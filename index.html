@@ -152,7 +152,9 @@
   .help-dots i.on { background: var(--ink); }
   .help-p { font-weight: 700; font-size: 16px; line-height: 1.4; color: rgba(21,21,21,.78); margin: 4px 6px 0; }
   .close-x { position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; border: 0; background: transparent; font-size: 26px; font-weight: 900; cursor: pointer; color: var(--muted); }
-  #fade { position: fixed; inset: 0; background: #ffffff; opacity: 0; pointer-events: none; z-index: 25; }
+  #fade { position: fixed; inset: 0; background: #ffffff; opacity: 0; pointer-events: none; z-index: 25; display: none; }
+  .edge-tint { position: fixed; left: 0; right: 0; height: 6px; background: var(--bg); pointer-events: none; z-index: 1; }
+  .edge-tint.top { top: 0; } .edge-tint.bottom { bottom: 0; }
   #toast {
     position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24px); transform: translateX(-50%) translateY(20px);
     background: var(--ink); color: #fff; font-weight: 900; padding: 12px 18px; border-radius: 999px; z-index: 30;
@@ -212,6 +214,7 @@
   </div>
 </div>
 
+<div class="edge-tint top"></div><div class="edge-tint bottom"></div>
 <div id="overlay"></div>
 <div id="fade"></div>
 <div id="toast"></div>
@@ -883,6 +886,7 @@ function setThemeColors(th) {
   document.documentElement.style.setProperty('--bg', bg);
   // Safari tints its top/bottom bars from these; set them directly and swap the meta tag so it refreshes
   document.documentElement.style.backgroundColor = bg; document.body.style.backgroundColor = bg;
+  for (const e of document.querySelectorAll('.edge-tint')) e.style.backgroundColor = bg;
   const old = document.querySelector('meta[name=theme-color]'); const m = document.createElement('meta');
   m.name = 'theme-color'; m.content = bg; if (old) old.replaceWith(m); else document.head.appendChild(m);
   scene.background = new THREE.Color(bg);
@@ -1306,10 +1310,9 @@ function computeView() {
   camera.updateProjectionMatrix();
 }
 function readyYaw() {
-  // look along the aim from behind the cue ball, kept within 70° of the table's own angle
-  const L = G.level.camera, [dx, dz] = aimDir();
-  let rel = Math.atan2(-dx, -dz) / DEG - L.rotation; rel = ((rel + 540) % 360) - 180;
-  return L.rotation + clamp(rel, -70, 70);
+  // look straight down the cue: camera directly behind the cue ball, facing along the aim
+  const [dx, dz] = aimDir();
+  return Math.atan2(-dx, -dz) / DEG;
 }
 function poseFor(mode) {
   const L = G.level.camera, p = { tx: 0, tz: 0, dist: view.base, tilt: L.tilt, rot: L.rotation };
@@ -1341,7 +1344,7 @@ function updateCamera(dt) {
     if (camTween.t >= camTween.dur) camTween = null;
   } else {
     camTween = null;
-    const k = G.camMode === 'ready' ? 2.2 : 2.6, f = 1 - Math.exp(-dt * k);
+    const k = G.camMode === 'ready' ? 2.6 : 2.6, f = 1 - Math.exp(-dt * k);
     cam.tx = lerp(cam.tx, p.tx, f); cam.tz = lerp(cam.tz, p.tz, f); cam.dist = lerp(cam.dist, p.dist, f); cam.tilt = lerp(cam.tilt, p.tilt, f);
     cam.rot += wrapDeg(p.rot - cam.rot) * f;
   }
@@ -1352,7 +1355,7 @@ function fadeTo(opaque, ms) { fade.target = opaque ? 1 : 0; fade.speed = 1000 / 
 function updateFade(dt) {
   if (reduceMotion) fade.v = 0;
   else if (fade.v !== fade.target) fade.v = fade.target > fade.v ? Math.min(fade.target, fade.v + dt * fade.speed) : Math.max(fade.target, fade.v - dt * fade.speed);
-  const el = $('fade'), o = fade.v.toFixed(3); if (el.style.opacity !== o) el.style.opacity = o;
+  const el = $('fade'), o = fade.v.toFixed(3); if (el.style.opacity !== o) { el.style.opacity = o; el.style.display = fade.v > 0 ? 'block' : 'none'; }
   if (fade.onFull && (fade.v >= 1 || reduceMotion)) { const f = fade.onFull; fade.onFull = null; f(); }
 }
 
@@ -1624,7 +1627,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && lo
   const dare = new URLSearchParams(location.search);
   if (dare.get('dare') && !day.done) setTimeout(() => toast(`A friend did table ${+dare.get('t') || 1} in ${+dare.get('dare')} shots. Beat that!`), 900);
   // expose a tiny hook for automated testing
-  window.__poolsies = { G, shoot, THREE, camera, aimState, toScreen, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
+  window.__poolsies = { G, shoot, THREE, camera, aimState, toScreen, readyYaw, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
 })();
 </script>
 </body>
