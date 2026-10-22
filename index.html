@@ -14,6 +14,7 @@
     /* Swap the game font here (one line). */
     --font: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     --bg: #c79a6a;
+    --chrome: #c79a6a; /* Safari's top/bottom bar color; the page fades into it at both edges */
     --ink: #151515;
     --muted: rgba(21, 21, 21, .55);
     --faint: rgba(21, 21, 21, .14);
@@ -25,7 +26,7 @@
   * { box-sizing: border-box; }
   html, body {
     margin: 0; height: 100%; overflow: hidden;
-    background: var(--bg);
+    background: var(--chrome);
     font-family: var(--font); color: var(--ink);
     -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none;
     touch-action: none; overscroll-behavior: none;
@@ -153,8 +154,9 @@
   .help-p { font-weight: 700; font-size: 16px; line-height: 1.4; color: rgba(21,21,21,.78); margin: 4px 6px 0; }
   .close-x { position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; border: 0; background: transparent; font-size: 26px; font-weight: 900; cursor: pointer; color: var(--muted); }
   #fade { position: fixed; inset: 0; background: #ffffff; opacity: 0; pointer-events: none; z-index: 25; display: none; }
-  .edge-tint { position: fixed; left: 0; right: 0; height: 6px; background: var(--bg); pointer-events: none; z-index: 1; }
-  .edge-tint.top { top: 0; } .edge-tint.bottom { bottom: 0; }
+  .edge-tint { position: fixed; left: 0; right: 0; pointer-events: none; z-index: 1; }
+  .edge-tint.top { top: 0; height: calc(env(safe-area-inset-top) + 56px); background: linear-gradient(var(--chrome) 0, var(--chrome) env(safe-area-inset-top), rgba(199,154,106,0) 100%); }
+  .edge-tint.bottom { bottom: 0; height: calc(env(safe-area-inset-bottom) + 48px); background: linear-gradient(0deg, var(--chrome) 0, var(--chrome) env(safe-area-inset-bottom), rgba(199,154,106,0) 100%); }
   #toast {
     position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24px); transform: translateX(-50%) translateY(20px);
     background: var(--ink); color: #fff; font-weight: 900; padding: 12px 18px; border-radius: 999px; z-index: 30;
@@ -884,11 +886,7 @@ function disposeGroup(g) { g.traverse(o => { if (o.geometry && ![...geoCache.val
 function setThemeColors(th) {
   const bg = th.floor.base;
   document.documentElement.style.setProperty('--bg', bg);
-  // Safari tints its top/bottom bars from these; set them directly and swap the meta tag so it refreshes
-  document.documentElement.style.backgroundColor = bg; document.body.style.backgroundColor = bg;
-  for (const e of document.querySelectorAll('.edge-tint')) e.style.backgroundColor = bg;
-  const old = document.querySelector('meta[name=theme-color]'); const m = document.createElement('meta');
-  m.name = 'theme-color'; m.content = bg; if (old) old.replaceWith(m); else document.head.appendChild(m);
+  // Safari keeps its bar color from page load, so the bars stay --chrome and the page edges fade into it.
   scene.background = new THREE.Color(bg);
   scene.fog.color.set(bg);
   hemi.groundColor.set(bg);
