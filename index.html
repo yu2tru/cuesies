@@ -14,7 +14,7 @@
     /* Swap the game font here (one line). */
     --font: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     --bg: #c79a6a;
-    --chrome: #c79a6a; /* Safari's top/bottom bar color; the page fades into it at both edges */
+    --bar: #c79a6a; /* current browser-bar color; the page edges fade into it */
     --ink: #151515;
     --muted: rgba(21, 21, 21, .55);
     --faint: rgba(21, 21, 21, .14);
@@ -26,7 +26,7 @@
   * { box-sizing: border-box; }
   html, body {
     margin: 0; height: 100%; overflow: hidden;
-    background: var(--chrome);
+    background: var(--bg);
     font-family: var(--font); color: var(--ink);
     -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none;
     touch-action: none; overscroll-behavior: none;
@@ -155,8 +155,11 @@
   .close-x { position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; border: 0; background: transparent; font-size: 26px; font-weight: 900; cursor: pointer; color: var(--muted); }
   #fade { position: fixed; inset: 0; background: #ffffff; opacity: 0; pointer-events: none; z-index: 25; display: none; }
   .edge-tint { position: fixed; left: 0; right: 0; pointer-events: none; z-index: 1; }
-  .edge-tint.top { top: 0; height: calc(env(safe-area-inset-top) + 56px); background: linear-gradient(var(--chrome) 0, var(--chrome) env(safe-area-inset-top), rgba(199,154,106,0) 100%); }
-  .edge-tint.bottom { bottom: 0; height: calc(env(safe-area-inset-bottom) + 48px); background: linear-gradient(0deg, var(--chrome) 0, var(--chrome) env(safe-area-inset-bottom), rgba(199,154,106,0) 100%); }
+  .edge-tint.top { top: 0; height: calc(env(safe-area-inset-top) + 56px); background: linear-gradient(var(--bar) 0, var(--bar) env(safe-area-inset-top), transparent 100%); }
+  .edge-tint.bottom { bottom: 0; height: calc(env(safe-area-inset-bottom) + 48px); background: linear-gradient(0deg, var(--bar) 0, var(--bar) env(safe-area-inset-bottom), transparent 100%); }
+  /* Safari 26 tints its bars from solid fixed strips at the screen edges (read when a strip appears) */
+  .bar-strip { position: fixed; left: 0; right: 0; height: 4px; pointer-events: none; z-index: 50; }
+  .bar-strip.top { top: 0; } .bar-strip.bottom { bottom: 0; }
   #toast {
     position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24px); transform: translateX(-50%) translateY(20px);
     background: var(--ink); color: #fff; font-weight: 900; padding: 12px 18px; border-radius: 999px; z-index: 30;
@@ -883,10 +886,33 @@ let levelGroup = null, ballGeo = sph(R, 32, 20), floorMesh = null;
 const decorCache = {};
 function disposeGroup(g) { g.traverse(o => { if (o.geometry && ![...geoCache.values()].includes(o.geometry) && o.geometry !== ballGeo) o.geometry.dispose(); }); }
 
+// Browser bars: Safari only reads a strip's color when the strip appears, so each change swaps in fresh strips.
+const bars = { color: null, timer: null };
+function paintBars(color) {
+  bars.color = color;
+  document.documentElement.style.setProperty('--bar', color);
+  document.documentElement.style.backgroundColor = color; document.body.style.backgroundColor = color;
+  for (const pos of ['top', 'bottom']) {
+    const n = document.createElement('div'); n.className = 'bar-strip ' + pos; n.style.backgroundColor = color;
+    const old = document.querySelector('.bar-strip.' + pos); if (old) old.replaceWith(n); else document.body.appendChild(n);
+  }
+  const m = document.createElement('meta'); m.name = 'theme-color'; m.content = color;
+  const oldM = document.querySelector('meta[name=theme-color]'); if (oldM) oldM.replaceWith(m); else document.head.appendChild(m);
+}
+function barsTo(color, ms) {
+  clearInterval(bars.timer);
+  if (!bars.color || ms <= 0 || reduceMotion) { paintBars(color); return; }
+  const from = new THREE.Color(bars.color), to = new THREE.Color(color), c = new THREE.Color(), t0 = performance.now();
+  bars.timer = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    paintBars(k >= 1 ? color : '#' + c.copy(from).lerp(to, k).getHexString());
+    if (k >= 1) clearInterval(bars.timer);
+  }, 50);
+}
 function setThemeColors(th) {
   const bg = th.floor.base;
   document.documentElement.style.setProperty('--bg', bg);
-  // Safari keeps its bar color from page load, so the bars stay --chrome and the page edges fade into it.
+  barsTo(bg, bars.color ? 450 : 0);
   scene.background = new THREE.Color(bg);
   scene.fog.color.set(bg);
   hemi.groundColor.set(bg);
@@ -1478,7 +1504,7 @@ function showResults(shots, capped, rankP) {
     $('stamp').classList.remove('show'); G.inputLocked = true;
     tweenCamera('outro', 0.7, easeIn); // leaving: ease in
     const next = G.idx + 1;
-    setTimeout(() => { fade.onFull = () => loadTable(next); fadeTo(true, 300); }, reduceMotion ? 0 : 380); };
+    setTimeout(() => { fade.onFull = () => loadTable(next); fadeTo(true, 300); barsTo('#ffffff', 300); }, reduceMotion ? 0 : 380); };
 }
 function rankHtml(r) {
   if (r.total <= 1) return `<b>#1</b> on the leaderboard<br><span class="muted">You're the first player today</span>`;
