@@ -25,13 +25,13 @@
   * { box-sizing: border-box; }
   html, body {
     margin: 0; height: 100%; overflow: hidden;
-    background: var(--bg); transition: background-color .6s ease;
+    background: var(--bg);
     font-family: var(--font); color: var(--ink);
     -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none;
     touch-action: none; overscroll-behavior: none;
   }
   button { font-family: var(--font); color: var(--ink); }
-  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; background: var(--bg); }
   #ui { position: fixed; inset: 0; pointer-events: none; display: flex; justify-content: center; z-index: 2; }
   .col {
     width: 100%; max-width: 480px; height: 100%; display: flex; flex-direction: column; position: relative;
@@ -57,7 +57,7 @@
   .seg { flex: 1; height: 6px; border-radius: 3px; background: var(--faint); transition: background .3s; }
   .seg.done { background: var(--ink); }
   .seg.cur { background: rgba(21,21,21,.42); }
-  .pill-wrap { display: flex; justify-content: center; margin-top: 12px; position: relative; }
+  .pill-wrap { display: flex; justify-content: center; margin-top: 6px; position: relative; }
   .pill {
     display: inline-flex; align-items: center; gap: 10px; background: var(--card); border-radius: 999px;
     padding: 8px 16px; min-height: 40px; font-weight: 900; font-size: 17px; letter-spacing: -0.03em;
@@ -68,7 +68,7 @@
   .sep { width: 1.5px; height: 18px; background: var(--faint); border-radius: 1px; }
   .mini {
     width: 20px; height: 20px; border-radius: 50%; position: relative; display: grid; place-items: center;
-    box-shadow: inset 0 -2px 0 rgba(0,0,0,.18); transition: opacity .3s, transform .3s;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,.14), 0 0 0 1.5px rgba(21,21,21,.22); transition: opacity .3s, transform .3s;
   }
   .mini span {
     width: 11px; height: 11px; border-radius: 50%; background: #fbf8ef; color: #151515;
@@ -91,17 +91,13 @@
   @keyframes floatUp { 0% { opacity: 0; transform: translate(-50%, 6px); } 15% { opacity: 1; transform: translate(-50%, 0); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -10px); } }
   .lvl-label, .lvl-title, .hint, .wordmark, .pno { text-shadow: 0 0 2px var(--bg), 0 0 10px var(--bg), 0 0 18px var(--bg); }
   .bottom { margin-top: auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .lvl-label { font-size: 12px; font-weight: 900; letter-spacing: .14em; color: var(--muted); }
+  .lvl-label { font-size: 11px; font-weight: 900; letter-spacing: .12em; color: rgba(21,21,21,.62); margin-top: 8px; text-align: left; }
   .lvl-title { font-size: 31px; font-weight: 900; letter-spacing: -0.05em; line-height: 1.05; margin-bottom: 6px; }
   .goal-chip {
     background: var(--card); border-radius: 18px; padding: 10px 18px; font-weight: 900; font-size: 16px; letter-spacing: -0.02em;
     box-shadow: 0 2px 0 rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.06); max-width: 100%;
   }
   .goal-chip small { display: block; font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: 0; margin-top: 2px; }
-  .power { position: relative; width: 100%; max-width: 340px; height: 16px; border-radius: 999px; margin-top: 10px;
-    background: rgba(255,253,248,.75); box-shadow: inset 0 2px 3px rgba(0,0,0,.14), 0 2px 0 rgba(0,0,0,.06); overflow: hidden; transition: transform .15s; }
-  .power.live { transform: scaleY(1.15); }
-  .power-fill { position: absolute; inset: 0; border-radius: 999px; background: linear-gradient(90deg, #2fa654 0%, #9cc82e 30%, #f3b81b 55%, #f07a2a 78%, #e2483c 100%); clip-path: inset(0 100% 0 0 round 999px); }
   .hint { font-size: 13px; font-weight: 800; color: var(--muted); margin-top: 6px; transition: opacity .3s; }
   .hint.hide { opacity: 0; }
 
@@ -154,6 +150,7 @@
   .help-dots i.on { background: var(--ink); }
   .help-p { font-weight: 700; font-size: 16px; line-height: 1.4; color: rgba(21,21,21,.78); margin: 4px 6px 0; }
   .close-x { position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; border: 0; background: transparent; font-size: 26px; font-weight: 900; cursor: pointer; color: var(--muted); }
+  #fade { position: fixed; inset: 0; background: #ffffff; opacity: 0; pointer-events: none; z-index: 25; }
   #toast {
     position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24px); transform: translateX(-50%) translateY(20px);
     background: var(--ink); color: #fff; font-weight: 900; padding: 12px 18px; border-radius: 999px; z-index: 30;
@@ -195,29 +192,26 @@
         <button class="icon-btn" id="btn-stats" aria-label="Stats">
           <svg viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-9"/></svg>
         </button>
-        <button class="icon-btn" id="btn-music" aria-label="Music">
-          <svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>
-        </button>
         <button class="icon-btn" id="btn-sound" aria-label="Sound">
           <svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
         </button>
       </div>
     </header>
     <div class="progress" id="progress"></div>
+    <div class="lvl-label" id="lvl-label">01 / 05 · WARM-UP</div>
     <div class="pill-wrap" id="pill-wrap">
       <div class="pill" id="pill"><span id="shot-label">Shot 1</span><i class="sep"></i><span class="tracker" id="tracker"></span></div>
     </div>
     <div class="bottom" id="bottom">
-      <div class="lvl-label" id="lvl-label">01 / 05 · WARM-UP</div>
       <div class="lvl-title" id="lvl-title">…</div>
       <div class="goal-chip" id="goal-chip">…</div>
-      <div class="power" id="power" aria-label="Shot power"><div class="power-fill" id="power-fill"></div></div>
       <div class="hint" id="hint">Drag around to aim. Pull back along the cue, then let go.</div>
     </div>
   </div>
 </div>
 
 <div id="overlay"></div>
+<div id="fade"></div>
 <div id="toast"></div>
 <div id="loading"><div class="wordmark">poolsies</div></div>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;font-family:sans-serif">Poolsies needs JavaScript and WebGL.</p></noscript>
@@ -260,7 +254,8 @@ function uuid() {
 }
 
 /* ============================ settings ============================= */
-const settings = Object.assign({ sound: true, music: true, seenHelp: false }, store.get('settings', {}));
+const settings = Object.assign({ sound: true, seenHelp: false }, store.get('settings', {}));
+settings.music = false; // background music is off (no music button)
 const saveSettings = () => store.set('settings', settings);
 let playerId = store.get('pid', null);
 if (!playerId) { playerId = uuid(); store.set('pid', playerId); }
@@ -884,7 +879,10 @@ function disposeGroup(g) { g.traverse(o => { if (o.geometry && ![...geoCache.val
 function setThemeColors(th) {
   const bg = th.floor.base;
   document.documentElement.style.setProperty('--bg', bg);
-  document.querySelector('meta[name=theme-color]').setAttribute('content', bg);
+  // Safari tints its top/bottom bars from these; set them directly and swap the meta tag so it refreshes
+  document.documentElement.style.backgroundColor = bg; document.body.style.backgroundColor = bg;
+  const old = document.querySelector('meta[name=theme-color]'); const m = document.createElement('meta');
+  m.name = 'theme-color'; m.content = bg; if (old) old.replaceWith(m); else document.head.appendChild(m);
   scene.background = new THREE.Color(bg);
   scene.fog.color.set(bg);
   hemi.groundColor.set(bg);
@@ -955,8 +953,11 @@ function loadTable(idx, restore) {
   aim.group.visible = false; levelGroup.add(aim.group);
   sunburst.visible = false; $('stamp').classList.remove('show');
   G.inputLocked = false; aimState.power = 0; drag = null; defaultAim(); setStickOpacity(0); stick.strike = 0;
+  G.readyYaw = null;
   updateUI(); computeView(); snapCamera('far');
-  G.camMode = G.shots > 0 ? 'ready' : 'overview';
+  if (G.shots > 0) G.readyYaw = readyYaw();
+  tweenCamera(G.shots > 0 ? 'ready' : 'overview', 1.1, easeOut); // entering: ease out
+  setTimeout(() => fadeTo(false, 450), 60);
 }
 function refreshActive() { G.active = G.balls.filter(b => !b.sunk); }
 
@@ -1083,7 +1084,7 @@ function onRest() {
   refreshActive();
   if (G.shots >= SHOT_CAP) { G.shots = SHOT_CAP; completeTable(true); return; }
   saveMid(); updatePill(); $('hint').classList.remove('hide');
-  G.inputLocked = false; G.camMode = 'ready';
+  G.inputLocked = false; defaultAim(); G.readyYaw = readyYaw(); G.camMode = 'ready';
 }
 function snapshot() { const pos = {}; for (const b of G.balls) pos[b.n] = [b.x, b.z]; return pos; }
 function saveMid(pos) { day.current = { idx: G.idx, shots: G.shots, orderIdx: G.orderIdx, sunk: G.sunk.slice(), pos: pos || snapshot() }; saveDay(); }
@@ -1220,36 +1221,35 @@ function defaultAim() {
 canvas.addEventListener('pointerdown', (e) => {
   Sound.init();
   if (!canShoot() || drag) return;
-  drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY, mode: null, ref: fingerAngle(e.clientX, e.clientY), axis: stickAxis() };
+  drag = { id: e.pointerId, lx: e.clientX, ly: e.clientY, aimed: false };
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
 });
+// Each bit of finger movement is read on its own, so one drag can both aim and pull:
+//  - moving around the cue ball turns the aim
+//  - moving toward/away from the ball along the cue charges (or un-charges) the shot
 canvas.addEventListener('pointermove', (e) => {
-  if (!drag || e.pointerId !== drag.id) return;
-  drag.x = e.clientX; drag.y = e.clientY;
-  if (!canShoot()) return;
-  const mx = drag.x - drag.sx, my = drag.y - drag.sy;
-  if (!drag.mode) {
-    const len = Math.sqrt(mx * mx + my * my); if (len < 12) return;
-    // power only when moving along the cue AND toward/away from the ball; moving around the ball always aims
-    const [cx, cy] = toScreen(G.cue.x, G.cue.z); const rx = drag.sx - cx, ry = drag.sy - cy, rl = Math.sqrt(rx * rx + ry * ry) || 1;
-    const along = Math.abs(mx * drag.axis[0] + my * drag.axis[1]) / len, radial = Math.abs(mx * rx + my * ry) / (len * rl);
-    drag.mode = along > 0.77 && (radial > 0.5 || rl < 40) ? 'power' : 'aim';
-  }
-  if (drag.mode === 'aim') {
-    const [cx, cy] = toScreen(G.cue.x, G.cue.z), a = fingerAngle(drag.x, drag.y);
-    const farEnough = Math.hypot(drag.x - cx, drag.y - cy) > 22;
-    if (a != null && drag.ref != null && farEnough) { let d = a - drag.ref; d = Math.atan2(Math.sin(d), Math.cos(d)); aimState.angle += d; }
-    if (a != null) drag.ref = a;
+  if (!drag || e.pointerId !== drag.id || !canShoot()) return;
+  const x = e.clientX, y = e.clientY, mx = x - drag.lx, my = y - drag.ly, len = Math.sqrt(mx * mx + my * my);
+  if (len < 3) return;
+  const [cx, cy] = toScreen(G.cue.x, G.cue.z), rx = x - cx, ry = y - cy, rl = Math.sqrt(rx * rx + ry * ry) || 1;
+  const ax = stickAxis(), along = (mx * ax[0] + my * ax[1]) / len, radial = Math.abs(mx * rx + my * ry) / (len * rl);
+  // a little stickiness so a straight pull doesn't wobble the aim (and a circle doesn't charge)
+  const pulling = drag.last === 'power' ? Math.abs(along) > 0.6 && radial > 0.15 : Math.abs(along) > 0.8 && radial > 0.25;
+  drag.last = rl < 40 || pulling ? 'power' : 'aim';
+  if (drag.last === 'power') {
+    aimState.power = clamp(aimState.power - (mx * ax[0] + my * ax[1]) / maxPull(), 0, 1);
   } else {
-    const back = -(mx * drag.axis[0] + my * drag.axis[1]); // pulling away from the shot direction
-    aimState.power = clamp(back / maxPull(), 0, 1);
+    const a0 = fingerAngle(drag.lx, drag.ly), a1 = fingerAngle(x, y);
+    if (a0 != null && a1 != null && rl > 22) { let d = a1 - a0; d = Math.atan2(Math.sin(d), Math.cos(d)); aimState.angle += d; drag.aimed = true; }
   }
+  drag.lx = x; drag.ly = y;
 });
 function endDrag(e, cancel) {
   if (!drag || e.pointerId !== drag.id) return;
-  const wasPower = drag.mode === 'power'; drag = null;
+  const aimed = drag.aimed; drag = null;
   const p = aimState.power; aimState.power = 0;
-  if (!cancel && wasPower && p >= 0.05 && canShoot()) { const [dx, dz] = aimDir(); stick.strike = p; shoot(dx, dz, p); }
+  if (!cancel && p >= 0.05 && canShoot()) { const [dx, dz] = aimDir(); stick.strike = p; shoot(dx, dz, p); return; }
+  if (aimed && G.camMode === 'ready') G.readyYaw = readyYaw(); // swing the camera in behind the new aim
 }
 canvas.addEventListener('pointerup', (e) => endDrag(e, false));
 canvas.addEventListener('pointercancel', (e) => endDrag(e, true));
@@ -1268,8 +1268,6 @@ function updateAimVisuals(dt) {
   if (want && stick.op > 0.9) stick.strike = 0;
   stick.body.position.z = stick.gap;
   if (ready && !G.inputLocked) drawAim(dx, dz, aimState.power); else aim.group.visible = false;
-  const pf = $('power-fill'); const pct = Math.round(aimState.power * 100) + '%';
-  if (pf.dataset.p !== pct) { pf.dataset.p = pct; pf.style.clipPath = `inset(0 ${100 - aimState.power * 100}% 0 0 round 999px)`; $('power').classList.toggle('live', aimState.power > 0); }
 }
 
 /* ============================== camera ============================= */
@@ -1304,9 +1302,20 @@ function computeView() {
   camera.setViewOffset(w, h, 0, view.center * h / 2, w, h);
   camera.updateProjectionMatrix();
 }
+function readyYaw() {
+  // look along the aim from behind the cue ball, kept within 70° of the table's own angle
+  const L = G.level.camera, [dx, dz] = aimDir();
+  let rel = Math.atan2(-dx, -dz) / DEG - L.rotation; rel = ((rel + 540) % 360) - 180;
+  return L.rotation + clamp(rel, -70, 70);
+}
 function poseFor(mode) {
   const L = G.level.camera, p = { tx: 0, tz: 0, dist: view.base, tilt: L.tilt, rot: L.rotation };
-  if (mode === 'ready') { p.tx = G.cue.x * 0.45; p.tz = G.cue.z * 0.45; p.dist = view.base * 0.8; }
+  if (mode === 'ready') {
+    const [dx, dz] = aimDir(), r = (G.readyYaw ?? L.rotation) * DEG;
+    // aim point a little ahead of the cue ball, along the camera's facing direction
+    p.tx = clamp(G.cue.x - Math.sin(r) * 0.35, -0.9, 0.9); p.tz = clamp(G.cue.z - Math.cos(r) * 0.35, -1.9, 1.9);
+    p.dist = view.base * 0.5; p.tilt = Math.max(38, L.tilt - 8); p.rot = G.readyYaw ?? L.rotation; void dx; void dz;
+  }
   else if (mode === 'far' || mode === 'outro') { p.dist = view.base * 1.32; p.tilt = Math.min(84, L.tilt + 8); p.tz = -0.3; }
   return p;
 }
@@ -1315,12 +1324,33 @@ function applyCam() {
   placeCam(camera, cam.tx, cam.tz, cam.dist, cam.tilt, cam.rot);
   scene.fog.near = cam.dist * 1.15; scene.fog.far = cam.dist * 2.6;
 }
+const wrapDeg = (d) => ((d + 540) % 360) - 180;
+const easeIn = (t) => t * t * t, easeOut = (t) => 1 - (1 - t) ** 3;
+let camTween = null; // { from, mode, t, dur, ease }
+function tweenCamera(mode, dur, ease) { G.camMode = mode; camTween = reduceMotion ? null : { from: { ...cam }, mode, t: 0, dur, ease }; }
 function updateCamera(dt) {
   const p = poseFor(G.camMode);
   if (reduceMotion) { Object.assign(cam, p); applyCam(); return; }
-  const k = G.camMode === 'outro' ? 4 : G.camMode === 'ready' ? 2.4 : 2.8, f = 1 - Math.exp(-dt * k);
-  cam.tx = lerp(cam.tx, p.tx, f); cam.tz = lerp(cam.tz, p.tz, f); cam.dist = lerp(cam.dist, p.dist, f); cam.tilt = lerp(cam.tilt, p.tilt, f); cam.rot = lerp(cam.rot, p.rot, f);
+  if (camTween && camTween.mode === G.camMode) {
+    camTween.t += dt; const k = camTween.ease(Math.min(1, camTween.t / camTween.dur)), f = camTween.from;
+    cam.tx = lerp(f.tx, p.tx, k); cam.tz = lerp(f.tz, p.tz, k); cam.dist = lerp(f.dist, p.dist, k); cam.tilt = lerp(f.tilt, p.tilt, k);
+    cam.rot = f.rot + wrapDeg(p.rot - f.rot) * k;
+    if (camTween.t >= camTween.dur) camTween = null;
+  } else {
+    camTween = null;
+    const k = G.camMode === 'ready' ? 2.2 : 2.6, f = 1 - Math.exp(-dt * k);
+    cam.tx = lerp(cam.tx, p.tx, f); cam.tz = lerp(cam.tz, p.tz, f); cam.dist = lerp(cam.dist, p.dist, f); cam.tilt = lerp(cam.tilt, p.tilt, f);
+    cam.rot += wrapDeg(p.rot - cam.rot) * f;
+  }
   applyCam();
+}
+const fade = { v: 0, target: 0, speed: 3, onFull: null };
+function fadeTo(opaque, ms) { fade.target = opaque ? 1 : 0; fade.speed = 1000 / Math.max(1, ms); if (reduceMotion) fade.v = 0; }
+function updateFade(dt) {
+  if (reduceMotion) fade.v = 0;
+  else if (fade.v !== fade.target) fade.v = fade.target > fade.v ? Math.min(fade.target, fade.v + dt * fade.speed) : Math.max(fade.target, fade.v - dt * fade.speed);
+  const el = $('fade'), o = fade.v.toFixed(3); if (el.style.opacity !== o) el.style.opacity = o;
+  if (fade.onFull && (fade.v >= 1 || reduceMotion)) { const f = fade.onFull; fade.onFull = null; f(); }
 }
 
 /* ============================ celebration ========================== */
@@ -1381,6 +1411,7 @@ function frame(now) {
     G.pops = G.pops.filter(p => !p.done);
     updateAimVisuals(dt);
     updateCamera(dt);
+    updateFade(dt);
     updateFx(dt);
     renderer.render(scene, camera);
   }
@@ -1440,7 +1471,10 @@ function showResults(shots, capped, rankP) {
   rankP.then(r => { const el = sheet.querySelector('#lb'); if (!el) return; if (r) el.innerHTML = rankHtml(r); else el.style.display = 'none'; });
   sheet.querySelector('#dare').onclick = () => share(`I sank "${G.level.title}" (table ${G.idx + 1}) on Poolsies No. ${PUZZLE_NO} in ${shots} shot${shots === 1 ? '' : 's'}. Bet you can't beat that 🎱\n${GAME_URL}?dare=${shots}&t=${G.idx + 1}`);
   sheet.querySelector('#next').onclick = () => { Sound.tap(); closeOverlay(); if (last) { showEndOfDay(); return; }
-    G.camMode = 'outro'; $('stamp').classList.remove('show'); setTimeout(() => loadTable(G.idx + 1), reduceMotion ? 0 : 600); };
+    $('stamp').classList.remove('show'); G.inputLocked = true;
+    tweenCamera('outro', 0.7, easeIn); // leaving: ease in
+    const next = G.idx + 1;
+    setTimeout(() => { fade.onFull = () => loadTable(next); fadeTo(true, 300); }, reduceMotion ? 0 : 380); };
 }
 function rankHtml(r) {
   if (r.total <= 1) return `<b>#1</b> on the leaderboard<br><span class="muted">You're the first player today</span>`;
@@ -1502,7 +1536,7 @@ function showStats() {
   sheet.querySelector('.close-x').onclick = sheet.querySelector('#ok').onclick = () => { Sound.tap(); closeOverlay(); };
 }
 const HELP = [
-  { t: 'Aim and shoot', p: 'Drag around to swing the cue. Then drag back along the cue to fill the power bar and let go to shoot. Slide back to the start to cancel.',
+  { t: 'Aim and shoot', p: 'Drag around to swing the cue. Then drag back along the cue to power up and let go to shoot. Slide back toward the ball to cancel.',
     art: `<svg viewBox="0 0 230 130"><rect x="20" y="8" width="190" height="114" rx="18" fill="#2f8d5a"/><g fill="#fff">${[0, 1, 2, 3, 4, 5].map(i => `<circle cx="${115}" cy="${84 - i * 10}" r="2.6"/>`).join('')}</g><circle cx="115" cy="32" r="9" fill="#d7262b"/><circle cx="115" cy="94" r="9" fill="#fbf8ef"/><path d="M150 70 v38" stroke="#151515" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 8"/><path d="M142 100 l8 9 l8-9" stroke="#151515" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
   { t: 'Every table has a goal', p: 'Sink a number of balls, only the stripes, certain colors, one special ball, or balls in order. Fewest shots wins.',
     art: `<svg viewBox="0 0 230 130"><rect x="30" y="34" width="170" height="62" rx="31" fill="#fffdf8"/><circle cx="72" cy="65" r="15" fill="#d7262b"/><circle cx="115" cy="65" r="15" fill="#1d4fb8"/><circle cx="158" cy="65" r="15" fill="#151515"/><circle cx="72" cy="65" r="16" fill="#2fa654"/><path d="M65 65l5 5 9-10" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
@@ -1521,10 +1555,9 @@ function showHelp(step = 0) {
   sheet.querySelector('#go').onclick = () => { Sound.init(); Sound.tap(); if (last) done(); else showHelp(step + 1); };
   const b = sheet.querySelector('#back'); if (b) b.onclick = () => { Sound.tap(); showHelp(step - 1); };
 }
-function syncToggles() { $('btn-music').classList.toggle('off', !settings.music); $('btn-sound').classList.toggle('off', !settings.sound); }
+function syncToggles() { $('btn-sound').classList.toggle('off', !settings.sound); }
 $('btn-help').onclick = () => { Sound.init(); Sound.tap(); showHelp(0); };
 $('btn-stats').onclick = () => { Sound.init(); Sound.tap(); showStats(); };
-$('btn-music').onclick = () => { Sound.init(); settings.music = !settings.music; saveSettings(); syncToggles(); Sound.setMusic(settings.music); };
 $('btn-sound').onclick = () => { Sound.init(); settings.sound = !settings.sound; saveSettings(); syncToggles(); Sound.setSound(settings.sound); Sound.tap(); };
 syncToggles();
 
