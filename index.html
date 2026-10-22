@@ -1617,8 +1617,8 @@ function poseFor(mode) {
   if (mode === 'ready') {
     const r = (L.rotation + G.yawSmooth) * DEG;
     // aim point a little ahead of the cue ball, along the camera's facing direction
-    p.tx = clamp(G.cue.x - Math.sin(r) * 0.35, -0.9, 0.9); p.tz = clamp(G.cue.z - Math.cos(r) * 0.35, -1.9, 1.9);
-    p.dist = view.base * 0.5; p.tilt = clamp(L.tilt - 16, 36, 50); p.rot = L.rotation;
+    p.tx = clamp(G.cue.x - Math.sin(r) * 0.6, -0.9, 0.9); p.tz = clamp(G.cue.z - Math.cos(r) * 0.6, -1.9, 1.9); // look further across the table
+    p.dist = view.base * 0.6; p.tilt = clamp(L.tilt - 18, 34, 48); p.rot = L.rotation;
   }
   else if (mode === 'far' || mode === 'outro') { p.dist = view.base * 1.32; p.tilt = Math.min(84, L.tilt + view.tiltAdj + 8); p.tz = -0.3; }
   return p;
