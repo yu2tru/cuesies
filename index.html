@@ -1461,7 +1461,7 @@ function setStickOpacity(o) {
 //  - circle around the table -> rotate the aim (and the cue stick)
 //  - pull straight back along the cue stick -> charge the power bar; let go to shoot, slide back to cancel
 let drag = null;
-const aimState = { angle: -Math.PI / 2, power: 0 };
+const aimState = { angle: -Math.PI / 2, target: -Math.PI / 2, power: 0 }; // angle eases toward target
 const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -R), hitP = new THREE.Vector3();
 const aimDir = () => [Math.cos(aimState.angle), Math.sin(aimState.angle)];
 function canShoot() { return !G.inputLocked && !G.moving && !G.complete && !$('overlay').classList.contains('show'); }
@@ -1481,7 +1481,7 @@ function defaultAim() {
     const d = (b.x - G.cue.x) ** 2 + (b.z - G.cue.z) ** 2 + (want ? 0 : 100);
     if (d < bd) { bd = d; best = b; }
   }
-  aimState.angle = best ? Math.atan2(best.z - G.cue.z, best.x - G.cue.x) : -Math.PI / 2;
+  aimState.angle = aimState.target = best ? Math.atan2(best.z - G.cue.z, best.x - G.cue.x) : -Math.PI / 2;
 }
 canvas.addEventListener('pointerdown', (e) => {
   Sound.init();
@@ -1504,7 +1504,13 @@ canvas.addEventListener('pointermove', (e) => {
   }
   if (drag.mode === 'aim') {
     const [cx, cy] = toScreen(G.cue.x, G.cue.z), a = fingerAngle(x, y);
-    if (a != null && drag.ref != null && Math.hypot(x - cx, y - cy) > 22) { let d = a - drag.ref; d = Math.atan2(Math.sin(d), Math.cos(d)); aimState.angle += d; drag.aimed = true; }
+    if (a != null && drag.ref != null && Math.hypot(x - cx, y - cy) > 22) {
+      let d = a - drag.ref; d = Math.atan2(Math.sin(d), Math.cos(d));
+      // geared down: the cue turns about half as far as the finger; slow drags turn even less for fine-tuning
+      const now = e.timeStamp, step = Math.max(0.008, (now - (drag.t || now - 16)) / 1000); drag.t = now;
+      const fast = clamp((Math.abs(d) / step - 0.6) / 2.4, 0, 1);
+      aimState.target += d * (0.22 + 0.26 * fast); drag.aimed = true;
+    }
     if (a != null) drag.ref = a;
   } else {
     aimState.power = clamp(-(mx * drag.axis[0] + my * drag.axis[1]) / maxPull(), 0, 1);
@@ -1554,12 +1560,14 @@ function updateKeys(dt) {
   if (!canShoot() || drag) return;
   const now = performance.now(), held = (k) => keys[k] ? (now - keys[k]) / 1000 : 0;
   const turn = (k) => held(k) ? (held(k) < 0.35 ? 18 : 75) * DEG * dt : 0; // tap for fine moves, hold to sweep
-  aimState.angle += turn('right') - turn('left'); // right arrow = clockwise on screen
+  aimState.target += turn('right') - turn('left'); // right arrow = clockwise on screen
   if (keys.down) aimState.power = Math.min(1, aimState.power + dt * 0.7);
   if (keys.up) aimState.power = Math.max(0, aimState.power - dt * 0.9);
 }
 function updateAimVisuals(dt) {
   updateKeys(dt);
+  // the aim glides toward where the finger/keys put it, smoothing out wobble
+  if (!G.moving) aimState.angle += (aimState.target - aimState.angle) * (reduceMotion ? 1 : 1 - Math.exp(-dt * 14));
   const ready = G.level && !G.moving && !G.complete && !G.cue.sunk && G.camMode !== 'outro';
   // cue stick: fades out on the shot, fades back in when the camera settles on the cue ball
   const want = ready && !G.inputLocked ? 1 : 0;
