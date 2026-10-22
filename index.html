@@ -454,7 +454,26 @@ function goalText(level) {
 /* ============================== audio ============================== */
 const Sound = (() => {
   let ac = null, sfx = null, mus = null, noise = null, timer = null, nextT = 0, step = 0, lastClack = 0, lastThump = 0;
+  // iPhones mute web audio when the ringer switch is on silent. Marking the page as media playback
+  // (and keeping a silent media element running) moves it onto the media volume, like a video or game.
+  let unmuter = null;
+  function mediaSession(on) {
+    try { if (navigator.audioSession) navigator.audioSession.type = on ? 'playback' : 'auto'; } catch (e) {}
+    try {
+      if (!unmuter) {
+        const rate = 8000, n = rate / 2, buf = new ArrayBuffer(44 + n), v = new DataView(buf), str = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+        str(0, 'RIFF'); v.setUint32(4, 36 + n, true); str(8, 'WAVE'); str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+        v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, 'data'); v.setUint32(40, n, true);
+        for (let i = 0; i < n; i++) v.setUint8(44 + i, 128); // 8-bit silence
+        unmuter = document.createElement('audio'); unmuter.src = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+        unmuter.loop = true; unmuter.setAttribute('playsinline', ''); unmuter.setAttribute('x-webkit-airplay', 'deny'); unmuter.preload = 'auto';
+      }
+      if (on) { const p = unmuter.play(); if (p && p.catch) p.catch(() => {}); } else unmuter.pause();
+    } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', () => { if (!unmuter) return; if (document.hidden) unmuter.pause(); else if (settings.sound) mediaSession(true); });
   function init() {
+    if (settings.sound) mediaSession(true);
     if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
     try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
     sfx = ac.createGain(); sfx.gain.value = settings.sound ? 0.9 : 0; sfx.connect(ac.destination);
@@ -489,7 +508,7 @@ const Sound = (() => {
     chime(big) { if (!ok()) return; const t = ac.currentTime; const notes = big ? [72, 76, 79, 84, 88, 91] : [72, 76, 79, 84];
       notes.forEach((m, i) => { const f = 440 * 2 ** ((m - 69) / 12); tone(f, t + i * 0.085, 0.7, 0.16, 'sine'); tone(f * 2, t + i * 0.085, 0.3, 0.04, 'triangle'); }); },
     tap() { if (!ok()) return; tone(900, ac.currentTime, 0.04, 0.08, 'sine', 600); },
-    setSound(on) { if (sfx) sfx.gain.setTargetAtTime(on ? 0.9 : 0, ac.currentTime, 0.02); },
+    setSound(on) { mediaSession(on); if (sfx) sfx.gain.setTargetAtTime(on ? 0.9 : 0, ac.currentTime, 0.02); },
     setMusic(on) { if (!ac) return; mus.gain.setTargetAtTime(on ? 0.5 : 0, ac.currentTime, 0.2); if (on) startMusic(); else stopMusic(); },
   };
   // Soft looping tune: lazy jazzy chords + plucked arpeggio, scheduled ahead of time.
@@ -1571,7 +1590,7 @@ function computeView() {
   view.center = (yTop + yBot) / 2;
   const L = G.level.camera;
   // tall phone screens: a slightly wider lens and a lower camera so the table doesn't read as long and skinny
-  const portrait = w / h < 0.8; view.tiltAdj = portrait ? -10 : 0; camera.fov = fitCam.fov = portrait ? 40 : 32;
+  const portrait = w / h < 0.8; view.tiltAdj = portrait ? -10 : 0; camera.fov = fitCam.fov = portrait ? 40 : 32; // fit at the low angle first...
   fitCam.aspect = w / h; fitCam.updateProjectionMatrix();
   let lo = 2, hi = 60; const v = new THREE.Vector3();
   for (let i = 0; i < 28; i++) {
@@ -1580,6 +1599,10 @@ function computeView() {
     if (fits) hi = mid; else lo = mid;
   }
   view.base = hi / L.zoom;
+  if (portrait) { // ...then keep that camera height, step forward and look a touch more down
+    const h0 = view.base * Math.sin((L.tilt - 10) * DEG); view.tiltAdj = -5;
+    view.base = h0 / Math.sin(Math.min(84, L.tilt - 5) * DEG);
+  }
   camera.aspect = w / h;
   camera.setViewOffset(w, h, 0, view.center * h / 2, w, h);
   camera.updateProjectionMatrix();
