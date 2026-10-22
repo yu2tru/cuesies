@@ -387,10 +387,12 @@ const DEMO_LEVELS = [
   { order: 5, title: 'Fireside Finale', theme: 'cabin',
     goal: { type: 'order', balls: [1, 2] }, cueStart: [0, 1.5],
     balls: [{ number: 1, pos: [-0.55, -1.45] }, { number: 2, pos: [0.62, -1.62] }, { number: 7, pos: [-0.15, -1.25] }, { number: 15, pos: [0.75, 0.2] }],
-    obstacles: [{ kind: 'book', shape: 'box', pos: [-0.25, 0.1], size: [0.9, 0.14], rotation: 0 },
+    obstacles: [{ kind: 'book', shape: 'box', pos: [-0.56, 0.12], size: [0.2, 0.27], rotation: 8 },
+      { kind: 'book', shape: 'box', pos: [-0.31, 0.04], size: [0.2, 0.27], rotation: -6 },
+      { kind: 'book', shape: 'box', pos: [-0.06, 0.15], size: [0.2, 0.27], rotation: 11 },
       { kind: 'cocoaMug', shape: 'circle', pos: [-0.55, -0.85], radius: 0.12 },
       { kind: 'snowGlobe', shape: 'circle', pos: [0.45, -0.55], radius: 0.15 },
-      { kind: 'book', shape: 'box', pos: [0.55, -1.15], size: [0.36, 0.12], rotation: 30 },
+      { kind: 'book', shape: 'box', pos: [0.55, -1.15], size: [0.2, 0.27], rotation: -25 },
       { kind: 'cocoaMug', shape: 'circle', pos: [0.0, -1.75], radius: 0.1 }],
     slowZones: [{ kind: 'rug', shape: 'circle', pos: [0.35, 0.72], radius: 0.3 }],
     camera: { tilt: 62, rotation: -8, zoom: 1.04 } },
@@ -794,15 +796,11 @@ const OBST = {
     return g;
   },
   book(o) {
-    // a row of hardcovers lying flat along the longer side, all inside the footprint
+    // one hardcover lying flat; spine along the longer side; a Christmas-story cover on top
     const { w, d } = o, g = new THREE.Group(), long = w >= d, L = long ? w : d, D = long ? d : w;
-    const n = Math.max(1, Math.round(L / 0.3)), seg = L / n, cols = ['#2e6fd1', '#c8413c', '#2f8d5a', '#d9a520', '#6b2fa0', '#1f7a7a'];
-    for (let i = 0; i < n; i++) {
-      const th = 0.05 + ((i * 37) % 3) * 0.008, b = makeBook(seg * 0.93, th, D * 0.9 - th / 2, cols[(i + Math.round(L * 10)) % cols.length]);
-      const row = new THREE.Group(); row.add(b); b.position.z = th / 4; row.rotation.y = ((i % 2) ? 1 : -1) * 0.03; row.position.x = -L / 2 + seg * (i + 0.5);
-      if (i % 2 === 1) { const top = makeBook(seg * 0.8, 0.04, D * 0.72, cols[(i + 3) % cols.length]); top.position.y = th; top.rotation.y = 0.12; row.add(top); }
-      const holder = new THREE.Group(); holder.add(row); if (!long) holder.rotation.y = Math.PI / 2; g.add(holder);
-    }
+    const th = 0.045 + ((o.seed || 0) % 3) * 0.008, design = BOOK_COVERS[(o.seed || 0) % BOOK_COVERS.length];
+    const b = makeBook(L * 0.95, th, D * 0.95 - th / 2, design.bg, design); b.position.z = th / 4;
+    const holder = new THREE.Group(); holder.add(b); if (!long) holder.rotation.y = Math.PI / 2; g.add(holder);
     return g;
   },
   napkinHolder(o) { const { w, d } = o, g = new THREE.Group(); g.add(mesh(rbox(w, 0.03, d, 0.01), mat('#c9ced3', 0.25))); for (const s of [-1, 1]) { const p = mesh(rbox(w, 0.16, 0.012, 0.004), mat('#c9ced3', 0.25)); p.position.set(0, 0.03, s * (d / 2 - 0.006)); g.add(p); } const n = mesh(rbox(w * 0.85, 0.15, d * 0.7, 0.004), mat('#ffffff', 0.9)); n.position.y = 0.03; g.add(n); return g; },
@@ -836,7 +834,35 @@ function makeCan(r, h, color) {
 }
 // A hardcover book lying flat: covers, rounded spine and recessed page block
 const pagesTex = () => canLabelCache.__pages || (canLabelCache.__pages = canvasTex(64, 64, (c, W, H) => { c.fillStyle = '#f4ecd8'; c.fillRect(0, 0, W, H); c.fillStyle = 'rgba(120,100,70,.18)'; for (let y = 2; y < H; y += 3) c.fillRect(0, y, W, 1); }));
-function makeBook(len, th, dep, color) {
+// Christmas story covers: emoji art (the device's own emoji) + a title
+const BOOK_COVERS = [
+  { title: 'A Christmas Carol', icon: '🎄', bg: '#a5262b', fg: '#f6e7c1', deco: '⭐' },
+  { title: 'The Night Before Christmas', icon: '🎅', bg: '#1f5a3a', fg: '#f6e7c1', deco: '❄️' },
+  { title: 'The Nutcracker', icon: '❄️', bg: '#1d3557', fg: '#f1d48a', deco: '⭐' },
+  { title: 'Snowman Stories', icon: '⛄', bg: '#efe6d2', fg: '#7a1f2b', deco: '❄️' },
+  { title: 'Rudolph', icon: '🦌', bg: '#6e1d27', fg: '#f6e7c1', deco: '🔔' },
+  { title: 'The Gift', icon: '🎁', bg: '#2a6b6b', fg: '#fbeed0', deco: '⭐' },
+];
+const coverTexCache = {};
+function coverTex(c) {
+  if (coverTexCache[c.title]) return coverTexCache[c.title];
+  const EMOJI = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+  return coverTexCache[c.title] = canvasTex(256, 352, (g, W, H) => {
+    g.fillStyle = c.bg; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, 0, 18, H); // hinge shadow by the spine
+    g.strokeStyle = c.fg; g.lineWidth = 5; g.strokeRect(30, 16, W - 46, H - 32); g.lineWidth = 1.5; g.strokeRect(38, 24, W - 62, H - 48);
+    g.fillStyle = c.fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const words = c.title.split(' '), lines = []; let line = '';
+    g.font = 'bold 30px Georgia, "Times New Roman", serif';
+    for (const wd of words) { const t = line ? line + ' ' + wd : wd; if (g.measureText(t).width > W - 90 && line) { lines.push(line); line = wd; } else line = t; }
+    lines.push(line);
+    lines.forEach((l, i) => g.fillText(l, W / 2 + 8, 62 + i * 34));
+    g.font = `92px ${EMOJI}`; g.fillText(c.icon, W / 2 + 8, H * 0.6);
+    g.font = `22px ${EMOJI}`; g.fillText(c.deco, 66, H - 50); g.fillText(c.deco, W - 34, H - 50);
+    g.font = 'italic 17px Georgia, serif'; g.fillText('Classic Tales', W / 2 + 8, H - 50);
+  });
+}
+function makeBook(len, th, dep, color, design) {
   const g = new THREE.Group(), cover = mat(color, 0.55), ct = 0.006;
   const lo = mesh(rbox(len, ct, dep, 0.004), cover); g.add(lo);
   const hi = mesh(rbox(len, ct, dep, 0.004), cover); hi.position.y = th - ct; g.add(hi);
@@ -844,6 +870,11 @@ function makeBook(len, th, dep, color) {
   spine.position.set(0, th / 2, -dep / 2); g.add(spine);
   const pages = mesh(cached(`pages${len}|${th}|${dep}`, () => new THREE.BoxGeometry(len - 0.01, th - 2 * ct + 0.001, dep - 0.006)), mat('#ffffff', 0.9, { map: pagesTex() }));
   pages.position.set(0, th / 2, -0.003); g.add(pages);
+  if (design) { // printed cover: portrait art, spine on its left edge
+    const art = new THREE.Mesh(cached(`cover${len}|${dep}`, () => { const pg = new THREE.PlaneGeometry(dep - 0.012, len - 0.012); pg.rotateX(-Math.PI / 2); pg.rotateY(-Math.PI / 2); return pg; }),
+      new THREE.MeshStandardMaterial({ map: coverTex(design), roughness: 0.6 }));
+    art.position.set(0, th + 0.0008, 0.001); art.receiveShadow = true; g.add(art);
+  }
   const band = mesh(rbox(0.012, th + 0.001, 0.006, 0.002), mat(shade(color, 0.25), 0.5), false); band.position.set(len * 0.32, -0.0005, -dep / 2 - th / 2 + 0.004); g.add(band);
   return g;
 }
@@ -1068,10 +1099,10 @@ function loadTable(idx, restore) {
     levelGroup.add(d);
   }
   // obstacles
-  G.obstacles = L.obstacles.map(o => {
+  G.obstacles = L.obstacles.map((o, oi) => {
     const p = oPhys(o);
     const builder = OBST[o.kind] || (o.shape === 'circle' ? OBST.bumper : OBST.block);
-    const shapeArgs = o.shape === 'circle' ? { r: o.radius } : { w: o.size[0], d: o.size[1] };
+    const shapeArgs = o.shape === 'circle' ? { r: o.radius } : { w: o.size[0], d: o.size[1], seed: oi };
     let m = builder(shapeArgs, th);
     // circle builders used with a box shape (or vice versa) fall back to the generic piece so physics always matches
     const boxKinds = ['toolbox', 'pizzaBox', 'book', 'napkinHolder', 'block'];
@@ -1079,7 +1110,7 @@ function loadTable(idx, restore) {
     m.position.set(o.pos[0], 0, o.pos[1]); m.rotation.y = -(p.deg || 0) * DEG;
     levelGroup.add(m); p.mesh = m; p.baseQ = m.quaternion.clone(); p.wig = null;
     if (o.kind === 'beachBall' && o.shape === 'circle') { // light ball: rolls when hit, never pocketed
-      Object.assign(p, { dynamic: true, vx: 0, vz: 0, hy: 0, vy: 0, start: o.pos.slice(), px: p.x, pz: p.z, ball: m.getObjectByName('ball') });
+      Object.assign(p, { dynamic: true, vx: 0, vz: 0, hy: 0, vy: 0, squash: 0, start: o.pos.slice(), px: p.x, pz: p.z, ball: m.getObjectByName('ball') });
     }
     return p;
   });
@@ -1164,7 +1195,8 @@ function physStep() {
   }
   for (const o of G.obstacles) {
     if (!o.dynamic) continue;
-    o.hy += o.vy * DT; o.vy -= 9 * DT; if (o.hy <= 0) { o.hy = 0; o.vy = o.vy < -0.15 ? -o.vy * 0.35 : 0; } // little hop
+    o.hy += o.vy * DT; o.vy -= 9 * DT; // hops (looks only; it never leaves the felt in the physics)
+    if (o.hy <= 0) { if (o.vy < -0.3) o.squash = Math.min(0.16, -o.vy * 0.09); o.hy = 0; o.vy = o.vy < -0.3 ? -o.vy * 0.5 : 0; }
     if (o.vx === 0 && o.vz === 0) continue;
     const sp = Math.sqrt(o.vx * o.vx + o.vz * o.vz), f = G.zones.length && inZone(o.x, o.z) ? SLOW_MULT : 1;
     const ns = sp - (1.0 * f + 1.6 * f * sp) * DT; // light: loses speed much faster than a pool ball
@@ -1209,9 +1241,9 @@ function physStep() {
       const rvn = (b.vx - o.vx) * c.nx + (b.vz - o.vz) * c.nz;
       if (rvn < 0) {
         b.vx -= (1 + E_OBS) * rvn * c.nx; b.vz -= (1 + E_OBS) * rvn * c.nz;
-        const push = -rvn * 1.15; o.vx -= c.nx * push; o.vz -= c.nz * push;
-        const sp = Math.sqrt(o.vx * o.vx + o.vz * o.vz); if (sp > 3.5) { o.vx *= 3.5 / sp; o.vz *= 3.5 / sp; }
-        o.vy = Math.min(0.9, o.vy + push * 0.3); Sound.thump(-rvn * 0.5);
+        const push = -rvn * 0.7; o.vx -= c.nx * push; o.vz -= c.nz * push;
+        const sp = Math.sqrt(o.vx * o.vx + o.vz * o.vz); if (sp > 2.2) { o.vx *= 2.2 / sp; o.vz *= 2.2 / sp; }
+        o.vy = Math.min(1.35, Math.max(o.vy, 0) + 0.45 + push * 0.5); Sound.thump(-rvn * 0.5);
       }
     }
   }
@@ -1233,7 +1265,7 @@ function physStep() {
 }
 function allStopped() {
   for (const b of G.active) if (b.vx !== 0 || b.vz !== 0) return false;
-  for (const o of G.obstacles) if (o.dynamic && (o.vx !== 0 || o.vz !== 0)) return false;
+  for (const o of G.obstacles) if (o.dynamic && (o.vx !== 0 || o.vz !== 0 || o.hy > 0 || o.vy !== 0)) return false;
   return true;
 }
 // hits make obstacles wobble in place (looks only; physics never moves them)
@@ -1521,7 +1553,7 @@ function updateAimVisuals(dt) {
 /* ============================== camera ============================= */
 // Camera modes: 'far' (entering/leaving a table), 'overview' (bird's eye), 'ready' (zoomed toward the cue ball),
 // 'shot' (bird's eye while balls roll), 'done' (bird's eye after the table), 'outro' (pulls back before the next table).
-const view = { base: 8, center: 0 };
+const view = { base: 8, center: 0, tiltAdj: 0 };
 const cam = { tx: 0, tz: 0, dist: 8, tilt: 58, rot: 0 };
 const fitCam = new THREE.PerspectiveCamera(32, 1, 0.1, 120);
 const FIT_PTS = [];
@@ -1538,10 +1570,12 @@ function computeView() {
   const yTop = 1 - 2 * top / h, yBot = -1 + 2 * bot / h; const half = Math.max(0.2, (yTop - yBot) / 2);
   view.center = (yTop + yBot) / 2;
   const L = G.level.camera;
+  // tall phone screens: a slightly wider lens and a lower camera so the table doesn't read as long and skinny
+  const portrait = w / h < 0.8; view.tiltAdj = portrait ? -10 : 0; camera.fov = fitCam.fov = portrait ? 40 : 32;
   fitCam.aspect = w / h; fitCam.updateProjectionMatrix();
   let lo = 2, hi = 60; const v = new THREE.Vector3();
   for (let i = 0; i < 28; i++) {
-    const mid = (lo + hi) / 2; placeCam(fitCam, 0, 0, mid, L.tilt, L.rotation);
+    const mid = (lo + hi) / 2; placeCam(fitCam, 0, 0, mid, L.tilt + view.tiltAdj, L.rotation);
     let fits = true; for (const p of FIT_PTS) { v.copy(p).project(fitCam); if (Math.abs(v.x) > 0.93 || Math.abs(v.y) > half || v.z > 1) { fits = false; break; } }
     if (fits) hi = mid; else lo = mid;
   }
@@ -1551,14 +1585,14 @@ function computeView() {
   camera.updateProjectionMatrix();
 }
 function poseFor(mode) {
-  const L = G.level.camera, p = { tx: 0, tz: 0, dist: view.base, tilt: L.tilt, rot: L.rotation };
+  const L = G.level.camera, p = { tx: 0, tz: 0, dist: view.base, tilt: L.tilt + view.tiltAdj, rot: L.rotation };
   if (mode === 'ready') {
     const r = (L.rotation + G.yawSmooth) * DEG;
     // aim point a little ahead of the cue ball, along the camera's facing direction
     p.tx = clamp(G.cue.x - Math.sin(r) * 0.35, -0.9, 0.9); p.tz = clamp(G.cue.z - Math.cos(r) * 0.35, -1.9, 1.9);
     p.dist = view.base * 0.5; p.tilt = clamp(L.tilt - 16, 36, 50); p.rot = L.rotation;
   }
-  else if (mode === 'far' || mode === 'outro') { p.dist = view.base * 1.32; p.tilt = Math.min(84, L.tilt + 8); p.tz = -0.3; }
+  else if (mode === 'far' || mode === 'outro') { p.dist = view.base * 1.32; p.tilt = Math.min(84, L.tilt + view.tiltAdj + 8); p.tz = -0.3; }
   return p;
 }
 function snapCamera(mode) { Object.assign(cam, poseFor(mode)); applyCam(); }
@@ -1656,6 +1690,7 @@ function frame(now) {
         const dx = o.x - o.px, dz = o.z - o.pz, d = Math.sqrt(dx * dx + dz * dz);
         if (d > 1e-6 && o.ball) { axis.set(dz / d, 0, -dx / d); qd.setFromAxisAngle(axis, d / o.r); o.ball.quaternion.premultiply(qd); }
         o.px = o.x; o.pz = o.z; o.mesh.position.set(o.x, o.hy, o.z);
+        o.squash = Math.max(0, (o.squash || 0) - dt * 0.9); const sq = o.squash || 0; o.mesh.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5);
       } else if (o.wig) {
         o.wig.t += dt; const w = o.wig, ang = reduceMotion ? 0 : w.amp * Math.exp(-w.t * 5) * Math.sin(w.t * 38);
         axis.set(w.ax, 0, w.az).normalize(); qd.setFromAxisAngle(axis, ang); o.mesh.quaternion.copy(qd).multiply(o.baseQ);
