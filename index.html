@@ -57,7 +57,7 @@
   .seg { flex: 1; height: 6px; border-radius: 3px; background: var(--faint); transition: background .3s; }
   .seg.done { background: var(--ink); }
   .seg.cur { background: rgba(21,21,21,.42); }
-  .pill-wrap { display: flex; justify-content: center; margin-top: 6px; position: relative; }
+  .pill-wrap { display: flex; justify-content: center; margin-top: 2px; position: relative; }
   .pill {
     display: inline-flex; align-items: center; gap: 10px; background: var(--card); border-radius: 999px;
     padding: 8px 16px; min-height: 40px; font-weight: 900; font-size: 17px; letter-spacing: -0.03em;
@@ -84,7 +84,7 @@
   .mini.got.count::after { display: none; }
   .mini.got.count { opacity: 1; transform: none; }
   .float-toast {
-    position: absolute; top: 46px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+    position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%); white-space: nowrap;
     background: var(--red); color: #fff; font-weight: 900; font-size: 14px; border-radius: 999px; padding: 6px 12px;
     animation: floatUp 1.6s ease forwards; pointer-events: none;
   }
@@ -92,7 +92,9 @@
   .lvl-label, .lvl-title, .hint, .wordmark, .pno { text-shadow: 0 0 2px var(--bg), 0 0 10px var(--bg), 0 0 18px var(--bg); }
   .bottom { margin-top: auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .lvl-label { font-size: 11px; font-weight: 900; letter-spacing: .12em; color: rgba(21,21,21,.62); margin-top: 8px; text-align: left; }
-  .lvl-title { font-size: 31px; font-weight: 900; letter-spacing: -0.05em; line-height: 1.05; margin-bottom: 6px; }
+  .lvl-title { font-size: 31px; font-weight: 900; letter-spacing: -0.05em; line-height: 1.05; margin-bottom: 8px; }
+  .goal-text { font-weight: 800; font-size: 14px; color: rgba(21,21,21,.72); margin-top: 8px; letter-spacing: -0.01em; text-shadow: 0 0 2px var(--bg), 0 0 10px var(--bg); }
+  .goal-text small { font-weight: 800; color: var(--muted); }
   .goal-chip {
     background: var(--card); border-radius: 18px; padding: 10px 18px; font-weight: 900; font-size: 16px; letter-spacing: -0.02em;
     box-shadow: 0 2px 0 rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.06); max-width: 100%;
@@ -199,12 +201,12 @@
     </header>
     <div class="progress" id="progress"></div>
     <div class="lvl-label" id="lvl-label">01 / 05 · WARM-UP</div>
-    <div class="pill-wrap" id="pill-wrap">
-      <div class="pill" id="pill"><span id="shot-label">Shot 1</span><i class="sep"></i><span class="tracker" id="tracker"></span></div>
-    </div>
     <div class="bottom" id="bottom">
       <div class="lvl-title" id="lvl-title">…</div>
-      <div class="goal-chip" id="goal-chip">…</div>
+      <div class="pill-wrap" id="pill-wrap">
+      <div class="pill" id="pill"><span id="shot-label">Shot 1</span><i class="sep"></i><span class="tracker" id="tracker"></span></div>
+      </div>
+      <div class="goal-text" id="goal-chip">…</div>
       <div class="hint" id="hint">Drag around to aim. Pull back along the cue, then let go.</div>
     </div>
   </div>
@@ -1221,34 +1223,35 @@ function defaultAim() {
 canvas.addEventListener('pointerdown', (e) => {
   Sound.init();
   if (!canShoot() || drag) return;
-  drag = { id: e.pointerId, lx: e.clientX, ly: e.clientY, aimed: false };
+  drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, mode: null, ref: fingerAngle(e.clientX, e.clientY), aimed: false };
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
 });
-// Each bit of finger movement is read on its own, so one drag can both aim and pull:
-//  - moving around the cue ball turns the aim
-//  - moving toward/away from the ball along the cue charges (or un-charges) the shot
+// One drag does one thing, decided by how it starts and then locked:
+//  - moving around the cue ball -> orbit the aim
+//  - pulling back along the cue -> charge; let go to shoot, slide back to cancel (aim stays put)
 canvas.addEventListener('pointermove', (e) => {
   if (!drag || e.pointerId !== drag.id || !canShoot()) return;
-  const x = e.clientX, y = e.clientY, mx = x - drag.lx, my = y - drag.ly, len = Math.sqrt(mx * mx + my * my);
-  if (len < 3) return;
-  const [cx, cy] = toScreen(G.cue.x, G.cue.z), rx = x - cx, ry = y - cy, rl = Math.sqrt(rx * rx + ry * ry) || 1;
-  const ax = stickAxis(), along = (mx * ax[0] + my * ax[1]) / len, radial = Math.abs(mx * rx + my * ry) / (len * rl);
-  // a little stickiness so a straight pull doesn't wobble the aim (and a circle doesn't charge)
-  const pulling = drag.last === 'power' ? Math.abs(along) > 0.6 && radial > 0.15 : Math.abs(along) > 0.8 && radial > 0.25;
-  drag.last = rl < 40 || pulling ? 'power' : 'aim';
-  if (drag.last === 'power') {
-    aimState.power = clamp(aimState.power - (mx * ax[0] + my * ax[1]) / maxPull(), 0, 1);
-  } else {
-    const a0 = fingerAngle(drag.lx, drag.ly), a1 = fingerAngle(x, y);
-    if (a0 != null && a1 != null && rl > 22) { let d = a1 - a0; d = Math.atan2(Math.sin(d), Math.cos(d)); aimState.angle += d; drag.aimed = true; }
+  const x = e.clientX, y = e.clientY, mx = x - drag.sx, my = y - drag.sy;
+  if (!drag.mode) {
+    const len = Math.sqrt(mx * mx + my * my); if (len < 12) return;
+    const [cx, cy] = toScreen(G.cue.x, G.cue.z), rx = drag.sx - cx, ry = drag.sy - cy, rl = Math.sqrt(rx * rx + ry * ry) || 1;
+    const ax = stickAxis(), along = Math.abs(mx * ax[0] + my * ax[1]) / len, radial = Math.abs(mx * rx + my * ry) / (len * rl);
+    drag.mode = rl < 40 || (along > 0.8 && radial > 0.25) ? 'power' : 'aim';
+    drag.axis = ax;
   }
-  drag.lx = x; drag.ly = y;
+  if (drag.mode === 'aim') {
+    const [cx, cy] = toScreen(G.cue.x, G.cue.z), a = fingerAngle(x, y);
+    if (a != null && drag.ref != null && Math.hypot(x - cx, y - cy) > 22) { let d = a - drag.ref; d = Math.atan2(Math.sin(d), Math.cos(d)); aimState.angle += d; drag.aimed = true; }
+    if (a != null) drag.ref = a;
+  } else {
+    aimState.power = clamp(-(mx * drag.axis[0] + my * drag.axis[1]) / maxPull(), 0, 1);
+  }
 });
 function endDrag(e, cancel) {
   if (!drag || e.pointerId !== drag.id) return;
-  const aimed = drag.aimed; drag = null;
+  const aimed = drag.aimed, wasPower = drag.mode === 'power'; drag = null;
   const p = aimState.power; aimState.power = 0;
-  if (!cancel && p >= 0.05 && canShoot()) { const [dx, dz] = aimDir(); stick.strike = p; shoot(dx, dz, p); return; }
+  if (!cancel && wasPower && p >= 0.05 && canShoot()) { const [dx, dz] = aimDir(); stick.strike = p; shoot(dx, dz, p); return; }
   if (aimed && G.camMode === 'ready') G.readyYaw = readyYaw(); // swing the camera in behind the new aim
 }
 canvas.addEventListener('pointerup', (e) => endDrag(e, false));
@@ -1285,7 +1288,7 @@ function placeCam(c, tx, tz, dist, tilt, rot) {
 }
 function computeView() {
   const w = innerWidth, h = innerHeight;
-  const top = $('pill-wrap').getBoundingClientRect().bottom + 6;
+  const top = $('lvl-label').getBoundingClientRect().bottom + 8;
   const bot = h - $('bottom').getBoundingClientRect().top + 4;
   const yTop = 1 - 2 * top / h, yBot = -1 + 2 * bot / h; const half = Math.max(0.2, (yTop - yBot) / 2);
   view.center = (yTop + yBot) / 2;
@@ -1314,7 +1317,7 @@ function poseFor(mode) {
     const [dx, dz] = aimDir(), r = (G.readyYaw ?? L.rotation) * DEG;
     // aim point a little ahead of the cue ball, along the camera's facing direction
     p.tx = clamp(G.cue.x - Math.sin(r) * 0.35, -0.9, 0.9); p.tz = clamp(G.cue.z - Math.cos(r) * 0.35, -1.9, 1.9);
-    p.dist = view.base * 0.5; p.tilt = Math.max(38, L.tilt - 8); p.rot = G.readyYaw ?? L.rotation; void dx; void dz;
+    p.dist = view.base * 0.5; p.tilt = clamp(L.tilt - 16, 36, 50); p.rot = G.readyYaw ?? L.rotation; void dx; void dz;
   }
   else if (mode === 'far' || mode === 'outro') { p.dist = view.base * 1.32; p.tilt = Math.min(84, L.tilt + 8); p.tz = -0.3; }
   return p;
@@ -1442,7 +1445,7 @@ function updateUI() {
   $('pno').textContent = `No. ${PUZZLE_NO}`;
   $('lvl-label').textContent = `${pad2(G.idx + 1)} / ${pad2(G.levels.length)} · ${tableLabel(G.idx)}`;
   $('lvl-title').textContent = L.title;
-  $('goal-chip').innerHTML = `${esc(gt.main)}${gt.sub ? `<small>${esc(gt.sub)}</small>` : ''}`;
+  $('goal-chip').innerHTML = `${esc(gt.main)}${gt.sub ? ` <small>${esc(gt.sub)}</small>` : ''}`;
   $('hint').classList.remove('hide');
   renderProgress(); renderTracker(); updatePill();
 }
@@ -1536,7 +1539,7 @@ function showStats() {
   sheet.querySelector('.close-x').onclick = sheet.querySelector('#ok').onclick = () => { Sound.tap(); closeOverlay(); };
 }
 const HELP = [
-  { t: 'Aim and shoot', p: 'Drag around to swing the cue. Then drag back along the cue to power up and let go to shoot. Slide back toward the ball to cancel.',
+  { t: 'Aim and shoot', p: 'Drag around to swing the cue. In a new drag, pull back along the cue to power up and let go to shoot. Slide back toward the ball to cancel.',
     art: `<svg viewBox="0 0 230 130"><rect x="20" y="8" width="190" height="114" rx="18" fill="#2f8d5a"/><g fill="#fff">${[0, 1, 2, 3, 4, 5].map(i => `<circle cx="${115}" cy="${84 - i * 10}" r="2.6"/>`).join('')}</g><circle cx="115" cy="32" r="9" fill="#d7262b"/><circle cx="115" cy="94" r="9" fill="#fbf8ef"/><path d="M150 70 v38" stroke="#151515" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 8"/><path d="M142 100 l8 9 l8-9" stroke="#151515" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
   { t: 'Every table has a goal', p: 'Sink a number of balls, only the stripes, certain colors, one special ball, or balls in order. Fewest shots wins.',
     art: `<svg viewBox="0 0 230 130"><rect x="30" y="34" width="170" height="62" rx="31" fill="#fffdf8"/><circle cx="72" cy="65" r="15" fill="#d7262b"/><circle cx="115" cy="65" r="15" fill="#1d4fb8"/><circle cx="158" cy="65" r="15" fill="#151515"/><circle cx="72" cy="65" r="16" fill="#2fa654"/><path d="M65 65l5 5 9-10" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
