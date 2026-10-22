@@ -970,12 +970,12 @@ function loadTable(idx, restore) {
   };
   G.cue = mk(0, L.cueStart);
   G.balls = [G.cue, ...L.balls.map(b => mk(b.number, b.pos))];
-  G.shots = 0; G.orderIdx = 0; G.sunk = []; G.complete = false; G.moving = false; G.lastPocket = null; G.drops = []; G.pops = []; G.acc = 0; G.hadScratch = false;
+  G.shots = 0; G.orderIdx = 0; G.sunk = []; G.out = []; G.complete = false; G.moving = false; G.lastPocket = null; G.drops = []; G.pops = []; G.acc = 0; G.hadScratch = false;
   if (restore && restore.idx === idx) {
-    G.shots = restore.shots || 0; G.orderIdx = restore.orderIdx || 0; G.sunk = restore.sunk || [];
+    G.shots = restore.shots || 0; G.orderIdx = restore.orderIdx || 0; G.sunk = restore.sunk || []; G.out = restore.out || [];
     for (const b of G.balls) {
       const s = restore.pos && restore.pos[b.n]; if (s) { b.x = s[0]; b.z = s[1]; }
-      if (b.n !== 0 && G.sunk.includes(b.n)) { b.sunk = true; b.mesh.visible = false; }
+      if (b.n !== 0 && (G.sunk.includes(b.n) || G.out.includes(b.n))) { b.sunk = true; b.mesh.visible = false; }
     }
   }
   refreshActive();
@@ -1076,8 +1076,14 @@ function pocketBall(b, p) {
   if (b.n === 0) { G.hadScratch = true; addShots(2, 'Scratch · +2'); return; }
   const goal = G.level.goal;
   if (goal.type === 'count') { G.sunk.push(b.n); G.lastPocket = p; }
-  else if (isTarget(b.n) && (goal.type !== 'order' || goal.targets[G.orderIdx] === b.n)) { G.sunk.push(b.n); G.orderIdx++; G.lastPocket = p; }
-  else { b.pending = true; addShots(1, goal.type === 'order' && isTarget(b.n) ? 'Out of order · +1' : 'Wrong ball · +1'); }
+  else if (isTarget(b.n)) {
+    // a target ball always counts; sinking one ahead of its turn on an order table costs +1
+    const early = goal.type === 'order' && goal.targets[G.orderIdx] !== b.n;
+    G.sunk.push(b.n); G.lastPocket = p;
+    while (G.orderIdx < goal.targets.length && G.sunk.includes(goal.targets[G.orderIdx])) G.orderIdx++;
+    if (early) addShots(1, 'Out of order · +1');
+  }
+  else { G.out.push(b.n); addShots(1, 'Wrong ball · +1'); } // stays down, just costs a shot
   renderTracker();
   const done = goal.type === 'count' ? G.sunk.length >= goal.count : goal.targets.every(t => G.sunk.includes(t));
   if (done) completeTable(false);
@@ -1117,7 +1123,7 @@ function onRest() {
   G.inputLocked = false; defaultAim(); G.readyYaw = readyYaw(); G.camMode = 'ready';
 }
 function snapshot() { const pos = {}; for (const b of G.balls) pos[b.n] = [b.x, b.z]; return pos; }
-function saveMid(pos) { day.current = { idx: G.idx, shots: G.shots, orderIdx: G.orderIdx, sunk: G.sunk.slice(), pos: pos || snapshot() }; saveDay(); }
+function saveMid(pos) { day.current = { idx: G.idx, shots: G.shots, orderIdx: G.orderIdx, sunk: G.sunk.slice(), out: G.out.slice(), pos: pos || snapshot() }; saveDay(); }
 
 function shoot(dx, dz, power) {
   if (G.inputLocked || G.moving || G.complete) return;
@@ -1570,7 +1576,7 @@ const HELP = [
     art: `<svg viewBox="0 0 230 130"><rect x="20" y="8" width="190" height="114" rx="18" fill="#2f8d5a"/><g fill="#fff">${[0, 1, 2, 3, 4, 5].map(i => `<circle cx="${115}" cy="${84 - i * 10}" r="2.6"/>`).join('')}</g><circle cx="115" cy="32" r="9" fill="#d7262b"/><circle cx="115" cy="94" r="9" fill="#fbf8ef"/><path d="M150 70 v38" stroke="#151515" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 8"/><path d="M142 100 l8 9 l8-9" stroke="#151515" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
   { t: 'Every table has a goal', p: 'Sink a number of balls, only the stripes, certain colors, one special ball, or balls in order. Fewest shots wins.',
     art: `<svg viewBox="0 0 230 130"><rect x="30" y="34" width="170" height="62" rx="31" fill="#fffdf8"/><circle cx="72" cy="65" r="15" fill="#d7262b"/><circle cx="115" cy="65" r="15" fill="#1d4fb8"/><circle cx="158" cy="65" r="15" fill="#151515"/><circle cx="72" cy="65" r="16" fill="#2fa654"/><path d="M65 65l5 5 9-10" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
-  { t: 'Scratches cost +2', p: 'Sink the cue ball and it\'s +2 shots. Sink a ball the goal says to leave and it\'s +1, and that ball comes back. Tables end at 15 shots.',
+  { t: 'Scratches cost +2', p: 'Sink the cue ball and it\'s +2 shots. Sink a ball the goal says to leave, or one out of order, and it\'s +1. Tables end at 15 shots.',
     art: `<svg viewBox="0 0 230 130"><circle cx="100" cy="72" r="34" fill="#151515"/><circle cx="100" cy="62" r="16" fill="#fbf8ef"/><rect x="138" y="30" width="62" height="38" rx="19" fill="#e2483c"/><text x="169" y="56" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="22" fill="#fff">+2</text></svg>` },
 ];
 function showHelp(step = 0) {
