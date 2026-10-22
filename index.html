@@ -473,10 +473,29 @@ const Sound = (() => {
   }
   // Coming back from another app: iOS leaves audio "interrupted"/"suspended" — wake everything up again
   function wake() { if (!ac) return; if (settings.sound) mediaSession(true); if (ac.state !== 'running') { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } }
-  document.addEventListener('visibilitychange', () => { if (!unmuter) return; if (document.hidden) unmuter.pause(); else wake(); });
-  addEventListener('pageshow', wake); addEventListener('focus', wake);
-  // some iOS versions only allow a restart from a tap, so also wake on the next touch/click/key
-  for (const ev of ['touchend', 'pointerdown', 'keydown']) addEventListener(ev, () => { if (ac && (ac.state !== 'running' || (unmuter && unmuter.paused && settings.sound))) wake(); }, { capture: true, passive: true });
+  // After more than a moment in another app, iOS can leave the audio engine silently dead (it may even claim
+  // to be "running"). So after a longer absence, throw it away and build a fresh one on the next tap.
+  let hiddenAt = 0, rebuildPending = false;
+  function rebuild() {
+    rebuildPending = false; stopMusic();
+    try { if (ac) ac.close(); } catch (e) {}
+    ac = null; sfx = null; mus = null;
+    if (unmuter) { try { unmuter.pause(); URL.revokeObjectURL(unmuter.src); } catch (e) {} unmuter = null; }
+    init();
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { hiddenAt = performance.now(); if (unmuter) unmuter.pause(); return; }
+    if (ac && performance.now() - hiddenAt > 1200) rebuildPending = true;
+    wake();
+  });
+  addEventListener('pageshow', (e) => { if (e.persisted && ac) rebuildPending = true; wake(); });
+  addEventListener('focus', wake);
+  // iOS only lets audio (re)start from a tap, so do the rebuild / restart on the next touch, click or key
+  for (const ev of ['touchend', 'pointerdown', 'keydown']) addEventListener(ev, () => {
+    if (!ac) return;
+    if (rebuildPending) rebuild();
+    else if (ac.state !== 'running' || (unmuter && unmuter.paused && settings.sound)) wake();
+  }, { capture: true, passive: true });
   function init() {
     if (settings.sound) mediaSession(true);
     if (ac) { if (ac.state !== 'running') { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } return; }
