@@ -25,15 +25,15 @@
   }
   * { box-sizing: border-box; }
   html, body {
-    margin: 0; height: 100%; overflow: hidden;
+    margin: 0; height: 100%; overflow: hidden; position: relative;
     background: var(--bg);
     font-family: var(--font); color: var(--ink);
     -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none;
     touch-action: none; overscroll-behavior: none;
   }
   button { font-family: var(--font); color: var(--ink); }
-  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; background: var(--bg); }
-  #ui { position: fixed; inset: 0; pointer-events: none; display: flex; justify-content: center; z-index: 2; }
+  #scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #ui { position: absolute; inset: 0; pointer-events: none; display: flex; justify-content: center; z-index: 2; }
   .col {
     width: 100%; max-width: 480px; height: 100%; display: flex; flex-direction: column; position: relative;
     padding: calc(env(safe-area-inset-top) + 6px) 16px calc(env(safe-area-inset-bottom) + 14px);
@@ -163,10 +163,10 @@
   .close-x { position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; border: 0; background: transparent; font-size: 26px; font-weight: 900; cursor: pointer; color: var(--muted); }
   #fade { position: fixed; inset: 0; background: #ffffff; opacity: 0; pointer-events: none; z-index: 25; display: none; }
   .edge-tint { position: fixed; left: 0; right: 0; pointer-events: none; z-index: 1; }
-  .edge-tint.top { top: 0; height: calc(env(safe-area-inset-top) + 56px); background: linear-gradient(var(--bar) 0, var(--bar) env(safe-area-inset-top), transparent 100%); }
+  .edge-tint.top { top: 12px; height: calc(env(safe-area-inset-top) + 44px); background: linear-gradient(var(--bar) 0, var(--bar) calc(env(safe-area-inset-top) - 12px), transparent 100%); }
   .edge-tint.bottom { bottom: 0; height: calc(env(safe-area-inset-bottom) + 48px); background: linear-gradient(0deg, var(--bar) 0, var(--bar) env(safe-area-inset-bottom), transparent 100%); }
   /* Safari 26 tints its bars from solid fixed strips at the screen edges (read when a strip appears) */
-  .bar-strip { position: fixed; left: 0; right: 0; height: 4px; pointer-events: none; z-index: 50; }
+  .bar-strip { position: fixed; left: 0; right: 0; height: 12px; pointer-events: none; z-index: 50; }
   .bar-strip.top { top: 0; } .bar-strip.bottom { bottom: 0; }
   #toast {
     position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24px); transform: translateX(-50%) translateY(20px);
@@ -174,7 +174,7 @@
     opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; font-size: 15px; white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis;
   }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 8; }
+  #fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 8; }
   #stamp {
     position: fixed; left: 50%; top: 36%; z-index: 9; pointer-events: none; display: none;
     font-weight: 900; font-size: 44px; letter-spacing: -0.04em; color: #e2483c; white-space: nowrap;
@@ -290,7 +290,6 @@ const KV = 0.26;            // speed-proportional drag
 const SLOW_MULT = 4.2;      // friction multiplier inside slow zones
 const STOP_V = 0.035;
 const E_BALL = 0.95, E_RAIL = 0.72, E_OBS = 0.55;
-const RATTLE_V = 4.6;       // faster than this and a ball rattles off the pocket jaws
 const SHOT_CAP = 15;
 const CM = 0.15;            // corner pocket mouth (cushion gap length along each rail)
 const SM = 0.115;           // side pocket half-mouth
@@ -371,19 +370,30 @@ const DEMO_LEVELS = [
   { order: 3, title: 'Under the Hood', theme: 'garage',
     goal: { type: 'colors', balls: [3, 2] }, cueStart: [0, 1.3],
     balls: [{ number: 3, pos: [-0.15, -1.0] }, { number: 2, pos: [0.35, -1.45] }, { number: 5, pos: [-0.62, -1.5] }, { number: 14, pos: [0.6, 0.4] }],
-    obstacles: [{ kind: 'toolbox', shape: 'box', pos: [0, -0.3], size: [0.72, 0.26], rotation: 0 }],
-    slowZones: [], camera: { tilt: 56, rotation: -10, zoom: 1 } },
+    obstacles: [{ kind: 'toolbox', shape: 'box', pos: [0, -0.3], size: [0.72, 0.26], rotation: 0 },
+      { kind: 'cone', shape: 'circle', pos: [0.64, -1.05], radius: 0.1 },
+      { kind: 'sodaCan', shape: 'circle', pos: [-0.55, -0.72], radius: 0.06 }],
+    slowZones: [{ kind: 'spill', shape: 'circle', pos: [0.28, 0.9], radius: 0.28 }],
+    camera: { tilt: 56, rotation: -10, zoom: 1 } },
   { order: 4, title: 'Sandcastle Siege', theme: 'boardwalk',
     goal: { type: 'specific', balls: [8] }, cueStart: [-0.2, 1.4],
     balls: [{ number: 8, pos: [0.25, -1.35] }, { number: 1, pos: [-0.6, -1.2] }, { number: 12, pos: [0.62, -0.2] }, { number: 4, pos: [-0.3, -1.78] }],
-    obstacles: [{ kind: 'sandcastle', shape: 'circle', pos: [0.15, -0.6], radius: 0.17 }],
-    slowZones: [{ kind: 'towel', shape: 'box', pos: [-0.45, 0.35], size: [0.6, 0.9], rotation: 12 }],
+    obstacles: [{ kind: 'sandcastle', shape: 'circle', pos: [0.15, -0.6], radius: 0.17 },
+      { kind: 'sandcastle', shape: 'circle', pos: [0.62, -1.58], radius: 0.11 },
+      { kind: 'beachBall', shape: 'circle', pos: [-0.45, -0.5], radius: 0.12 }],
+    slowZones: [{ kind: 'towel', shape: 'box', pos: [-0.45, 0.35], size: [0.6, 0.9], rotation: 12 },
+      { kind: 'towel', shape: 'box', pos: [0.5, -0.95], size: [0.5, 0.36], rotation: -20 }],
     camera: { tilt: 52, rotation: 12, zoom: 1 } },
   { order: 5, title: 'Fireside Finale', theme: 'cabin',
-    goal: { type: 'order', balls: [1, 2] }, cueStart: [0, 1.3],
-    balls: [{ number: 1, pos: [-0.1, -0.7] }, { number: 2, pos: [0.65, -1.5] }, { number: 7, pos: [-0.6, -1.3] }, { number: 15, pos: [0.2, 0.3] }],
-    obstacles: [{ kind: 'cocoaMug', shape: 'circle', pos: [-0.38, -0.15], radius: 0.12 }, { kind: 'snowGlobe', shape: 'circle', pos: [0.4, -0.9], radius: 0.14 }],
-    slowZones: [], camera: { tilt: 62, rotation: -8, zoom: 1.04 } },
+    goal: { type: 'order', balls: [1, 2] }, cueStart: [0, 1.5],
+    balls: [{ number: 1, pos: [-0.55, -1.45] }, { number: 2, pos: [0.62, -1.62] }, { number: 7, pos: [-0.15, -1.25] }, { number: 15, pos: [0.75, 0.2] }],
+    obstacles: [{ kind: 'book', shape: 'box', pos: [-0.25, 0.1], size: [0.9, 0.14], rotation: 0 },
+      { kind: 'cocoaMug', shape: 'circle', pos: [-0.55, -0.85], radius: 0.12 },
+      { kind: 'snowGlobe', shape: 'circle', pos: [0.45, -0.55], radius: 0.15 },
+      { kind: 'book', shape: 'box', pos: [0.55, -1.15], size: [0.36, 0.12], rotation: 30 },
+      { kind: 'cocoaMug', shape: 'circle', pos: [0.0, -1.75], radius: 0.1 }],
+    slowZones: [{ kind: 'rug', shape: 'circle', pos: [0.35, 0.72], radius: 0.3 }],
+    camera: { tilt: 62, rotation: -8, zoom: 1.04 } },
 ];
 
 /* ======================== ball colors & goals ====================== */
@@ -1044,10 +1054,25 @@ function physStep() {
   for (let it = 0; it < 2; it++) for (let i = 0; i < A.length; i++) for (let j = i + 1; j < A.length; j++) {
     const a = A[i], b = A[j]; const dx = b.x - a.x, dz = b.z - a.z, d2 = dx * dx + dz * dz;
     if (d2 >= 4 * R * R || d2 < 1e-12) continue;
-    const d = Math.sqrt(d2), nx = dx / d, nz = dz / d, ov = (2 * R - d) / 2;
-    a.x -= nx * ov; a.z -= nz * ov; b.x += nx * ov; b.z += nz * ov;
-    const rel = (a.vx - b.vx) * nx + (a.vz - b.vz) * nz;
-    if (rel > 0) { const j2 = rel * (1 + E_BALL) / 2; a.vx -= j2 * nx; a.vz -= j2 * nz; b.vx += j2 * nx; b.vz += j2 * nz; Sound.clack(rel); }
+    let d = Math.sqrt(d2), nx = dx / d, nz = dz / d;
+    let rel = (a.vx - b.vx) * nx + (a.vz - b.vz) * nz;
+    let t = 0;
+    if (rel > 0) {
+      // the balls overlapped during this step: rewind both to the exact moment they touched,
+      // so the hit direction matches the aim preview even on fast shots
+      const wx = b.vx - a.vx, wz = b.vz - a.vz, qa = wx * wx + wz * wz;
+      if (qa > 1e-12) {
+        const qb = -2 * (dx * wx + dz * wz), qc = d2 - 4 * R * R, disc = qb * qb - 4 * qa * qc;
+        t = Math.min(DT * 1.5, Math.max(0, (-qb + Math.sqrt(Math.max(0, disc))) / (2 * qa)));
+      }
+      a.x -= a.vx * t; a.z -= a.vz * t; b.x -= b.vx * t; b.z -= b.vz * t;
+      const ex = b.x - a.x, ez = b.z - a.z; d = Math.sqrt(ex * ex + ez * ez) || 1e-6; nx = ex / d; nz = ez / d;
+      rel = (a.vx - b.vx) * nx + (a.vz - b.vz) * nz;
+      if (rel > 0) { const j2 = rel * (1 + E_BALL) / 2; a.vx -= j2 * nx; a.vz -= j2 * nz; b.vx += j2 * nx; b.vz += j2 * nz; Sound.clack(rel); }
+      a.x += a.vx * t; a.z += a.vz * t; b.x += b.vx * t; b.z += b.vz * t;
+      const fx = b.x - a.x, fz = b.z - a.z; d = Math.sqrt(fx * fx + fz * fz) || 1e-6; nx = fx / d; nz = fz / d;
+    }
+    if (d < 2 * R) { const ov = (2 * R - d) / 2; a.x -= nx * ov; a.z -= nz * ov; b.x += nx * ov; b.z += nz * ov; }
   }
   for (const b of A) {
     if (b.x > -0.9 && b.x < 0.9 && b.z > -1.9 && b.z < 1.9) { /* far from cushions */ } else {
@@ -1066,8 +1091,7 @@ function physStep() {
     if (bd < best.r * best.r) {
       const d = Math.sqrt(bd) || 1e-6, nx = (b.x - best.x) / d, nz = (b.z - best.z) / d;
       const vn = b.vx * nx + b.vz * nz, sp = Math.sqrt(b.vx * b.vx + b.vz * b.vz);
-      if (sp > RATTLE_V && vn < 0) { b.vx = (b.vx - 2 * vn * nx) * 0.38; b.vz = (b.vz - 2 * vn * nz) * 0.38; Sound.thump(sp * 0.6); }
-      else if (vn <= 0 || sp < 1.2) pocketBall(b, best);
+      if (vn <= 0 || sp < 1.2) pocketBall(b, best);
     }
   }
   if (G.activeDirty) { refreshActive(); G.activeDirty = false; }
@@ -1192,7 +1216,7 @@ function firstContact(x0, z0, dx, dz) {
   let lo = prev, hi = s; for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; const h = probe(x0 + dx * m, z0 + dz * m); if (h) { hi = m; hit = h; } else lo = m; }
   return { s: lo, hit };
 }
-function setDot(i, x, z, r) { tmpV.set(x, 0.006, z); tmpS.set(r, 1, r); tmpM.compose(tmpV, tmpQ.identity(), tmpS); aim.dots.setMatrixAt(i, tmpM); }
+function setDot(i, x, z, r) { tmpV.set(x, 0.014, z); tmpS.set(r, 1, r); tmpM.compose(tmpV, tmpQ.identity(), tmpS); aim.dots.setMatrixAt(i, tmpM); }
 function drawAim(dx, dz, power) {
   const c = G.cue; const { s, hit } = firstContact(c.x, c.z, dx, dz);
   let n = 0; const gap = 0.055;
@@ -1200,13 +1224,13 @@ function drawAim(dx, dz, power) {
   const gx = c.x + dx * s, gz = c.z + dz * s;
   const showGhost = hit && hit.type !== 'pocket';
   aim.ghost.visible = aim.ghostFill.visible = !!showGhost;
-  aim.ghost.position.set(gx, 0.007, gz); aim.ghostFill.position.set(gx, 0.006, gz);
+  aim.ghost.position.set(gx, 0.016, gz); aim.ghostFill.position.set(gx, 0.015, gz);
   if (hit && hit.type === 'ball') {
     const b = hit.ball; let nx = b.x - gx, nz = b.z - gz; const d = Math.sqrt(nx * nx + nz * nz) || 1; nx /= d; nz /= d;
     for (let t = R * 1.6, k = 0; k < 7 && n < 220; t += gap, k++) setDot(n++, b.x + nx * t, b.z + nz * t, 0.009 * (1 - k * 0.09));
   }
   aim.dots.count = n; aim.dots.instanceMatrix.needsUpdate = true;
-  aim.ring.position.set(c.x, 0.008, c.z); aim.ringBg.position.set(c.x, 0.007, c.z);
+  aim.ring.position.set(c.x, 0.017, c.z); aim.ringBg.position.set(c.x, 0.016, c.z);
   const segs = Math.max(1, Math.round(power * aim.SEG));
   aim.ring.geometry.setDrawRange(0, segs * 6);
   aim.ring.material.color.setHSL(lerp(0.33, 0.0, power), 0.85, 0.55);
@@ -1317,7 +1341,28 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
 })();
 
+// Keyboard: ←/→ turn the cue, ↓ charges, ↑ lowers the charge, Space shoots. Works alongside dragging.
+const keys = { left: 0, right: 0, down: 0, up: 0 };
+addEventListener('keydown', (e) => {
+  const k = { ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', ArrowUp: 'up' }[e.key];
+  if (k || e.code === 'Space') { if ($('overlay').classList.contains('show')) return; e.preventDefault(); Sound.init(); }
+  if (k) { if (!keys[k]) keys[k] = performance.now(); return; }
+  if (e.code === 'Space' && !e.repeat && !drag && aimState.power >= 0.05 && canShoot()) {
+    const p = aimState.power, [dx, dz] = aimDir(); aimState.power = 0; stick.strike = p; shoot(dx, dz, p);
+  }
+});
+addEventListener('keyup', (e) => { const k = { ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', ArrowUp: 'up' }[e.key]; if (k) keys[k] = 0; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = 0; });
+function updateKeys(dt) {
+  if (!canShoot() || drag) return;
+  const now = performance.now(), held = (k) => keys[k] ? (now - keys[k]) / 1000 : 0;
+  const turn = (k) => held(k) ? (held(k) < 0.35 ? 18 : 75) * DEG * dt : 0; // tap for fine moves, hold to sweep
+  aimState.angle += turn('right') - turn('left'); // right arrow = clockwise on screen
+  if (keys.down) aimState.power = Math.min(1, aimState.power + dt * 0.7);
+  if (keys.up) aimState.power = Math.max(0, aimState.power - dt * 0.9);
+}
 function updateAimVisuals(dt) {
+  updateKeys(dt);
   const ready = G.level && !G.moving && !G.complete && !G.cue.sunk && G.camMode !== 'outro';
   // cue stick: fades out on the shot, fades back in when the camera settles on the cue ball
   const want = ready && !G.inputLocked ? 1 : 0;
@@ -1593,7 +1638,7 @@ function showStats() {
   sheet.querySelector('.close-x').onclick = sheet.querySelector('#ok').onclick = () => { Sound.tap(); closeOverlay(); };
 }
 const HELP = [
-  { t: 'Aim and shoot', p: 'Drag around to swing the cue. Drag the strip at the bottom to turn the camera. In a new drag, pull back along the cue to power up and let go to shoot. Slide back toward the ball to cancel.',
+  { t: 'Aim and shoot', p: 'Drag around to swing the cue (or ← →). Drag the strip at the bottom to turn the camera. In a new drag, pull back along the cue to power up and let go to shoot. Slide back toward the ball to cancel. Keyboard: ↓ charges, ↑ lowers it, Space shoots.',
     art: `<svg viewBox="0 0 230 130"><rect x="20" y="8" width="190" height="114" rx="18" fill="#2f8d5a"/><g fill="#fff">${[0, 1, 2, 3, 4, 5].map(i => `<circle cx="${115}" cy="${84 - i * 10}" r="2.6"/>`).join('')}</g><circle cx="115" cy="32" r="9" fill="#d7262b"/><circle cx="115" cy="94" r="9" fill="#fbf8ef"/><path d="M150 70 v38" stroke="#151515" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 8"/><path d="M142 100 l8 9 l8-9" stroke="#151515" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
   { t: 'Every table has a goal', p: 'Sink a number of balls, only the stripes, certain colors, one special ball, or balls in order. Fewest shots wins.',
     art: `<svg viewBox="0 0 230 130"><rect x="30" y="34" width="170" height="62" rx="31" fill="#fffdf8"/><circle cx="72" cy="65" r="15" fill="#d7262b"/><circle cx="115" cy="65" r="15" fill="#1d4fb8"/><circle cx="158" cy="65" r="15" fill="#151515"/><circle cx="72" cy="65" r="16" fill="#2fa654"/><path d="M65 65l5 5 9-10" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
@@ -1678,7 +1723,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && lo
   const dare = new URLSearchParams(location.search);
   if (dare.get('dare') && !day.done) setTimeout(() => toast(`A friend did table ${+dare.get('t') || 1} in ${+dare.get('dare')} shots. Beat that!`), 900);
   // expose a tiny hook for automated testing
-  window.__poolsies = { G, shoot, THREE, camera, aimState, toScreen, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
+  window.__poolsies = { G, shoot, THREE, camera, aimState, toScreen, firstContact, physStep, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
 })();
 </script>
 </body>
