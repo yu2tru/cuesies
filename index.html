@@ -101,7 +101,15 @@
     box-shadow: 0 2px 0 rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.06); max-width: 100%;
   }
   .goal-chip small { display: block; font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: 0; margin-top: 2px; }
-  .hint { font-size: 13px; font-weight: 800; color: var(--muted); margin-top: 6px; transition: opacity .3s; }
+  .turn {
+    pointer-events: auto; touch-action: none; cursor: grab; width: 100%; max-width: 340px; height: 44px; margin-top: 8px; border-radius: 999px;
+    display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 800; color: var(--muted);
+    background-color: rgba(255,253,248,.4); box-shadow: inset 0 0 0 1.5px rgba(21,21,21,.08);
+    background-image: repeating-linear-gradient(90deg, rgba(21,21,21,.10) 0 2px, transparent 2px 18px); background-size: 100% 10px; background-repeat: repeat-x; background-position: 0 center;
+  }
+  .turn.active { cursor: grabbing; background-color: rgba(255,253,248,.6); }
+  .turn span { background: rgba(255,253,248,.85); padding: 2px 8px; border-radius: 999px; }
+  .turn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
   .hint.hide { opacity: 0; }
 
   /* Overlays */
@@ -214,7 +222,9 @@
       <div class="pill" id="pill"><span id="shot-label">Shot 1</span><i class="sep"></i><span class="tracker" id="tracker"></span></div>
       </div>
       <div class="goal-text" id="goal-chip">…</div>
-      <div class="hint" id="hint">Drag around to aim. Pull back along the cue, then let go.</div>
+      <div class="turn" id="hint" aria-label="Drag left or right to turn the camera">
+        <svg viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></svg><span>Drag here to turn</span><svg viewBox="0 0 24 24"><path d="M10 6l6 6-6 6"/></svg>
+      </div>
     </div>
   </div>
 </div>
@@ -870,7 +880,7 @@ function zoneMesh(z, th) {
 const G = {
   levels: DEMO_LEVELS.map((l, i) => normalizeLevel({ ...l, date: TODAY }, i)),
   remote: false, sb: null,
-  idx: 0, level: null, theme: null, camMode: 'overview',
+  idx: 0, level: null, theme: null, camMode: 'overview', yawTarget: 0, yawSmooth: 0,
   balls: [], cue: null, active: [], obstacles: [], zones: [],
   shots: 0, orderIdx: 0, sunk: [], complete: false, moving: false, inputLocked: true,
   lastPocket: null, acc: 0, drops: [], pops: [], hadScratch: false,
@@ -983,9 +993,8 @@ function loadTable(idx, restore) {
   aim.group.visible = false; levelGroup.add(aim.group);
   sunburst.visible = false; $('stamp').classList.remove('show');
   G.inputLocked = false; aimState.power = 0; drag = null; defaultAim(); setStickOpacity(0); stick.strike = 0;
-  G.readyYaw = null;
+  G.yawTarget = 0; G.yawSmooth = 0;
   updateUI(); computeView(); snapCamera('far');
-  if (G.shots > 0) G.readyYaw = readyYaw();
   tweenCamera(G.shots > 0 ? 'ready' : 'overview', 1.1, easeOut); // entering: ease out
   setTimeout(() => fadeTo(false, 450), 60);
 }
@@ -1119,8 +1128,8 @@ function onRest() {
   for (const b of G.balls) if (b.pending) respawn(b);
   refreshActive();
   if (G.shots >= SHOT_CAP) { G.shots = SHOT_CAP; completeTable(true); return; }
-  saveMid(); updatePill(); $('hint').classList.remove('hide');
-  G.inputLocked = false; defaultAim(); G.readyYaw = readyYaw(); G.camMode = 'ready';
+  saveMid(); updatePill(); 
+  G.inputLocked = false; defaultAim(); G.camMode = 'ready';
 }
 function snapshot() { const pos = {}; for (const b of G.balls) pos[b.n] = [b.x, b.z]; return pos; }
 function saveMid(pos) { day.current = { idx: G.idx, shots: G.shots, orderIdx: G.orderIdx, sunk: G.sunk.slice(), out: G.out.slice(), pos: pos || snapshot() }; saveDay(); }
@@ -1135,7 +1144,6 @@ function shoot(dx, dz, power) {
   G.cue.vx = dx * sp; G.cue.vz = dz * sp;
   G.moving = true; G.inputLocked = true; G.acc = 0; G.camMode = 'shot';
   Sound.cue(power); haptic(8);
-  $('hint').classList.add('hide');
   updatePill();
 }
 function completeTable(capped) {
@@ -1286,11 +1294,28 @@ function endDrag(e, cancel) {
   const aimed = drag.aimed, wasPower = drag.mode === 'power'; drag = null;
   const p = aimState.power; aimState.power = 0;
   if (!cancel && wasPower && p >= 0.05 && canShoot()) { const [dx, dz] = aimDir(); stick.strike = p; shoot(dx, dz, p); return; }
-  if (aimed && G.camMode === 'ready') G.readyYaw = readyYaw(); // swing the camera in behind the new aim
+  void aimed;
 }
 canvas.addEventListener('pointerup', (e) => endDrag(e, false));
 canvas.addEventListener('pointercancel', (e) => endDrag(e, true));
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// Camera turn strip (bottom of the screen): drag left/right to orbit the camera. The camera eases after the finger.
+(() => {
+  const el = $('hint'); let tdrag = null;
+  el.addEventListener('pointerdown', (e) => {
+    Sound.init(); if (tdrag || $('overlay').classList.contains('show')) return;
+    tdrag = { id: e.pointerId, x: e.clientX }; el.classList.add('active');
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!tdrag || e.pointerId !== tdrag.id) return;
+    G.yawTarget -= (e.clientX - tdrag.x) * 0.45; tdrag.x = e.clientX; // grab-and-turn feel
+    el.style.backgroundPositionX = (-G.yawTarget / 0.45) + 'px';
+  });
+  const end = (e) => { if (tdrag && e.pointerId === tdrag.id) { tdrag = null; el.classList.remove('active'); } };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+})();
 
 function updateAimVisuals(dt) {
   const ready = G.level && !G.moving && !G.complete && !G.cue.sunk && G.camMode !== 'outro';
@@ -1339,25 +1364,20 @@ function computeView() {
   camera.setViewOffset(w, h, 0, view.center * h / 2, w, h);
   camera.updateProjectionMatrix();
 }
-function readyYaw() {
-  // look straight down the cue: camera directly behind the cue ball, facing along the aim
-  const [dx, dz] = aimDir();
-  return Math.atan2(-dx, -dz) / DEG;
-}
 function poseFor(mode) {
   const L = G.level.camera, p = { tx: 0, tz: 0, dist: view.base, tilt: L.tilt, rot: L.rotation };
   if (mode === 'ready') {
-    const [dx, dz] = aimDir(), r = (G.readyYaw ?? L.rotation) * DEG;
+    const r = (L.rotation + G.yawSmooth) * DEG;
     // aim point a little ahead of the cue ball, along the camera's facing direction
     p.tx = clamp(G.cue.x - Math.sin(r) * 0.35, -0.9, 0.9); p.tz = clamp(G.cue.z - Math.cos(r) * 0.35, -1.9, 1.9);
-    p.dist = view.base * 0.5; p.tilt = clamp(L.tilt - 16, 36, 50); p.rot = G.readyYaw ?? L.rotation; void dx; void dz;
+    p.dist = view.base * 0.5; p.tilt = clamp(L.tilt - 16, 36, 50); p.rot = L.rotation;
   }
   else if (mode === 'far' || mode === 'outro') { p.dist = view.base * 1.32; p.tilt = Math.min(84, L.tilt + 8); p.tz = -0.3; }
   return p;
 }
 function snapCamera(mode) { Object.assign(cam, poseFor(mode)); applyCam(); }
 function applyCam() {
-  placeCam(camera, cam.tx, cam.tz, cam.dist, cam.tilt, cam.rot);
+  placeCam(camera, cam.tx, cam.tz, cam.dist, cam.tilt, cam.rot + G.yawSmooth); // + the player's own turn
   scene.fog.near = cam.dist * 1.15; scene.fog.far = cam.dist * 2.6;
 }
 const wrapDeg = (d) => ((d + 540) % 360) - 180;
@@ -1365,6 +1385,8 @@ const easeIn = (t) => t * t * t, easeOut = (t) => 1 - (1 - t) ** 3;
 let camTween = null; // { from, mode, t, dur, ease }
 function tweenCamera(mode, dur, ease) { G.camMode = mode; camTween = reduceMotion ? null : { from: { ...cam }, mode, t: 0, dur, ease }; }
 function updateCamera(dt) {
+  // ease toward the turn the player dragged to, so fast swipes stay smooth
+  G.yawSmooth += (G.yawTarget - G.yawSmooth) * (reduceMotion ? 1 : 1 - Math.exp(-dt * 7));
   const p = poseFor(G.camMode);
   if (reduceMotion) { Object.assign(cam, p); applyCam(); return; }
   if (camTween && camTween.mode === G.camMode) {
@@ -1479,7 +1501,6 @@ function updateUI() {
   $('lvl-label').textContent = `${pad2(G.idx + 1)} / ${pad2(G.levels.length)} · ${tableLabel(G.idx)}`;
   $('lvl-title').textContent = L.title;
   $('goal-chip').innerHTML = `${esc(gt.main)}${gt.sub ? ` <small>${esc(gt.sub)}</small>` : ''}`;
-  $('hint').classList.remove('hide');
   renderProgress(); renderTracker(); updatePill();
 }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -1572,7 +1593,7 @@ function showStats() {
   sheet.querySelector('.close-x').onclick = sheet.querySelector('#ok').onclick = () => { Sound.tap(); closeOverlay(); };
 }
 const HELP = [
-  { t: 'Aim and shoot', p: 'Drag around to swing the cue. In a new drag, pull back along the cue to power up and let go to shoot. Slide back toward the ball to cancel.',
+  { t: 'Aim and shoot', p: 'Drag around to swing the cue. Drag the strip at the bottom to turn the camera. In a new drag, pull back along the cue to power up and let go to shoot. Slide back toward the ball to cancel.',
     art: `<svg viewBox="0 0 230 130"><rect x="20" y="8" width="190" height="114" rx="18" fill="#2f8d5a"/><g fill="#fff">${[0, 1, 2, 3, 4, 5].map(i => `<circle cx="${115}" cy="${84 - i * 10}" r="2.6"/>`).join('')}</g><circle cx="115" cy="32" r="9" fill="#d7262b"/><circle cx="115" cy="94" r="9" fill="#fbf8ef"/><path d="M150 70 v38" stroke="#151515" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 8"/><path d="M142 100 l8 9 l8-9" stroke="#151515" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
   { t: 'Every table has a goal', p: 'Sink a number of balls, only the stripes, certain colors, one special ball, or balls in order. Fewest shots wins.',
     art: `<svg viewBox="0 0 230 130"><rect x="30" y="34" width="170" height="62" rx="31" fill="#fffdf8"/><circle cx="72" cy="65" r="15" fill="#d7262b"/><circle cx="115" cy="65" r="15" fill="#1d4fb8"/><circle cx="158" cy="65" r="15" fill="#151515"/><circle cx="72" cy="65" r="16" fill="#2fa654"/><path d="M65 65l5 5 9-10" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
@@ -1657,7 +1678,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && lo
   const dare = new URLSearchParams(location.search);
   if (dare.get('dare') && !day.done) setTimeout(() => toast(`A friend did table ${+dare.get('t') || 1} in ${+dare.get('dare')} shots. Beat that!`), 900);
   // expose a tiny hook for automated testing
-  window.__poolsies = { G, shoot, THREE, camera, aimState, toScreen, readyYaw, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
+  window.__poolsies = { G, shoot, THREE, camera, aimState, toScreen, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
 })();
 </script>
 </body>
