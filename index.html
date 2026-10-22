@@ -98,6 +98,10 @@
     box-shadow: 0 2px 0 rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.06); max-width: 100%;
   }
   .goal-chip small { display: block; font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: 0; margin-top: 2px; }
+  .power { position: relative; width: 100%; max-width: 340px; height: 16px; border-radius: 999px; margin-top: 10px;
+    background: rgba(255,253,248,.75); box-shadow: inset 0 2px 3px rgba(0,0,0,.14), 0 2px 0 rgba(0,0,0,.06); overflow: hidden; transition: transform .15s; }
+  .power.live { transform: scaleY(1.15); }
+  .power-fill { position: absolute; inset: 0; border-radius: 999px; background: linear-gradient(90deg, #2fa654 0%, #9cc82e 30%, #f3b81b 55%, #f07a2a 78%, #e2483c 100%); clip-path: inset(0 100% 0 0 round 999px); }
   .hint { font-size: 13px; font-weight: 800; color: var(--muted); margin-top: 6px; transition: opacity .3s; }
   .hint.hide { opacity: 0; }
 
@@ -207,7 +211,8 @@
       <div class="lvl-label" id="lvl-label">01 / 05 · WARM-UP</div>
       <div class="lvl-title" id="lvl-title">…</div>
       <div class="goal-chip" id="goal-chip">…</div>
-      <div class="hint" id="hint">Drag back from anywhere, then let go.</div>
+      <div class="power" id="power" aria-label="Shot power"><div class="power-fill" id="power-fill"></div></div>
+      <div class="hint" id="hint">Drag around to aim. Pull back along the cue, then let go.</div>
     </div>
   </div>
 </div>
@@ -860,7 +865,7 @@ function zoneMesh(z, th) {
 const G = {
   levels: DEMO_LEVELS.map((l, i) => normalizeLevel({ ...l, date: TODAY }, i)),
   remote: false, sb: null,
-  idx: 0, level: null, theme: null,
+  idx: 0, level: null, theme: null, camMode: 'overview',
   balls: [], cue: null, active: [], obstacles: [], zones: [],
   shots: 0, orderIdx: 0, sunk: [], complete: false, moving: false, inputLocked: true,
   lastPocket: null, acc: 0, drops: [], pops: [], hadScratch: false,
@@ -949,8 +954,9 @@ function loadTable(idx, restore) {
   for (const b of G.balls) { b.px = b.x; b.pz = b.z; b.mesh.position.set(b.x, R, b.z); b.mesh.scale.setScalar(1); }
   aim.group.visible = false; levelGroup.add(aim.group);
   sunburst.visible = false; $('stamp').classList.remove('show');
-  G.inputLocked = false;
-  updateUI(); computeView(); snapCamera();
+  G.inputLocked = false; aimState.power = 0; drag = null; defaultAim(); setStickOpacity(0); stick.strike = 0;
+  updateUI(); computeView(); snapCamera('far');
+  G.camMode = G.shots > 0 ? 'ready' : 'overview';
 }
 function refreshActive() { G.active = G.balls.filter(b => !b.sunk); }
 
@@ -1077,7 +1083,7 @@ function onRest() {
   refreshActive();
   if (G.shots >= SHOT_CAP) { G.shots = SHOT_CAP; completeTable(true); return; }
   saveMid(); updatePill(); $('hint').classList.remove('hide');
-  G.inputLocked = false;
+  G.inputLocked = false; G.camMode = 'ready';
 }
 function snapshot() { const pos = {}; for (const b of G.balls) pos[b.n] = [b.x, b.z]; return pos; }
 function saveMid(pos) { day.current = { idx: G.idx, shots: G.shots, orderIdx: G.orderIdx, sunk: G.sunk.slice(), pos: pos || snapshot() }; saveDay(); }
@@ -1090,13 +1096,13 @@ function shoot(dx, dz, power) {
   saveMid(pre); // a refresh mid-shot keeps the shot spent
   const sp = MAX_SPEED * power;
   G.cue.vx = dx * sp; G.cue.vz = dz * sp;
-  G.moving = true; G.inputLocked = true; G.acc = 0;
+  G.moving = true; G.inputLocked = true; G.acc = 0; G.camMode = 'shot';
   Sound.cue(power); haptic(8);
   $('hint').classList.add('hide');
   updatePill();
 }
 function completeTable(capped) {
-  G.complete = true; G.inputLocked = true;
+  G.complete = true; G.inputLocked = true; G.camMode = 'done';
   const shots = Math.min(G.shots, SHOT_CAP); G.shots = shots;
   const oneAndDone = shots === 1 && !capped;
   day.results[G.idx] = shots; day.current = null;
@@ -1162,40 +1168,113 @@ function drawAim(dx, dz, power) {
   aim.group.visible = true;
 }
 
+/* ============================== cue stick ========================== */
+const stick = (() => {
+  const root = new THREE.Group(), tilt = new THREE.Group(), body = new THREE.Group();
+  root.add(tilt); tilt.add(body); tilt.rotation.x = -9 * DEG;
+  const mats = [];
+  // pieces from the tip (z = 0) to the butt; thin end first
+  const parts = [[0.0115, 0.0115, 0.016, '#3d7fd6', 0.9], [0.012, 0.0122, 0.034, '#f6f1e6', 0.4], [0.0122, 0.02, 0.95, '#e9d3a6', 0.45],
+    [0.021, 0.021, 0.03, '#c9ced3', 0.25], [0.021, 0.028, 0.42, '#6b3a22', 0.4], [0.029, 0.029, 0.18, '#1d1d1d', 0.8], [0.029, 0.027, 0.03, '#111111', 0.6]];
+  let z = 0;
+  for (const [r0, r1, len, color, rough] of parts) {
+    const g = new THREE.CylinderGeometry(r1, r0, len, 18); g.rotateX(Math.PI / 2); g.translate(0, 0, z + len / 2);
+    const m = new THREE.MeshStandardMaterial({ color, roughness: rough, transparent: true, opacity: 0 }); mats.push(m);
+    const mesh = new THREE.Mesh(g, m); mesh.castShadow = true; body.add(mesh); z += len;
+  }
+  root.visible = false; scene.add(root);
+  return { root, body, mats, op: 0, gap: R + 0.02, strike: 0 };
+})();
+function setStickOpacity(o) {
+  stick.op = o; for (const m of stick.mats) m.opacity = o;
+  stick.root.visible = o > 0.01; for (const c of stick.body.children) c.castShadow = o > 0.6;
+}
+
 /* ============================== input ============================== */
+// One finger, two kinds of drag. Whichever it starts as, it stays for that drag:
+//  - circle around the table -> rotate the aim (and the cue stick)
+//  - pull straight back along the cue stick -> charge the power bar; let go to shoot, slide back to cancel
 let drag = null;
+const aimState = { angle: -Math.PI / 2, power: 0 };
 const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -R), hitP = new THREE.Vector3();
+const aimDir = () => [Math.cos(aimState.angle), Math.sin(aimState.angle)];
 function canShoot() { return !G.inputLocked && !G.moving && !G.complete && !$('overlay').classList.contains('show'); }
-function cueScreen() { const v = new THREE.Vector3(G.cue.x, R, G.cue.z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; }
+function toScreen(x, z) { const v = new THREE.Vector3(x, R, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; }
 function screenToTable(sx, sy) { ndc.set(sx / innerWidth * 2 - 1, -(sy / innerHeight) * 2 + 1); raycaster.setFromCamera(ndc, camera); return raycaster.ray.intersectPlane(plane, hitP) ? [hitP.x, hitP.z] : null; }
-function aimFromDrag() {
-  const ddx = drag.x - drag.sx, ddy = drag.y - drag.sy, len = Math.sqrt(ddx * ddx + ddy * ddy);
-  if (len < 10) return null;
-  const [cx, cy] = cueScreen(); const p = screenToTable(cx - ddx / len * 90, cy - ddy / len * 90);
-  if (!p) return null;
-  let dx = p[0] - G.cue.x, dz = p[1] - G.cue.z; const d = Math.sqrt(dx * dx + dz * dz) || 1; dx /= d; dz /= d;
-  const maxPull = clamp(Math.min(innerWidth, innerHeight) * 0.42, 150, 280);
-  return { dx, dz, power: clamp(len / maxPull, 0.03, 1) };
+const maxPull = () => clamp(Math.min(innerWidth, innerHeight) * 0.32, 110, 190);
+function stickAxis() { // the aim direction as seen on screen (unit vector, pointing where the ball will go)
+  const [dx, dz] = aimDir(), a = toScreen(G.cue.x, G.cue.z), b = toScreen(G.cue.x + dx * 0.4, G.cue.z + dz * 0.4);
+  const vx = b[0] - a[0], vy = b[1] - a[1], l = Math.sqrt(vx * vx + vy * vy) || 1; return [vx / l, vy / l];
+}
+function fingerAngle(x, y) { const p = screenToTable(x, y); return p ? Math.atan2(p[1] - G.cue.z, p[0] - G.cue.x) : null; }
+function defaultAim() {
+  const g = G.level.goal; let best = null, bd = 1e9;
+  for (const b of G.active) {
+    if (b === G.cue) continue;
+    const want = g.type === 'count' ? true : g.type === 'order' ? b.n === g.targets[G.orderIdx] : g.targets.includes(b.n) && !G.sunk.includes(b.n);
+    const d = (b.x - G.cue.x) ** 2 + (b.z - G.cue.z) ** 2 + (want ? 0 : 100);
+    if (d < bd) { bd = d; best = b; }
+  }
+  aimState.angle = best ? Math.atan2(best.z - G.cue.z, best.x - G.cue.x) : -Math.PI / 2;
 }
 canvas.addEventListener('pointerdown', (e) => {
   Sound.init();
   if (!canShoot() || drag) return;
-  drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY };
+  drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY, mode: null, ref: fingerAngle(e.clientX, e.clientY), axis: stickAxis() };
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
 });
-canvas.addEventListener('pointermove', (e) => { if (drag && e.pointerId === drag.id) { drag.x = e.clientX; drag.y = e.clientY; } });
-function endDrag(e, cancel) {
+canvas.addEventListener('pointermove', (e) => {
   if (!drag || e.pointerId !== drag.id) return;
   drag.x = e.clientX; drag.y = e.clientY;
-  const a = cancel ? null : aimFromDrag();
-  drag = null; aim.group.visible = false;
-  if (a) shoot(a.dx, a.dz, a.power);
+  if (!canShoot()) return;
+  const mx = drag.x - drag.sx, my = drag.y - drag.sy;
+  if (!drag.mode) {
+    const len = Math.sqrt(mx * mx + my * my); if (len < 12) return;
+    // power only when moving along the cue AND toward/away from the ball; moving around the ball always aims
+    const [cx, cy] = toScreen(G.cue.x, G.cue.z); const rx = drag.sx - cx, ry = drag.sy - cy, rl = Math.sqrt(rx * rx + ry * ry) || 1;
+    const along = Math.abs(mx * drag.axis[0] + my * drag.axis[1]) / len, radial = Math.abs(mx * rx + my * ry) / (len * rl);
+    drag.mode = along > 0.77 && (radial > 0.5 || rl < 40) ? 'power' : 'aim';
+  }
+  if (drag.mode === 'aim') {
+    const [cx, cy] = toScreen(G.cue.x, G.cue.z), a = fingerAngle(drag.x, drag.y);
+    const farEnough = Math.hypot(drag.x - cx, drag.y - cy) > 22;
+    if (a != null && drag.ref != null && farEnough) { let d = a - drag.ref; d = Math.atan2(Math.sin(d), Math.cos(d)); aimState.angle += d; }
+    if (a != null) drag.ref = a;
+  } else {
+    const back = -(mx * drag.axis[0] + my * drag.axis[1]); // pulling away from the shot direction
+    aimState.power = clamp(back / maxPull(), 0, 1);
+  }
+});
+function endDrag(e, cancel) {
+  if (!drag || e.pointerId !== drag.id) return;
+  const wasPower = drag.mode === 'power'; drag = null;
+  const p = aimState.power; aimState.power = 0;
+  if (!cancel && wasPower && p >= 0.05 && canShoot()) { const [dx, dz] = aimDir(); stick.strike = p; shoot(dx, dz, p); }
 }
 canvas.addEventListener('pointerup', (e) => endDrag(e, false));
 canvas.addEventListener('pointercancel', (e) => endDrag(e, true));
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
+function updateAimVisuals(dt) {
+  const ready = G.level && !G.moving && !G.complete && !G.cue.sunk && G.camMode !== 'outro';
+  // cue stick: fades out on the shot, fades back in when the camera settles on the cue ball
+  const want = ready && !G.inputLocked ? 1 : 0;
+  const op = want ? Math.min(1, stick.op + dt * 2.6) : Math.max(0, stick.op - dt * 3.2);
+  if (op !== stick.op) setStickOpacity(op);
+  const [dx, dz] = aimDir();
+  if (stick.strike > 0) { stick.gap = Math.max(R + 0.004, stick.gap - dt * (2 + stick.strike * 8)); }
+  else stick.gap = lerp(stick.gap, R + 0.02 + aimState.power * 0.42, 1 - Math.exp(-dt * 30));
+  if (!G.moving) { stick.root.position.set(G.cue.x, R, G.cue.z); stick.root.rotation.y = Math.atan2(-dx, -dz); }
+  if (want && stick.op > 0.9) stick.strike = 0;
+  stick.body.position.z = stick.gap;
+  if (ready && !G.inputLocked) drawAim(dx, dz, aimState.power); else aim.group.visible = false;
+  const pf = $('power-fill'); const pct = Math.round(aimState.power * 100) + '%';
+  if (pf.dataset.p !== pct) { pf.dataset.p = pct; pf.style.clipPath = `inset(0 ${100 - aimState.power * 100}% 0 0 round 999px)`; $('power').classList.toggle('live', aimState.power > 0); }
+}
+
 /* ============================== camera ============================= */
+// Camera modes: 'far' (entering/leaving a table), 'overview' (bird's eye), 'ready' (zoomed toward the cue ball),
+// 'shot' (bird's eye while balls roll), 'done' (bird's eye after the table), 'outro' (pulls back before the next table).
 const view = { base: 8, center: 0 };
 const cam = { tx: 0, tz: 0, dist: 8, tilt: 58, rot: 0 };
 const fitCam = new THREE.PerspectiveCamera(32, 1, 0.1, 120);
@@ -1225,22 +1304,22 @@ function computeView() {
   camera.setViewOffset(w, h, 0, view.center * h / 2, w, h);
   camera.updateProjectionMatrix();
 }
-function snapCamera() { const L = G.level.camera; Object.assign(cam, { tx: 0, tz: 0, dist: view.base, tilt: L.tilt, rot: L.rotation }); applyCam(); }
+function poseFor(mode) {
+  const L = G.level.camera, p = { tx: 0, tz: 0, dist: view.base, tilt: L.tilt, rot: L.rotation };
+  if (mode === 'ready') { p.tx = G.cue.x * 0.45; p.tz = G.cue.z * 0.45; p.dist = view.base * 0.8; }
+  else if (mode === 'far' || mode === 'outro') { p.dist = view.base * 1.32; p.tilt = Math.min(84, L.tilt + 8); p.tz = -0.3; }
+  return p;
+}
+function snapCamera(mode) { Object.assign(cam, poseFor(mode)); applyCam(); }
 function applyCam() {
   placeCam(camera, cam.tx, cam.tz, cam.dist, cam.tilt, cam.rot);
   scene.fog.near = cam.dist * 1.15; scene.fog.far = cam.dist * 2.6;
 }
 function updateCamera(dt) {
-  const L = G.level.camera; let tx = 0, tz = 0, dist = view.base, tilt = L.tilt, rot = L.rotation, k = 2.2;
-  if (G.complete && G.lastPocket && !reduceMotion) {
-    tx = G.lastPocket.x * 0.7; tz = G.lastPocket.z * 0.7; dist = view.base * 0.64; tilt = Math.min(80, L.tilt + 8); rot = L.rotation + (G.lastPocket.x >= 0 ? -16 : 16); k = 2.4;
-  } else if (G.moving && !reduceMotion) {
-    let sx = 0, sz = 0, n = 0; for (const b of G.active) if (b.vx || b.vz) { sx += b.x; sz += b.z; n++; }
-    if (n) { tx = sx / n * 0.2; tz = sz / n * 0.15; dist = view.base * 0.97; }
-    k = 1.4;
-  }
-  const f = 1 - Math.exp(-dt * k);
-  cam.tx = lerp(cam.tx, tx, f); cam.tz = lerp(cam.tz, tz, f); cam.dist = lerp(cam.dist, dist, f); cam.tilt = lerp(cam.tilt, tilt, f); cam.rot = lerp(cam.rot, rot, f);
+  const p = poseFor(G.camMode);
+  if (reduceMotion) { Object.assign(cam, p); applyCam(); return; }
+  const k = G.camMode === 'outro' ? 4 : G.camMode === 'ready' ? 2.4 : 2.8, f = 1 - Math.exp(-dt * k);
+  cam.tx = lerp(cam.tx, p.tx, f); cam.tz = lerp(cam.tz, p.tz, f); cam.dist = lerp(cam.dist, p.dist, f); cam.tilt = lerp(cam.tilt, p.tilt, f); cam.rot = lerp(cam.rot, p.rot, f);
   applyCam();
 }
 
@@ -1300,7 +1379,7 @@ function frame(now) {
     G.drops = G.drops.filter(d => !d.done);
     for (const p of G.pops) { p.t += dt; const k = Math.min(1, p.t / 0.28); p.b.mesh.scale.setScalar(k < 1 ? 1 + Math.sin(k * Math.PI) * 0.25 - (1 - k) * 0.6 : 1); if (k >= 1) p.done = true; }
     G.pops = G.pops.filter(p => !p.done);
-    if (drag && canShoot()) { const a = aimFromDrag(); if (a) drawAim(a.dx, a.dz, a.power); else aim.group.visible = false; } else if (!drag) aim.group.visible = false;
+    updateAimVisuals(dt);
     updateCamera(dt);
     updateFx(dt);
     renderer.render(scene, camera);
@@ -1342,7 +1421,7 @@ function openOverlay(html, { center = false, dismiss = true } = {}) {
   const o = $('overlay'); o.className = 'show' + (center ? ' center' : '');
   o.innerHTML = `<div class="scrim"></div><div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
   if (dismiss) o.querySelector('.scrim').onclick = closeOverlay;
-  drag = null; aim.group.visible = false;
+  drag = null; aimState.power = 0;
   return o.querySelector('.sheet');
 }
 function closeOverlay() { const o = $('overlay'); o.className = ''; o.innerHTML = ''; }
@@ -1360,7 +1439,8 @@ function showResults(shots, capped, rankP) {
   if (!G.remote) sheet.querySelector('#lb').style.display = 'none';
   rankP.then(r => { const el = sheet.querySelector('#lb'); if (!el) return; if (r) el.innerHTML = rankHtml(r); else el.style.display = 'none'; });
   sheet.querySelector('#dare').onclick = () => share(`I sank "${G.level.title}" (table ${G.idx + 1}) on Poolsies No. ${PUZZLE_NO} in ${shots} shot${shots === 1 ? '' : 's'}. Bet you can't beat that 🎱\n${GAME_URL}?dare=${shots}&t=${G.idx + 1}`);
-  sheet.querySelector('#next').onclick = () => { Sound.tap(); closeOverlay(); if (last) showEndOfDay(); else loadTable(G.idx + 1); };
+  sheet.querySelector('#next').onclick = () => { Sound.tap(); closeOverlay(); if (last) { showEndOfDay(); return; }
+    G.camMode = 'outro'; $('stamp').classList.remove('show'); setTimeout(() => loadTable(G.idx + 1), reduceMotion ? 0 : 600); };
 }
 function rankHtml(r) {
   if (r.total <= 1) return `<b>#1</b> on the leaderboard<br><span class="muted">You're the first player today</span>`;
@@ -1422,7 +1502,7 @@ function showStats() {
   sheet.querySelector('.close-x').onclick = sheet.querySelector('#ok').onclick = () => { Sound.tap(); closeOverlay(); };
 }
 const HELP = [
-  { t: 'Aim and shoot', p: 'Press anywhere, drag back, and let go. The cue ball goes the other way. Pull further for more power.',
+  { t: 'Aim and shoot', p: 'Drag around to swing the cue. Then drag back along the cue to fill the power bar and let go to shoot. Slide back to the start to cancel.',
     art: `<svg viewBox="0 0 230 130"><rect x="20" y="8" width="190" height="114" rx="18" fill="#2f8d5a"/><g fill="#fff">${[0, 1, 2, 3, 4, 5].map(i => `<circle cx="${115}" cy="${84 - i * 10}" r="2.6"/>`).join('')}</g><circle cx="115" cy="32" r="9" fill="#d7262b"/><circle cx="115" cy="94" r="9" fill="#fbf8ef"/><path d="M150 70 v38" stroke="#151515" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 8"/><path d="M142 100 l8 9 l8-9" stroke="#151515" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
   { t: 'Every table has a goal', p: 'Sink a number of balls, only the stripes, certain colors, one special ball, or balls in order. Fewest shots wins.',
     art: `<svg viewBox="0 0 230 130"><rect x="30" y="34" width="170" height="62" rx="31" fill="#fffdf8"/><circle cx="72" cy="65" r="15" fill="#d7262b"/><circle cx="115" cy="65" r="15" fill="#1d4fb8"/><circle cx="158" cy="65" r="15" fill="#151515"/><circle cx="72" cy="65" r="16" fill="#2fa654"/><path d="M65 65l5 5 9-10" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
@@ -1482,7 +1562,7 @@ async function submitAndRank(tableOrder, shots) {
 /* =============================== boot ============================== */
 function onResize() {
   renderer.setSize(innerWidth, innerHeight, false);
-  if (G.level) { computeView(); if (!G.moving && !G.complete) { cam.dist = view.base; } applyCam(); }
+  if (G.level) { computeView(); applyCam(); }
 }
 addEventListener('resize', onResize);
 addEventListener('orientationchange', () => setTimeout(onResize, 200));
@@ -1508,7 +1588,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && lo
   const dare = new URLSearchParams(location.search);
   if (dare.get('dare') && !day.done) setTimeout(() => toast(`A friend did table ${+dare.get('t') || 1} in ${+dare.get('dare')} shots. Beat that!`), 900);
   // expose a tiny hook for automated testing
-  window.__poolsies = { G, shoot, THREE, camera, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
+  window.__poolsies = { G, shoot, THREE, camera, aimState, toScreen, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
 })();
 </script>
 </body>
