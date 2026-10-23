@@ -1699,10 +1699,10 @@ canvas.addEventListener('pointermove', (e) => {
     const [cx, cy] = toScreen(G.cue.x, G.cue.z), a = fingerAngle(x, y);
     if (a != null && drag.ref != null && Math.hypot(x - cx, y - cy) > 22) {
       let d = a - drag.ref; d = Math.atan2(Math.sin(d), Math.cos(d));
-      // geared down: the cue turns about half as far as the finger; slow drags turn even less for fine-tuning
+      // geared: slow drags turn the cue very little (fine-tuning), fast sweeps turn it more
       const now = e.timeStamp, step = Math.max(0.008, (now - (drag.t || now - 16)) / 1000); drag.t = now;
       const fast = clamp((Math.abs(d) / step - 0.6) / 2.4, 0, 1);
-      aimState.target += d * (0.22 + 0.26 * fast); drag.aimed = true;
+      aimState.target += d * (0.12 + 0.552 * fast); drag.aimed = true; // slow: 12% of the finger, fast: ~67%
     }
     if (a != null) drag.ref = a;
   } else {
