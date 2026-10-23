@@ -479,7 +479,7 @@ const Sound = (() => {
   function rebuild() {
     rebuildPending = false; stopMusic();
     try { if (ac) ac.close(); } catch (e) {}
-    ac = null; sfx = null; mus = null;
+    ac = null; sfx = null; mus = null; lastClack = 0; lastThump = 0; // new engine = new clock
     if (unmuter) { try { unmuter.pause(); URL.revokeObjectURL(unmuter.src); } catch (e) {} unmuter = null; }
     init();
   }
@@ -1416,7 +1416,12 @@ const aim = (() => {
   const ringBg = new THREE.Mesh(ringGeo.clone(), new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.18, depthWrite: false }));
   const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.95, depthWrite: false }));
   ring.renderOrder = 4; group.add(ringBg, ring);
-  return { group, dots, ghost, ghostFill, ring, ringBg, SEG };
+  // faint always-on guides: the cue ball's path to its first contact, and where a struck ball heads
+  const guideGeo = cached('guide', () => { const g = new THREE.PlaneGeometry(1, 0.011); g.rotateX(-Math.PI / 2); g.translate(0.5, 0, 0); return g; });
+  const guideMat = new THREE.MeshBasicMaterial({ color: '#d9d9d9', transparent: true, opacity: 0.25, depthWrite: false });
+  const guideCue = new THREE.Mesh(guideGeo, guideMat), guideObj = new THREE.Mesh(guideGeo, guideMat);
+  guideCue.renderOrder = guideObj.renderOrder = 2; group.add(guideCue, guideObj);
+  return { group, dots, ghost, ghostFill, ring, ringBg, SEG, guideCue, guideObj };
 })();
 const tmpM = new THREE.Matrix4(), tmpV = new THREE.Vector3(), tmpS = new THREE.Vector3(), tmpQ = new THREE.Quaternion();
 function probe(x, z, self = G.cue) {
@@ -1451,6 +1456,9 @@ function trail(n, x, z, dx, dz, from, to, strength, size) {
   for (let t = from; t < to - 0.005 && n < 220; t += gap) { const k = (t - from) / Math.max(0.001, to - from); setDot(n++, x + dx * t, z + dz * t, size * (1 - 0.6 * taper * k)); }
   return n;
 }
+function setGuide(m, x, z, dx, dz, len) {
+  m.visible = len > 0.01; m.position.set(x, 0.012, z); m.rotation.y = -Math.atan2(dz, dx); m.scale.x = Math.max(0.001, len);
+}
 function drawAim(dx, dz, power) {
   if (power < 0.05) power = 0; // below the minimum a shot needs: show no charge at all
   const c = G.cue, v0 = MAX_SPEED * power, { s, hit } = firstContact(c.x, c.z, dx, dz);
@@ -1464,6 +1472,12 @@ function drawAim(dx, dz, power) {
   aim.ghost.material.opacity = reaches ? 1 : 0.38; aim.ghostFill.material.opacity = reaches ? 0.5 : 0.1;
   aim.ghost.material.color.set(reaches ? '#ffffff' : '#e8e8e8'); aim.ghost.scale.setScalar(reaches ? 1.08 : 1);
   aim.ghost.position.set(gx, 0.016, gz); aim.ghostFill.position.set(gx, 0.015, gz);
+  // faint guide, regardless of charge
+  setGuide(aim.guideCue, c.x + dx * R, c.z + dz * R, dx, dz, s - R);
+  if (hit && hit.type === 'ball') {
+    const b = hit.ball; let nx = b.x - gx, nz = b.z - gz; const d = Math.sqrt(nx * nx + nz * nz) || 1; nx /= d; nz /= d;
+    setGuide(aim.guideObj, b.x + nx * R, b.z + nz * R, nx, nz, Math.min(0.6, firstContact(b.x, b.z, nx, nz, b).s - R));
+  } else aim.guideObj.visible = false;
   if (reaches && hit.type === 'ball') {
     // object ball: speed it picks up from this hit, and how far that carries it (no bounces shown)
     const b = hit.ball; let nx = b.x - gx, nz = b.z - gz; const d = Math.sqrt(nx * nx + nz * nz) || 1; nx /= d; nz /= d;
