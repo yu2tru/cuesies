@@ -166,8 +166,8 @@
   .edge-tint.top { top: 12px; height: calc(env(safe-area-inset-top) + 44px); background: linear-gradient(var(--bar) 0, var(--bar) calc(env(safe-area-inset-top) - 12px), transparent 100%); }
   .edge-tint.bottom { bottom: 0; height: calc(env(safe-area-inset-bottom) + 48px); background: linear-gradient(0deg, var(--bar) 0, var(--bar) env(safe-area-inset-bottom), transparent 100%); }
   /* Safari 26 tints its bars from solid fixed strips at the screen edges (read when a strip appears) */
-  .bar-strip { position: fixed; left: 0; right: 0; height: 12px; pointer-events: none; z-index: 0; } /* behind the page: Safari still reads it, but it never covers content */
-  .bar-strip.top { top: 0; } .bar-strip.bottom { bottom: 0; }
+  .bar-strip { position: fixed; left: 0; right: 0; height: 12px; pointer-events: none; z-index: 50; } /* topmost so Safari always reads it... */
+  .bar-strip.top { top: -8px; } .bar-strip.bottom { bottom: -8px; } /* ...but mostly off-screen, so it never covers content */
   /* ---------- home (same layout and sizes as Scoople's and Stopple's home pages) ---------- */
   /* fits one screen: the hero takes whatever height is left after the cards */
   #home { position: fixed; inset: 0; z-index: 4; overflow: hidden; padding: 0 0 env(safe-area-inset-bottom); pointer-events: none; }
@@ -1944,6 +1944,7 @@ function frame(now) {
 
 /* ================================ UI =============================== */
 function renderProgress() {
+  $('progress').style.visibility = G.practice ? 'hidden' : '';
   $('progress').innerHTML = G.levels.map((_, i) => `<div class="seg ${day.results[i] != null ? 'done' : i === G.idx ? 'cur' : ''}"></div>`).join('');
 }
 const miniCache = {};
@@ -1977,7 +1978,7 @@ function updatePill() {
 function updateUI() {
   const L = G.level, gt = goalText(L);
   $('pno').textContent = `No. ${PUZZLE_NO}`;
-  $('lvl-label').textContent = G.practice ? `PRACTICE · ${pad2(G.idx + 1)} / ${pad2(G.levels.length)}` : `${pad2(G.idx + 1)} / ${pad2(G.levels.length)} · ${tableLabel(G.idx)}`;
+  $('lvl-label').textContent = G.practice ? 'PRACTICE' : `${pad2(G.idx + 1)} / ${pad2(G.levels.length)} · ${tableLabel(G.idx)}`;
   $('lvl-title').textContent = L.title;
   $('goal-chip').innerHTML = `${esc(gt.main)}${gt.sub ? ` <small>${esc(gt.sub)}</small>` : ''}`;
   renderProgress(); renderTracker(); updatePill();
@@ -1994,6 +1995,11 @@ function openOverlay(html, { center = false, dismiss = true } = {}) {
 function closeOverlay() { const o = $('overlay'); o.className = ''; o.innerHTML = ''; overlayStrips(); }
 const badgeFor = (s) => s <= 2 ? ['green', 'CLEAN'] : s <= 5 ? ['yellow', 'NOT BAD'] : ['red', 'WAY OVER'];
 
+function goToTable(next, practice) { // leaving: ease out with the white fade, then the next table eases in
+  $('stamp').classList.remove('show'); G.inputLocked = true;
+  tweenCamera('outro', 0.7, easeIn);
+  setTimeout(() => { fade.onFull = () => loadTable(next, null, practice); fadeTo(true, 300); barsTo('#ffffff', 300); }, reduceMotion ? 0 : 380);
+}
 function showResults(shots, capped, rankP) {
   const [bc, bt] = badgeFor(shots); const last = G.idx >= G.levels.length - 1;
   if (G.practice) {
@@ -2002,9 +2008,11 @@ function showResults(shots, capped, rankP) {
       <div class="big">${shots} <small>shot${shots === 1 ? '' : 's'}</small></div>
       <span class="badge ${bc}">${bt}</span>
       <div class="note">Replays don't count toward today.</div>
-      <div class="btn-row"><button class="btn" id="home-btn">Home</button><button class="btn primary" id="again">Play again</button></div>`, { dismiss: false });
+      <div class="btn-row"><button class="btn primary" id="next">Next level</button></div>
+      <div class="btn-row" style="margin-top:10px"><button class="btn" id="home-btn">Home</button><button class="btn" id="again">Play again</button></div>`, { dismiss: false });
     sheet.querySelector('#home-btn').onclick = () => { Sound.tap(); closeOverlay(); showHome(); };
-    sheet.querySelector('#again').onclick = () => { Sound.tap(); closeOverlay(); loadTable(G.idx, null, true); };
+    sheet.querySelector('#again').onclick = () => { Sound.tap(); closeOverlay(); goToTable(G.idx, true); };
+    sheet.querySelector('#next').onclick = () => { Sound.tap(); closeOverlay(); goToTable((G.idx + 1) % G.levels.length, true); };
     return;
   }
   const sheet = openOverlay(`
@@ -2017,11 +2025,7 @@ function showResults(shots, capped, rankP) {
   if (!G.remote) sheet.querySelector('#lb').style.display = 'none';
   rankP.then(r => { const el = sheet.querySelector('#lb'); if (!el) return; if (r) el.innerHTML = rankHtml(r); else el.style.display = 'none'; });
   sheet.querySelector('#dare').onclick = () => share(`I sank "${G.level.title}" (table ${G.idx + 1}) on Cuesies No. ${PUZZLE_NO} in ${shots} shot${shots === 1 ? '' : 's'}. Bet you can't beat that 🎱\n${GAME_URL}?dare=${shots}&t=${G.idx + 1}`);
-  sheet.querySelector('#next').onclick = () => { Sound.tap(); closeOverlay(); if (last) { showEndOfDay(); return; }
-    $('stamp').classList.remove('show'); G.inputLocked = true;
-    tweenCamera('outro', 0.7, easeIn); // leaving: ease in
-    const next = G.idx + 1;
-    setTimeout(() => { fade.onFull = () => loadTable(next); fadeTo(true, 300); barsTo('#ffffff', 300); }, reduceMotion ? 0 : 380); };
+  sheet.querySelector('#next').onclick = () => { Sound.tap(); closeOverlay(); if (last) { showEndOfDay(); return; } goToTable(G.idx + 1, false); };
 }
 function rankHtml(r) {
   if (r.total <= 1) return `<b>#1</b> on the leaderboard<br><span class="muted">You're the first player today</span>`;
