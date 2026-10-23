@@ -37,11 +37,10 @@ create table if not exists public.poolsies_scores (
   play_date    date        not null,
   puzzle_no    integer,
   table_order  smallint    not null check (table_order between 0 and 5),
-  shots        smallint    not null check (shots between 1 and 75),
+  -- no shot limit in the game; the upper bound here only filters out junk submissions
+  shots        smallint    not null check (shots between 1 and 5000),
   created_at   timestamptz not null default now(),
-  unique (player_id, play_date, table_order),
-  -- single tables are capped at 15 shots; the daily total at 5 x 15
-  check (table_order = 0 or shots <= 15)
+  unique (player_id, play_date, table_order)
 );
 
 create index if not exists poolsies_scores_board
