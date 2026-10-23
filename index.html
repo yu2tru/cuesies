@@ -168,6 +168,58 @@
   /* Safari 26 tints its bars from solid fixed strips at the screen edges (read when a strip appears) */
   .bar-strip { position: fixed; left: 0; right: 0; height: 12px; pointer-events: none; z-index: 50; }
   .bar-strip.top { top: 0; } .bar-strip.bottom { bottom: 0; }
+  /* ---------- home (same layout and sizes as Scoople's and Stopple's home pages) ---------- */
+  /* fits one screen: the hero takes whatever height is left after the cards */
+  #home { position: fixed; inset: 0; z-index: 4; overflow: hidden; padding: 0 0 env(safe-area-inset-bottom); pointer-events: none; }
+  .home-body, .home-top .wordmark { pointer-events: auto; }
+  .home-col { width: min(480px, 100%); height: 100%; margin: 0 auto; display: flex; flex-direction: column; padding-bottom: 10px; }
+  .hero { position: relative; flex: 1 1 0; min-height: 120px; }   /* transparent: the live 3D table shows through */
+  /* the wordmark sits in exactly the same box as the game's header, so it doesn't jump between pages */
+  .home-top { display: flex; align-items: center; height: 52px; margin-top: calc(env(safe-area-inset-top) + 6px); padding: 0 16px; }
+  button.wordmark { font-family: inherit; color: var(--ink); background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
+  #gameWord { pointer-events: auto; }
+  .home-body { flex: none; padding: 0 14px; position: relative; isolation: isolate; }
+  .home-body::before { /* the floor color behind the cards spans the whole page width, fading in at the top */
+    content: ''; position: absolute; z-index: -1; top: -30px; bottom: -80px; left: 50%; width: 100vw; transform: translateX(-50%);
+    background: linear-gradient(to bottom, transparent, var(--bg) 46px); pointer-events: none; }
+  .home-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .home-date { font-weight: 800; font-size: 15px; color: rgba(21,21,21,.72); letter-spacing: -.02em; }
+  .home-icons { display: flex; gap: 8px; }
+  .rbtn { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--card); display: grid; place-items: center; box-shadow: 0 2px 0 rgba(31,28,21,.05); cursor: pointer; position: relative; }
+  .rbtn svg { width: 21px; height: 21px; stroke: var(--ink); fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .rbtn.off svg { opacity: .35; }
+  .rbtn.off::after { content: ''; position: absolute; width: 24px; height: 2.4px; background: var(--ink); border-radius: 2px; transform: rotate(-45deg); opacity: .8; }
+  .hcard { background: var(--card); border-radius: 22px; padding: 13px 14px; margin-bottom: 8px; box-shadow: 0 2px 0 rgba(31,28,21,.04); }
+  .hcard .eyebrow { font-weight: 800; font-size: 12px; letter-spacing: .14em; color: var(--muted); text-transform: uppercase; }
+  .today-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 1px; }
+  .today-row b { font-weight: 900; font-size: 24px; letter-spacing: -.05em; }
+  .dots { display: flex; gap: 6px; }
+  .dots i { width: 13px; height: 13px; border-radius: 50%; border: 2.5px solid #3f3b33; box-sizing: border-box; }
+  .dots i.green { background: var(--green); border-color: var(--green); }
+  .dots i.yellow { background: var(--yellow); border-color: var(--yellow); }
+  .dots i.red { background: var(--red); border-color: var(--red); }
+  .hsub { font-weight: 700; font-size: 14px; color: rgba(21,21,21,.72); margin: 3px 0 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #homePlay { width: 100%; height: 52px; border: 0; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 900; font-size: 18px; letter-spacing: -0.02em; cursor: pointer; }
+  #homePlay:active { transform: scale(.98); }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 8px; }
+  .tile { display: flex; align-items: center; gap: 7px; min-height: 50px; padding: 8px 9px; border: 0; border-radius: 16px; background: color-mix(in srgb, var(--bg) 45%, #fff);
+    font-family: inherit; color: var(--ink); font-weight: 900; font-size: 14px; letter-spacing: -.03em; text-align: left; line-height: 1.1; cursor: pointer; }
+  .tile .ic { font-size: 21px; flex: none; }
+  .tile small { display: block; font-weight: 800; font-size: 11px; color: var(--muted); letter-spacing: 0; margin-top: 2px; }
+  .tile[disabled] { opacity: .55; cursor: default; }
+  .tile:not([disabled]):active { transform: scale(.97); }
+  .tiles2 { display: grid; grid-template-columns: 1.25fr 1fr .8fr; gap: 7px; }
+  .tiles2 .tile { background: var(--card); min-height: 54px; box-shadow: 0 2px 0 rgba(31,28,21,.04); }
+  .list { display: grid; gap: 8px; text-align: left; margin-top: 12px; }
+  .lrow { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 10px; width: 100%;
+    background: rgba(31,28,21,.04); border: 0; border-radius: 18px; padding: 12px 14px; text-align: left; font-family: inherit; color: var(--ink); }
+  button.lrow { cursor: pointer; } button.lrow:active { transform: scale(.98); }
+  .lrow .emo { font-size: 26px; text-align: center; }
+  .lrow b { display: block; font-weight: 900; font-size: 16px; letter-spacing: -0.02em; }
+  .lrow small { display: block; font-weight: 700; font-size: 13px; color: var(--muted); }
+  .lrow .chev { font-weight: 900; font-size: 18px; color: rgba(21,21,21,.72); }
+  .lrow.locked .emo { opacity: .25; filter: grayscale(1); }
+  @media (max-height: 640px) { .home-top { height: 46px; } }
   #toast {
     position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24px); transform: translateX(-50%) translateY(20px);
     background: var(--ink); color: #fff; font-weight: 900; padding: 12px 18px; border-radius: 999px; z-index: 30;
@@ -201,7 +253,7 @@
 <div id="ui">
   <div class="col">
     <header>
-      <div class="brand"><div class="wordmark">cuesies</div><div class="pno" id="pno">No. 1</div></div>
+      <div class="brand"><button class="wordmark" id="gameWord" aria-label="cuesies, go to home page">cuesies</button><div class="pno" id="pno">No. 1</div></div>
       <div class="icons">
         <button class="icon-btn" id="btn-help" aria-label="How to play">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4"/><circle cx="12" cy="17.4" r=".6" fill="currentColor"/></svg>
@@ -224,6 +276,41 @@
       <div class="goal-text" id="goal-chip">…</div>
       <div class="turn" id="hint" aria-label="Drag left or right to turn the camera">
         <svg viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></svg><span>Drag here to turn</span><svg viewBox="0 0 24 24"><path d="M10 6l6 6-6 6"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="home" hidden aria-label="Home">
+  <div class="home-col">
+    <div class="hero" id="homeHero">
+      <div class="home-top" id="homeTop"><button class="wordmark" id="homeWord" tabindex="-1">cuesies</button></div>
+    </div>
+    <div class="home-body">
+      <div class="home-row"><div class="home-date" id="homeDate"></div>
+        <div class="home-icons">
+          <button class="rbtn" id="homeSound" aria-label="Toggle sound"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg></button>
+          <button class="rbtn" id="homeHelp" aria-label="How to play"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4"/><circle cx="12" cy="17.6" r=".6" fill="currentColor"/></svg></button>
+        </div>
+      </div>
+      <div class="hcard">
+        <div class="eyebrow">Today</div>
+        <div class="today-row"><b>Five tables</b><div class="dots" id="homeDots"></div></div>
+        <div class="hsub" id="homeSub">Sink each goal in the fewest shots · about 5 min</div>
+        <button id="homePlay">Play today</button>
+      </div>
+      <div class="hcard">
+        <div class="eyebrow">More ways to play</div>
+        <div class="tiles">
+          <button class="tile" id="homeLevels"><span class="ic">🎯</span><span>Levels<small id="homeLevelsSub">pick any</small></span></button>
+          <button class="tile" disabled><span class="ic">🎲</span><span>Practice<small>soon</small></span></button>
+          <button class="tile" disabled><span class="ic">🏆</span><span>Gauntlet<small>soon</small></span></button>
+        </div>
+      </div>
+      <div class="tiles2">
+        <button class="tile" id="homeCollection"><span class="ic">🎱</span><span>Collection<small id="homeCollCount">0/9</small></span></button>
+        <button class="tile" id="homeStats"><span class="ic">📊</span><span>Stats<small>your history</small></span></button>
+        <button class="tile" id="homeStreakBtn" aria-label="Current streak"><span class="ic">🔥</span><span><span id="homeStreak">0</span><small>streak</small></span></button>
       </div>
     </div>
   </div>
@@ -1137,7 +1224,8 @@ function oPhys(o) {
   return o.shape === 'circle' ? { shape: 'circle', x: o.pos[0], z: o.pos[1], r: o.radius } : { shape: 'box', x: o.pos[0], z: o.pos[1], hw: o.size[0] / 2, hd: o.size[1] / 2, c, s, deg };
 }
 
-function loadTable(idx, restore) {
+function loadTable(idx, restore, practice = false) {
+  G.practice = practice;
   G.idx = idx; const L = G.level = G.levels[idx]; const th = G.theme = THEMES[L.theme];
   if (levelGroup) { scene.remove(levelGroup); disposeGroup(levelGroup); }
   levelGroup = new THREE.Group(); scene.add(levelGroup);
@@ -1385,7 +1473,7 @@ function onRest() {
   G.inputLocked = false; defaultAim(); G.camMode = 'ready';
 }
 function snapshot() { const pos = {}; for (const b of G.balls) pos[b.n] = [b.x, b.z]; pos.obs = G.obstacles.map(o => o.dynamic ? [o.x, o.z] : null); return pos; }
-function saveMid(pos) { day.current = { idx: G.idx, shots: G.shots, orderIdx: G.orderIdx, sunk: G.sunk.slice(), out: G.out.slice(), pos: pos || snapshot() }; saveDay(); }
+function saveMid(pos) { if (G.practice) return; day.current = { idx: G.idx, shots: G.shots, orderIdx: G.orderIdx, sunk: G.sunk.slice(), out: G.out.slice(), pos: pos || snapshot() }; saveDay(); }
 
 function shoot(dx, dz, power) {
   if (G.inputLocked || G.moving || G.complete) return;
@@ -1403,12 +1491,15 @@ function completeTable(capped) {
   G.complete = true; G.inputLocked = true; G.camMode = 'done';
   const shots = Math.min(G.shots, SHOT_CAP); G.shots = shots;
   const oneAndDone = shots === 1 && !capped;
-  day.results[G.idx] = shots; day.current = null;
-  if (day.results.filter(v => v != null).length >= G.levels.length) day.done = true;
-  saveDay(); updatePill(); renderProgress();
+  if (!G.practice) { // replays from Levels don't count toward today
+    day.results[G.idx] = shots; day.current = null;
+    if (day.results.filter(v => v != null).length >= G.levels.length) day.done = true;
+    saveDay();
+  }
+  markRoom(G.level.theme); updatePill(); renderProgress();
   if (!capped) Sound.chime(oneAndDone);
   if (oneAndDone) celebrate();
-  const rankP = submitAndRank(G.level.order, shots);
+  const rankP = G.practice ? Promise.resolve(null) : submitAndRank(G.level.order, shots);
   setTimeout(() => showResults(shots, capped, rankP), oneAndDone ? 2200 : capped ? 500 : 1500);
 }
 
@@ -1534,7 +1625,7 @@ let drag = null;
 const aimState = { angle: -Math.PI / 2, target: -Math.PI / 2, power: 0 }; // angle eases toward target
 const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -R), hitP = new THREE.Vector3();
 const aimDir = () => [Math.cos(aimState.angle), Math.sin(aimState.angle)];
-function canShoot() { return !G.inputLocked && !G.moving && !G.complete && !$('overlay').classList.contains('show'); }
+function canShoot() { return !homeOpen && !G.inputLocked && !G.moving && !G.complete && !$('overlay').classList.contains('show'); }
 function toScreen(x, z) { const v = new THREE.Vector3(x, R, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; }
 function screenToTable(sx, sy) { ndc.set(sx / innerWidth * 2 - 1, -(sy / innerHeight) * 2 + 1); raycaster.setFromCamera(ndc, camera); return raycaster.ray.intersectPlane(plane, hitP) ? [hitP.x, hitP.z] : null; }
 const maxPull = () => clamp(Math.min(innerWidth, innerHeight) * 0.32, 110, 190);
@@ -1553,8 +1644,27 @@ function defaultAim() {
   }
   aimState.angle = aimState.target = best ? Math.atan2(best.z - G.cue.z, best.x - G.cue.x) : -Math.PI / 2;
 }
+// Zoom: pinch or scroll wheel. In = the cue-ball view, out = the whole-table view; eased both ways.
+let lastZoom = 0;
+function zoomTo(dir) {
+  if (homeOpen || G.complete || G.moving || $('overlay').classList.contains('show') || G.camMode === 'outro') return;
+  const now = performance.now(); if (now - lastZoom < 350) return; lastZoom = now;
+  const target = dir > 0 ? 'ready' : 'overview'; if (G.camMode === target) return;
+  tweenCamera(target, 0.9, easeInOut);
+}
+canvas.addEventListener('wheel', (e) => { e.preventDefault(); if (Math.abs(e.deltaY) >= 2) zoomTo(e.deltaY < 0 ? 1 : -1); }, { passive: false });
+document.addEventListener('gesturestart', (e) => e.preventDefault()); // keep iOS from zooming the page itself
+const touchPts = new Map(); let pinch = null;
 canvas.addEventListener('pointerdown', (e) => {
   Sound.init();
+  if (e.pointerType === 'touch') {
+    touchPts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (touchPts.size === 2) { // second finger: this is a pinch, not a shot
+      const [a, b] = [...touchPts.values()]; pinch = { d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, done: false };
+      drag = null; aimState.power = 0; return;
+    }
+  }
+  if (pinch) return;
   if (!canShoot() || drag) return;
   drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, mode: null, ref: fingerAngle(e.clientX, e.clientY), aimed: false };
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
@@ -1563,6 +1673,14 @@ canvas.addEventListener('pointerdown', (e) => {
 //  - moving around the cue ball -> orbit the aim
 //  - pulling back along the cue -> charge; let go to shoot, slide back to cancel (aim stays put)
 canvas.addEventListener('pointermove', (e) => {
+  if (touchPts.has(e.pointerId)) touchPts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch) {
+    if (touchPts.size >= 2 && !pinch.done) {
+      const [a, b] = [...touchPts.values()], r = Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d0;
+      if (r > 1.18) { pinch.done = true; zoomTo(1); } else if (r < 0.85) { pinch.done = true; zoomTo(-1); }
+    }
+    return;
+  }
   if (!drag || e.pointerId !== drag.id || !canShoot()) return;
   const x = e.clientX, y = e.clientY, mx = x - drag.sx, my = y - drag.sy;
   if (!drag.mode) {
@@ -1593,8 +1711,9 @@ function endDrag(e, cancel) {
   if (!cancel && wasPower && p >= 0.05 && canShoot()) { const [dx, dz] = aimDir(); stick.strike = p; shoot(dx, dz, p); return; }
   void aimed;
 }
-canvas.addEventListener('pointerup', (e) => endDrag(e, false));
-canvas.addEventListener('pointercancel', (e) => endDrag(e, true));
+const liftTouch = (e) => { touchPts.delete(e.pointerId); if (pinch && touchPts.size === 0) pinch = null; };
+canvas.addEventListener('pointerup', (e) => { liftTouch(e); endDrag(e, false); });
+canvas.addEventListener('pointercancel', (e) => { liftTouch(e); endDrag(e, true); });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 // Camera turn strip (bottom of the screen): drag left/right to orbit the camera. The camera eases after the finger.
@@ -1627,6 +1746,7 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => { const k = { ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', ArrowUp: 'up' }[e.key]; if (k) keys[k] = 0; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = 0; });
 function updateKeys(dt) {
+  if (homeOpen) return;
   if (!canShoot() || drag) return;
   const now = performance.now(), held = (k) => keys[k] ? (now - keys[k]) / 1000 : 0;
   const turn = (k) => held(k) ? (held(k) < 0.35 ? 18 : 75) * DEG * dt : 0; // tap for fine moves, hold to sweep
@@ -1638,7 +1758,7 @@ function updateAimVisuals(dt) {
   updateKeys(dt);
   // the aim glides toward where the finger/keys put it, smoothing out wobble
   if (!G.moving) aimState.angle += (aimState.target - aimState.angle) * (reduceMotion ? 1 : 1 - Math.exp(-dt * 14));
-  const ready = G.level && !G.moving && !G.complete && !G.cue.sunk && G.camMode !== 'outro';
+  const ready = G.level && !homeOpen && !G.moving && !G.complete && !G.cue.sunk && G.camMode !== 'outro';
   // cue stick: fades out on the shot, fades back in when the camera settles on the cue ball
   const want = ready && !G.inputLocked ? 1 : 0;
   const op = want ? Math.min(1, stick.op + dt * 2.6) : Math.max(0, stick.op - dt * 3.2);
@@ -1667,8 +1787,9 @@ function placeCam(c, tx, tz, dist, tilt, rot) {
 }
 function computeView() {
   const w = innerWidth, h = innerHeight;
-  const top = $('lvl-label').getBoundingClientRect().bottom + 8;
-  const bot = h - $('bottom').getBoundingClientRect().top + 4;
+  // frame the table between the header and the bottom panel (or inside the hero on the home page)
+  const top = homeOpen ? $('homeTop').getBoundingClientRect().bottom + 4 : $('lvl-label').getBoundingClientRect().bottom + 8;
+  const bot = h - (homeOpen ? $('homeHero').getBoundingClientRect().bottom - 4 : $('bottom').getBoundingClientRect().top - 4);
   const yTop = 1 - 2 * top / h, yBot = -1 + 2 * bot / h; const half = Math.max(0.2, (yTop - yBot) / 2);
   view.center = (yTop + yBot) / 2;
   const L = G.level.camera;
@@ -1708,9 +1829,11 @@ function applyCam() {
 }
 const wrapDeg = (d) => ((d + 540) % 360) - 180;
 const easeIn = (t) => t * t * t, easeOut = (t) => 1 - (1 - t) ** 3;
+const easeInOut = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 let camTween = null; // { from, mode, t, dur, ease }
 function tweenCamera(mode, dur, ease) { G.camMode = mode; camTween = reduceMotion ? null : { from: { ...cam }, mode, t: 0, dur, ease }; }
 function updateCamera(dt) {
+  if (homeOpen && !reduceMotion) G.yawTarget += dt * 7; // the home page's table slowly turns
   // ease toward the turn the player dragged to, so fast swipes stay smooth
   G.yawSmooth += (G.yawTarget - G.yawSmooth) * (reduceMotion ? 1 : 1 - Math.exp(-dt * 7));
   const p = poseFor(G.camMode);
@@ -1849,7 +1972,7 @@ function updatePill() {
 function updateUI() {
   const L = G.level, gt = goalText(L);
   $('pno').textContent = `No. ${PUZZLE_NO}`;
-  $('lvl-label').textContent = `${pad2(G.idx + 1)} / ${pad2(G.levels.length)} · ${tableLabel(G.idx)}`;
+  $('lvl-label').textContent = G.practice ? `PRACTICE · ${pad2(G.idx + 1)} / ${pad2(G.levels.length)}` : `${pad2(G.idx + 1)} / ${pad2(G.levels.length)} · ${tableLabel(G.idx)}`;
   $('lvl-title').textContent = L.title;
   $('goal-chip').innerHTML = `${esc(gt.main)}${gt.sub ? ` <small>${esc(gt.sub)}</small>` : ''}`;
   renderProgress(); renderTracker(); updatePill();
@@ -1868,6 +1991,17 @@ const badgeFor = (s) => s <= 2 ? ['green', 'CLEAN'] : s <= 5 ? ['yellow', 'NOT B
 
 function showResults(shots, capped, rankP) {
   const [bc, bt] = badgeFor(shots); const last = G.idx >= G.levels.length - 1;
+  if (G.practice) {
+    const sheet = openOverlay(`
+      <div class="eyebrow">PRACTICE · ${esc(G.level.title.toUpperCase())}</div>
+      <div class="big">${shots} <small>shot${shots === 1 ? '' : 's'}</small></div>
+      <span class="badge ${bc}">${bt}</span>
+      <div class="note">Replays don't count toward today.</div>
+      <div class="btn-row"><button class="btn" id="home-btn">Home</button><button class="btn primary" id="again">Play again</button></div>`, { dismiss: false });
+    sheet.querySelector('#home-btn').onclick = () => { Sound.tap(); closeOverlay(); showHome(); };
+    sheet.querySelector('#again').onclick = () => { Sound.tap(); closeOverlay(); loadTable(G.idx, null, true); };
+    return;
+  }
   const sheet = openOverlay(`
     <div class="eyebrow">${pad2(G.idx + 1)} / ${pad2(G.levels.length)} · ${esc(G.level.title.toUpperCase())}</div>
     <div class="big">${shots} <small>shot${shots === 1 ? '' : 's'}</small></div>
@@ -1909,11 +2043,12 @@ function showEndOfDay() {
     <div class="streak">🔥 ${currentStreak()} day streak</div>
     <div class="lb" id="lb">${G.remote ? '<span class="muted">Checking the leaderboard…</span>' : ''}</div>
     <div class="breakdown">${rows}</div>
-    <div class="btn-row"><button class="btn primary" id="share">Share</button></div>
+    <div class="btn-row"><button class="btn" id="home-btn">Home</button><button class="btn primary" id="share">Share</button></div>
     <div class="note">Next puzzle in <span class="countdown" id="cd"></span></div>`, { dismiss: false });
   if (!G.remote) sheet.querySelector('#lb').style.display = 'none';
   submitAndRank(0, total).then(r => { const el = sheet.querySelector('#lb'); if (!el) return; if (r) el.innerHTML = rankHtml(r); else el.style.display = 'none'; });
   sheet.querySelector('#share').onclick = () => share(shareText());
+  sheet.querySelector('#home-btn').onclick = () => { Sound.tap(); closeOverlay(); showHome(); };
   const cd = sheet.querySelector('#cd');
   const tick = () => { const now = new Date(), mid = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); const s = Math.max(0, Math.floor((mid - now) / 1000));
     if (!cd.isConnected) return clearInterval(tm); cd.textContent = `${pad2(Math.floor(s / 3600))}:${pad2(Math.floor(s / 60) % 60)}:${pad2(s % 60)}`; if (s === 0) location.reload(); };
@@ -1944,7 +2079,7 @@ function showStats() {
   sheet.querySelector('.close-x').onclick = sheet.querySelector('#ok').onclick = () => { Sound.tap(); closeOverlay(); };
 }
 const HELP = [
-  { t: 'Aim and shoot', p: 'Drag around to swing the cue (or ← →). Drag the strip at the bottom to turn the camera. In a new drag, pull back along the cue to power up and let go to shoot. Slide back toward the ball to cancel. Keyboard: ↓ charges, ↑ lowers it, Space shoots.',
+  { t: 'Aim and shoot', p: 'Drag around to swing the cue (or ← →). Drag the strip at the bottom to turn the camera. In a new drag, pull back along the cue to power up and let go to shoot. Slide back toward the ball to cancel. Pinch or scroll to zoom in on the cue ball and back out. Keyboard: ↓ charges, ↑ lowers it, Space shoots.',
     art: `<svg viewBox="0 0 230 130"><rect x="20" y="8" width="190" height="114" rx="18" fill="#2f8d5a"/><g fill="#fff">${[0, 1, 2, 3, 4, 5].map(i => `<circle cx="${115}" cy="${84 - i * 10}" r="2.6"/>`).join('')}</g><circle cx="115" cy="32" r="9" fill="#d7262b"/><circle cx="115" cy="94" r="9" fill="#fbf8ef"/><path d="M150 70 v38" stroke="#151515" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 8"/><path d="M142 100 l8 9 l8-9" stroke="#151515" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
   { t: 'Every table has a goal', p: 'Sink a number of balls, only the stripes, certain colors, one special ball, or balls in order. Fewest shots wins.',
     art: `<svg viewBox="0 0 230 130"><rect x="30" y="34" width="170" height="62" rx="31" fill="#fffdf8"/><circle cx="72" cy="65" r="15" fill="#d7262b"/><circle cx="115" cy="65" r="15" fill="#1d4fb8"/><circle cx="158" cy="65" r="15" fill="#151515"/><circle cx="72" cy="65" r="16" fill="#2fa654"/><path d="M65 65l5 5 9-10" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
@@ -1968,6 +2103,72 @@ $('btn-help').onclick = () => { Sound.init(); Sound.tap(); showHelp(0); };
 $('btn-stats').onclick = () => { Sound.init(); Sound.tap(); showStats(); };
 $('btn-sound').onclick = () => { Sound.init(); settings.sound = !settings.sound; saveSettings(); syncToggles(); Sound.setSound(settings.sound); Sound.tap(); };
 syncToggles();
+
+/* ============================== home page ============================= */
+let homeOpen = false;
+const ROOM_ICON = { basement: '🎯', diner: '🍔', garage: '🔧', patio: '🌿', boardwalk: '🏖️', cabin: '🏔️', dorm: '🍕', rooftop: '🌇', bowling: '🎳' };
+function markRoom(theme) { stats.rooms = stats.rooms || {}; if (!stats.rooms[theme]) { stats.rooms[theme] = 1; saveStats(); } }
+const dailyIdx = () => Math.min(day.results.filter(v => v != null).length, G.levels.length - 1);
+function renderHome() {
+  $('homeDate').textContent = `No. ${PUZZLE_NO} · ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`;
+  $('homeDots').innerHTML = G.levels.map((_, i) => { const v = day.results[i]; return `<i class="${v == null ? '' : badgeFor(v)[0]}"></i>`; }).join('');
+  const done = day.results.filter(v => v != null).length;
+  $('homePlay').textContent = day.done ? `See results · ${totalShots()} shots` : done ? `Continue · ${done}/${G.levels.length}` : 'Play today';
+  $('homeLevels').disabled = !day.done; $('homeLevelsSub').textContent = day.done ? 'replay any' : 'locked';
+  $('homeCollCount').textContent = `${Object.keys(stats.rooms || {}).length}/${Object.keys(THEMES).length}`;
+  $('homeStreak').textContent = currentStreak();
+  $('homeSound').classList.toggle('off', !settings.sound);
+}
+function showHome() {
+  if ($('overlay').classList.contains('show')) closeOverlay();
+  homeOpen = true; drag = null; aimState.power = 0;
+  $('home').hidden = false; $('ui').style.visibility = 'hidden'; $('stamp').classList.remove('show');
+  renderHome(); computeView(); G.camMode = 'home';
+}
+function hideHome() {
+  homeOpen = false; $('home').hidden = true; $('ui').style.visibility = '';
+  G.yawTarget = Math.round(G.yawSmooth / 360) * 360; // ease the turn back to the table's own angle
+  computeView();
+}
+function playToday() {
+  Sound.init(); Sound.tap();
+  hideHome();
+  if (day.done) { // finished: show the day's results over the last table
+    if (G.practice || !G.complete) { loadTable(G.levels.length - 1, null); G.complete = true; G.inputLocked = true; G.shots = day.results[G.levels.length - 1]; updatePill(); }
+    G.camMode = 'done'; showEndOfDay(); return;
+  }
+  const i = dailyIdx();
+  if (G.practice || G.idx !== i || G.complete) loadTable(i, day.current);
+  else tweenCamera(G.shots > 0 ? 'ready' : 'overview', 1.1, easeOut);
+  if (!settings.seenHelp) showHelp(0);
+}
+$('homePlay').onclick = playToday;
+$('gameWord').onclick = () => { Sound.tap(); showHome(); };
+$('homeHelp').onclick = () => { Sound.init(); Sound.tap(); showHelp(0); };
+$('homeSound').onclick = () => { $('btn-sound').click(); renderHome(); };
+$('homeStats').onclick = $('homeStreakBtn').onclick = () => { Sound.init(); Sound.tap(); showStats(); };
+$('homeLevels').onclick = () => {
+  Sound.init(); Sound.tap();
+  const rows = G.levels.map((l, i) => {
+    const v = day.results[i], [bc] = v != null ? badgeFor(v) : ['']; const col = { green: 'var(--green)', yellow: 'var(--yellow)', red: 'var(--red)' }[bc] || 'var(--muted)';
+    return `<button class="lrow" data-level="${i}"><span class="emo">${ROOM_ICON[l.theme] || '🎱'}</span>
+      <span><b>${esc(l.title)}</b><small>${esc(THEMES[l.theme].place)} · today <span style="color:${col};font-weight:900">${v == null ? '–' : v + (v === 1 ? ' shot' : ' shots')}</span></small></span><span class="chev">›</span></button>`;
+  }).join('');
+  const sheet = openOverlay(`<button class="close-x" aria-label="Close">×</button><div class="eyebrow">LEVELS</div><h2>Replay today's tables</h2>
+    <div class="note">Practice as much as you like. Replays don't count toward today.</div><div class="list">${rows}</div>`, { center: true });
+  sheet.querySelector('.close-x').onclick = () => { Sound.tap(); closeOverlay(); };
+  sheet.querySelector('.list').onclick = (e) => { const b = e.target.closest('[data-level]'); if (!b) return; Sound.tap(); closeOverlay(); hideHome(); loadTable(+b.dataset.level, null, true); };
+};
+$('homeCollection').onclick = () => {
+  Sound.init(); Sound.tap();
+  const got = stats.rooms || {}, keys = Object.keys(THEMES), n = keys.filter(k => got[k]).length;
+  const rows = keys.map(k => got[k]
+    ? `<div class="lrow"><span class="emo">${ROOM_ICON[k]}</span><span><b>${esc(THEMES[k].place)}</b><small>table cleared here</small></span><span></span></div>`
+    : `<div class="lrow locked"><span class="emo">❔</span><span><b>???</b><small>not visited yet</small></span><span></span></div>`).join('');
+  const sheet = openOverlay(`<button class="close-x" aria-label="Close">×</button><div class="eyebrow">COLLECTION</div><h2>Rooms</h2>
+    <div class="note">Every place you've cleared a table. ${n} of ${keys.length} found.</div><div class="list">${rows}</div>`, { center: true });
+  sheet.querySelector('.close-x').onclick = () => { Sound.tap(); closeOverlay(); };
+};
 
 /* ============================= backend ============================= */
 function withTimeout(p, ms) { return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]); }
@@ -2022,14 +2223,15 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && lo
   requestAnimationFrame(frame);
   $('loading').style.opacity = 0; setTimeout(() => $('loading').remove(), 450);
   if (day.done || doneCount >= G.levels.length) {
-    G.complete = true; G.inputLocked = true; G.shots = day.results[idx]; updatePill(); renderProgress(); showEndOfDay();
+    G.complete = true; G.inputLocked = true; G.shots = day.results[idx]; updatePill(); renderProgress();
     // retry any score submissions that failed earlier
     if (G.remote) G.levels.forEach((l, i) => { if (!day.submitted[l.order] && day.results[i] != null) submitAndRank(l.order, day.results[i]); });
-  } else if (!settings.seenHelp) showHelp(0);
+  }
+  showHome(); // every visit starts on the home page
   const dare = new URLSearchParams(location.search);
   if (dare.get('dare') && !day.done) setTimeout(() => toast(`A friend did table ${+dare.get('t') || 1} in ${+dare.get('dare')} shots. Beat that!`), 900);
   // expose a tiny hook for automated testing
-  window.__poolsies = { G, shoot, THREE, camera, aimState, toScreen, firstContact, physStep, roll, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
+  window.__poolsies = { G, shoot, showHome, playToday, zoomTo, THREE, camera, aimState, toScreen, firstContact, physStep, roll, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
 })();
 </script>
 </body>

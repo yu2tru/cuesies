@@ -1,7 +1,7 @@
 # cuesies
 
 Cuesies is a daily pool puzzle for the browser. Five tables a day, one goal each, fewest shots wins.
-Everything lives in `index.html` (Three.js + Supabase client from pinned jsDelivr URLs). Host it as a static page.
+Opens on a home page (today's card, Levels replays, Collection, Stats, Streak) styled like Scoople and Stopple. Everything lives in `index.html` (Three.js + Supabase client from pinned jsDelivr URLs). Host it as a static page.
 
 ## Setup
 
