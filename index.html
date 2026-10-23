@@ -1435,15 +1435,19 @@ function firstContact(x0, z0, dx, dz) {
 function setDot(i, x, z, r) { tmpV.set(x, 0.014, z); tmpS.set(r, 1, r); tmpM.compose(tmpV, tmpQ.identity(), tmpS); aim.dots.setMatrixAt(i, tmpM); }
 function drawAim(dx, dz, power) {
   const c = G.cue; const { s, hit } = firstContact(c.x, c.z, dx, dz);
-  let n = 0; const gap = 0.055;
-  for (let t = R * 2.1; t < s - 0.01 && n < 180; t += gap) setDot(n++, c.x + dx * t, c.z + dz * t, 0.011);
+  let n = 0; const gap = 0.045;
+  // cue ball: a short tapering trail that grows (and gains dots) as the shot charges; stops at the impact point
+  const L = 0.3 + power * 1.25, end = Math.min(L, s - 0.01);
+  for (let t = R * 2.1; t < end && n < 180; t += gap) { const k = t / L; setDot(n++, c.x + dx * t, c.z + dz * t, 0.012 - 0.0075 * k); }
   const gx = c.x + dx * s, gz = c.z + dz * s;
-  const showGhost = hit && hit.type !== 'pocket';
+  const showGhost = hit && hit.type !== 'pocket'; // the impact point, wherever the first contact is
   aim.ghost.visible = aim.ghostFill.visible = !!showGhost;
   aim.ghost.position.set(gx, 0.016, gz); aim.ghostFill.position.set(gx, 0.015, gz);
   if (hit && hit.type === 'ball') {
+    // object ball: same tapering trail; longer with more charge, shorter on thin cuts (they pass on less speed)
     const b = hit.ball; let nx = b.x - gx, nz = b.z - gz; const d = Math.sqrt(nx * nx + nz * nz) || 1; nx /= d; nz /= d;
-    for (let t = R * 1.6, k = 0; k < 7 && n < 220; t += gap, k++) setDot(n++, b.x + nx * t, b.z + nz * t, 0.009 * (1 - k * 0.09));
+    const Lt = (0.16 + power * 0.85) * Math.max(0.3, dx * nx + dz * nz);
+    for (let t = R * 1.6; t < Lt + R * 1.6 && n < 220; t += gap) { const k = (t - R * 1.6) / Lt; setDot(n++, b.x + nx * t, b.z + nz * t, 0.011 - 0.0072 * k); }
   }
   aim.dots.count = n; aim.dots.instanceMatrix.needsUpdate = true;
   aim.ring.position.set(c.x, 0.017, c.z); aim.ringBg.position.set(c.x, 0.016, c.z);
