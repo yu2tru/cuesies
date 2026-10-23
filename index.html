@@ -1447,19 +1447,22 @@ function roll(x, z, dx, dz, v0, maxD) {
 }
 // A dotted trail: dense, even, full-size dots for a strong roll; sparser dots that shrink toward the end for a weak one
 function trail(n, x, z, dx, dz, from, to, strength, size) {
-  const gap = lerp(0.1, 0.04, strength), taper = 1 - strength;
+  const gap = lerp(0.13, 0.08, strength), taper = 1 - strength;
   for (let t = from; t < to - 0.005 && n < 220; t += gap) { const k = (t - from) / Math.max(0.001, to - from); setDot(n++, x + dx * t, z + dz * t, size * (1 - 0.6 * taper * k)); }
   return n;
 }
 function drawAim(dx, dz, power) {
+  if (power < 0.05) power = 0; // below the minimum a shot needs: show no charge at all
   const c = G.cue, v0 = MAX_SPEED * power, { s, hit } = firstContact(c.x, c.z, dx, dz);
   let n = 0;
   const r = roll(c.x, c.z, dx, dz, v0, s), reaches = hit && r.v > 0;
   const strength = reaches ? clamp(r.v / (MAX_SPEED * 0.6), 0, 1) : clamp(v0 / MAX_SPEED, 0, 1) * 0.5;
-  if (power < 0.03) n = trail(n, c.x, c.z, dx, dz, R * 2.1, R * 2.1 + 0.16, 0, 0.011); // just aiming: a tiny direction hint
-  else n = trail(n, c.x, c.z, dx, dz, R * 2.1, reaches ? s : Math.min(r.d, s), strength, 0.012);
-  const gx = c.x + dx * s, gz = c.z + dz * s, showGhost = reaches && hit.type !== 'pocket';
+  if (power > 0) n = trail(n, c.x, c.z, dx, dz, R * 2.1, reaches ? s : Math.min(r.d, s), strength, 0.012);
+  // the circle always shows where you're pointing; it lights up once the charge will actually get there
+  const gx = c.x + dx * s, gz = c.z + dz * s, showGhost = hit && hit.type !== 'pocket';
   aim.ghost.visible = aim.ghostFill.visible = !!showGhost;
+  aim.ghost.material.opacity = reaches ? 1 : 0.38; aim.ghostFill.material.opacity = reaches ? 0.5 : 0.1;
+  aim.ghost.material.color.set(reaches ? '#ffffff' : '#e8e8e8'); aim.ghost.scale.setScalar(reaches ? 1.08 : 1);
   aim.ghost.position.set(gx, 0.016, gz); aim.ghostFill.position.set(gx, 0.015, gz);
   if (reaches && hit.type === 'ball') {
     // object ball: speed it picks up from this hit, and how far that carries it (no bounces shown)
@@ -1470,8 +1473,8 @@ function drawAim(dx, dz, power) {
   }
   aim.dots.count = n; aim.dots.instanceMatrix.needsUpdate = true;
   aim.ring.position.set(c.x, 0.017, c.z); aim.ringBg.position.set(c.x, 0.016, c.z);
-  const segs = Math.max(1, Math.round(power * aim.SEG));
-  aim.ring.geometry.setDrawRange(0, segs * 6);
+  const segs = Math.round(power * aim.SEG);
+  aim.ring.visible = segs > 0; aim.ring.geometry.setDrawRange(0, segs * 6);
   aim.ring.material.color.setHSL(lerp(0.33, 0.0, power), 0.85, 0.55);
   aim.group.visible = true;
 }
