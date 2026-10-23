@@ -120,9 +120,24 @@
   .sheet {
     position: relative; width: 100%; max-width: 480px; background: var(--card); border-radius: 30px 30px 0 0;
     padding: 26px 22px calc(env(safe-area-inset-bottom) + 22px); text-align: center; animation: up .38s cubic-bezier(.2,.9,.25,1.1);
-    box-shadow: 0 -10px 40px rgba(0,0,0,.15); max-height: 92vh; overflow-y: auto; touch-action: pan-y;
+    box-shadow: 0 -10px 40px rgba(0,0,0,.15); max-height: 92vh; max-height: calc(100dvh - 24px); overflow-y: auto; touch-action: pan-y;
+    transition: transform .38s cubic-bezier(.2,.9,.25,1);
   }
-  #overlay.center .sheet { border-radius: 30px; width: calc(100% - 32px); padding-bottom: 22px; }
+  /* centered pop-ups fit the space you can actually see (dvh = between Safari's bars) */
+  #overlay.center .sheet { border-radius: 30px; width: calc(100% - 32px); padding-bottom: 22px; max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  #overlay .scrim { transition: opacity .3s ease; }
+  /* finished pop-ups can be tucked away: tap outside -> slides down to a tab, tap the tab -> back up */
+  .sheet .grab { display: none; width: 40px; height: 5px; border-radius: 3px; background: rgba(21,21,21,.18); margin: -14px auto 12px; }
+  #overlay.tuckable .sheet .grab { display: block; }
+  #overlay.peek { pointer-events: none; }
+  #overlay.peek .scrim { opacity: 0; }
+  #overlay.peek .sheet { pointer-events: auto; cursor: pointer; transform: translateY(calc(100% - 92px - env(safe-area-inset-bottom))); overflow: hidden; }
+  #overlay.peek .sheet * { pointer-events: none; }
+  .list.grid2 { grid-template-columns: 1fr 1fr; }
+  .list.grid2 .lrow { grid-template-columns: 30px 1fr; padding: 9px 10px; border-radius: 14px; gap: 8px; }
+  .list.grid2 .lrow .emo { font-size: 22px; }
+  .list.grid2 .lrow b { font-size: 14px; line-height: 1.15; }
+  .list.grid2 .lrow small { font-size: 11.5px; }
   @keyframes up { from { transform: translateY(100%); } to { transform: translateY(0); } }
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
   .sheet .eyebrow { font-size: 12px; font-weight: 900; letter-spacing: .14em; color: var(--muted); }
@@ -1188,7 +1203,8 @@ function setStrips(top, bottom) {
 const scrimmed = (hex) => { const c = parseInt(hex.slice(1), 16), f = (v) => Math.round(v * 0.82); return '#' + [f(c >> 16 & 255), f(c >> 8 & 255), f(c & 255)].map(v => v.toString(16).padStart(2, '0')).join(''); };
 function overlayStrips() { // bars follow what's on screen: darkened table on top, the white card at the bottom
   const o = $('overlay');
-  if (o.classList.contains('show')) { const dark = scrimmed(bars.color); setStrips(dark, o.classList.contains('center') ? dark : '#fffdf8'); }
+  if (o.classList.contains('peek')) setStrips(bars.color, '#fffdf8'); // tucked: table shows clearly, card tab at the bottom
+  else if (o.classList.contains('show')) { const dark = scrimmed(bars.color); setStrips(dark, o.classList.contains('center') ? dark : '#fffdf8'); }
   else setStrips(bars.color, bars.color);
 }
 function paintBars(color) {
@@ -1650,7 +1666,8 @@ function defaultAim() {
 // Zoom: pinch or scroll wheel. In = the cue-ball view, out = the whole-table view; eased both ways.
 let lastZoom = 0;
 function zoomTo(dir) {
-  if (homeOpen || G.complete || G.moving || $('overlay').classList.contains('show') || G.camMode === 'outro') return;
+  const tucked = $('overlay').classList.contains('peek');
+  if (homeOpen || G.moving || G.camMode === 'outro' || ($('overlay').classList.contains('show') && !tucked) || (G.complete && !tucked)) return;
   const now = performance.now(); if (now - lastZoom < 350) return; lastZoom = now;
   const target = dir > 0 ? 'ready' : 'overview'; if (G.camMode === target) return;
   tweenCamera(target, 0.9, easeInOut);
@@ -1728,7 +1745,7 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 (() => {
   const el = $('hint'); let tdrag = null;
   el.addEventListener('pointerdown', (e) => {
-    Sound.init(); if ($('overlay').classList.contains('show')) return;
+    Sound.init(); const ov = $('overlay').classList; if (ov.contains('show') && !ov.contains('peek')) return; // works while a pop-up is tucked away
     // a new touch always takes over, so a lift the browser never reported can't leave the strip stuck
     tdrag = { id: e.pointerId, x: e.clientX }; el.classList.add('active');
     try { el.setPointerCapture(e.pointerId); } catch (err) {}
@@ -1992,9 +2009,15 @@ function updateUI() {
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2200); }
 function openOverlay(html, { center = false, dismiss = true } = {}) {
-  const o = $('overlay'); o.className = 'show' + (center ? ' center' : '');
-  o.innerHTML = `<div class="scrim"></div><div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
+  const o = $('overlay'), tuck = !center && !dismiss; // finished-level / end-of-day sheets can be tucked away
+  o.className = 'show' + (center ? ' center' : '') + (tuck ? ' tuckable' : '');
+  o.innerHTML = `<div class="scrim"></div><div class="sheet" role="dialog" aria-modal="true">${tuck ? '<div class="grab"></div>' : ''}${html}</div>`;
   if (dismiss) o.querySelector('.scrim').onclick = closeOverlay;
+  if (tuck) {
+    const sheet = o.querySelector('.sheet');
+    o.querySelector('.scrim').onclick = () => { o.classList.add('peek'); sheet.scrollTop = 0; $('stamp').classList.remove('show'); overlayStrips(); };
+    sheet.addEventListener('click', (e) => { if (o.classList.contains('peek')) { e.stopPropagation(); o.classList.remove('peek'); overlayStrips(); } }, true);
+  }
   drag = null; aimState.power = 0; overlayStrips();
   return o.querySelector('.sheet');
 }
@@ -2180,10 +2203,10 @@ $('homeCollection').onclick = () => {
   Sound.init(); Sound.tap();
   const got = stats.rooms || {}, keys = Object.keys(THEMES), n = keys.filter(k => got[k]).length;
   const rows = keys.map(k => got[k]
-    ? `<div class="lrow"><span class="emo">${ROOM_ICON[k]}</span><span><b>${esc(THEMES[k].place)}</b><small>table cleared here</small></span><span></span></div>`
-    : `<div class="lrow locked"><span class="emo">❔</span><span><b>???</b><small>not visited yet</small></span><span></span></div>`).join('');
+    ? `<div class="lrow"><span class="emo">${ROOM_ICON[k]}</span><span><b>${esc(THEMES[k].place)}</b><small>cleared</small></span></div>`
+    : `<div class="lrow locked"><span class="emo">❔</span><span><b>???</b><small>not visited</small></span></div>`).join('');
   const sheet = openOverlay(`<button class="close-x" aria-label="Close">×</button><div class="eyebrow">COLLECTION</div><h2>Rooms</h2>
-    <div class="note">Every place you've cleared a table. ${n} of ${keys.length} found.</div><div class="list">${rows}</div>`, { center: true });
+    <div class="note">Every place you've cleared a table. ${n} of ${keys.length} found.</div><div class="list grid2">${rows}</div>`, { center: true });
   sheet.querySelector('.close-x').onclick = () => { Sound.tap(); closeOverlay(); };
 };
 
