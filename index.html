@@ -469,6 +469,8 @@ const Sound = (() => {
         unmuter.loop = true; unmuter.setAttribute('playsinline', ''); unmuter.setAttribute('x-webkit-airplay', 'deny'); unmuter.preload = 'auto';
       }
       if (on) { const p = unmuter.play(); if (p && p.catch) p.catch(() => {}); } else unmuter.pause();
+      // how it shows up in the phone's "now playing" panel
+      if (on && 'mediaSession' in navigator && window.MediaMetadata && !navigator.mediaSession.metadata) navigator.mediaSession.metadata = new MediaMetadata({ title: 'Poolsies', artist: 'Game sound' });
     } catch (e) {}
   }
   // Coming back from another app: iOS leaves audio "interrupted"/"suspended" — wake everything up again
