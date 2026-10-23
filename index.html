@@ -162,8 +162,10 @@
   .help-p { font-weight: 700; font-size: 16px; line-height: 1.4; color: rgba(21,21,21,.78); margin: 4px 6px 0; }
   .close-x { position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; border: 0; background: transparent; font-size: 26px; font-weight: 900; cursor: pointer; color: var(--muted); }
   #fade { position: fixed; inset: 0; background: #ffffff; opacity: 0; pointer-events: none; z-index: 25; display: none; }
-  .edge-tint { position: fixed; left: 0; right: 0; pointer-events: none; z-index: 1; }
-  .edge-tint.top { top: 12px; height: calc(env(safe-area-inset-top) + 44px); background: linear-gradient(var(--bar) 0, var(--bar) calc(env(safe-area-inset-top) - 12px), transparent 100%); }
+  /* page-edge fades into the browser bars. Not position:fixed, so Safari never reads its bar color from these
+     (only the .bar-strip elements); the page never scrolls, so they still sit at the very top and bottom. */
+  .edge-tint { position: absolute; left: 0; right: 0; pointer-events: none; z-index: 1; }
+  .edge-tint.top { top: 0; height: calc(env(safe-area-inset-top) + 56px); background: linear-gradient(var(--bar) 0, var(--bar) env(safe-area-inset-top), transparent 100%); }
   .edge-tint.bottom { bottom: 0; height: calc(env(safe-area-inset-bottom) + 48px); background: linear-gradient(0deg, var(--bar) 0, var(--bar) env(safe-area-inset-bottom), transparent 100%); }
   /* Safari 26 tints its bars from solid fixed strips at the screen edges (read when a strip appears) */
   .bar-strip { position: fixed; left: 0; right: 0; height: 12px; pointer-events: none; z-index: 50; } /* topmost so Safari always reads it... */
