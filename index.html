@@ -485,13 +485,15 @@ const Sound = (() => {
   }
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { hiddenAt = performance.now(); if (unmuter) unmuter.pause(); return; }
-    if (ac && performance.now() - hiddenAt > 1200) rebuildPending = true;
-    wake();
+    if (ac && performance.now() - hiddenAt > 1200) {
+      rebuild(); // try straight away; if iOS keeps it paused, the next touch (tap or drag) finishes the job
+      setTimeout(() => { if (ac && ac.state !== 'running') rebuildPending = true; }, 400);
+    } else wake();
   });
   addEventListener('pageshow', (e) => { if (e.persisted && ac) rebuildPending = true; wake(); });
   addEventListener('focus', wake);
   // iOS only lets audio (re)start from a tap, so do the rebuild / restart on the next touch, click or key
-  for (const ev of ['touchend', 'pointerdown', 'keydown']) addEventListener(ev, () => {
+  for (const ev of ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'click', 'keydown']) addEventListener(ev, () => {
     if (!ac) return;
     if (rebuildPending) rebuild();
     else if (ac.state !== 'running' || (unmuter && unmuter.paused && settings.sound)) wake();
@@ -1417,37 +1419,54 @@ const aim = (() => {
   return { group, dots, ghost, ghostFill, ring, ringBg, SEG };
 })();
 const tmpM = new THREE.Matrix4(), tmpV = new THREE.Vector3(), tmpS = new THREE.Vector3(), tmpQ = new THREE.Quaternion();
-function probe(x, z) {
+function probe(x, z, self = G.cue) {
   for (const s of SEGS) if (segContact(x, z, s, R)) return { type: 'wall' };
   for (const o of G.obstacles) if (obstacleContact(x, z, o, R)) return { type: 'obs' };
-  for (const b of G.active) if (b !== G.cue) { const dx = b.x - x, dz = b.z - z; if (dx * dx + dz * dz < 4 * R * R) return { type: 'ball', ball: b }; }
+  for (const b of G.active) if (b !== self && b !== G.cue) { const dx = b.x - x, dz = b.z - z; if (dx * dx + dz * dz < 4 * R * R) return { type: 'ball', ball: b }; }
   if (x > 1 || x < -1 || z > 2 || z < -2) return { type: 'pocket' };
   for (const p of POCKETS) { const dx = x - p.x, dz = z - p.z; if (dx * dx + dz * dz < p.r * p.r) return { type: 'pocket' }; }
   return null;
 }
-function firstContact(x0, z0, dx, dz) {
+function firstContact(x0, z0, dx, dz, self) {
   let prev = 0, s = 0, hit = null; const step = 0.012;
-  for (s = step; s < 9; s += step) { hit = probe(x0 + dx * s, z0 + dz * s); if (hit) break; prev = s; }
+  for (s = step; s < 9; s += step) { hit = probe(x0 + dx * s, z0 + dz * s, self); if (hit) break; prev = s; }
   if (!hit) return { s: 9, hit: null };
-  let lo = prev, hi = s; for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; const h = probe(x0 + dx * m, z0 + dz * m); if (h) { hi = m; hit = h; } else lo = m; }
+  let lo = prev, hi = s; for (let i = 0; i < 12; i++) { const m = (lo + hi) / 2; const h = probe(x0 + dx * m, z0 + dz * m, self); if (h) { hi = m; hit = h; } else lo = m; }
   return { s: lo, hit };
 }
 function setDot(i, x, z, r) { tmpV.set(x, 0.014, z); tmpS.set(r, 1, r); tmpM.compose(tmpV, tmpQ.identity(), tmpS); aim.dots.setMatrixAt(i, tmpM); }
+// How far a ball rolls in a straight line from speed v0 (same friction and slow zones as the real physics).
+// Returns the distance covered (up to maxD) and its speed when it gets there (0 if it stops short).
+function roll(x, z, dx, dz, v0, maxD) {
+  let d = 0, v = v0, n = 0;
+  while (v > STOP_V && d < maxD && n++ < 4000) {
+    const f = G.zones.length && inZone(x + dx * d, z + dz * d) ? SLOW_MULT : 1;
+    v -= (MU * f + KV * f * v) * DT; if (v <= STOP_V) break; d += v * DT;
+  }
+  return d >= maxD ? { d: maxD, v } : { d, v: 0 };
+}
+// A dotted trail: dense, even, full-size dots for a strong roll; sparser dots that shrink toward the end for a weak one
+function trail(n, x, z, dx, dz, from, to, strength, size) {
+  const gap = lerp(0.1, 0.04, strength), taper = 1 - strength;
+  for (let t = from; t < to - 0.005 && n < 220; t += gap) { const k = (t - from) / Math.max(0.001, to - from); setDot(n++, x + dx * t, z + dz * t, size * (1 - 0.6 * taper * k)); }
+  return n;
+}
 function drawAim(dx, dz, power) {
-  const c = G.cue; const { s, hit } = firstContact(c.x, c.z, dx, dz);
-  let n = 0; const gap = 0.045;
-  // cue ball: a short tapering trail that grows (and gains dots) as the shot charges; stops at the impact point
-  const L = 0.3 + power * 1.25, end = Math.min(L, s - 0.01);
-  for (let t = R * 2.1; t < end && n < 180; t += gap) { const k = t / L; setDot(n++, c.x + dx * t, c.z + dz * t, 0.012 - 0.0075 * k); }
-  const gx = c.x + dx * s, gz = c.z + dz * s;
-  const showGhost = hit && hit.type !== 'pocket'; // the impact point, wherever the first contact is
+  const c = G.cue, v0 = MAX_SPEED * power, { s, hit } = firstContact(c.x, c.z, dx, dz);
+  let n = 0;
+  const r = roll(c.x, c.z, dx, dz, v0, s), reaches = hit && r.v > 0;
+  const strength = reaches ? clamp(r.v / (MAX_SPEED * 0.6), 0, 1) : clamp(v0 / MAX_SPEED, 0, 1) * 0.5;
+  if (power < 0.03) n = trail(n, c.x, c.z, dx, dz, R * 2.1, R * 2.1 + 0.16, 0, 0.011); // just aiming: a tiny direction hint
+  else n = trail(n, c.x, c.z, dx, dz, R * 2.1, reaches ? s : Math.min(r.d, s), strength, 0.012);
+  const gx = c.x + dx * s, gz = c.z + dz * s, showGhost = reaches && hit.type !== 'pocket';
   aim.ghost.visible = aim.ghostFill.visible = !!showGhost;
   aim.ghost.position.set(gx, 0.016, gz); aim.ghostFill.position.set(gx, 0.015, gz);
-  if (hit && hit.type === 'ball') {
-    // object ball: same tapering trail; longer with more charge, shorter on thin cuts (they pass on less speed)
+  if (reaches && hit.type === 'ball') {
+    // object ball: speed it picks up from this hit, and how far that carries it (no bounces shown)
     const b = hit.ball; let nx = b.x - gx, nz = b.z - gz; const d = Math.sqrt(nx * nx + nz * nz) || 1; nx /= d; nz /= d;
-    const Lt = (0.16 + power * 0.85) * Math.max(0.3, dx * nx + dz * nz);
-    for (let t = R * 1.6; t < Lt + R * 1.6 && n < 220; t += gap) { const k = (t - R * 1.6) / Lt; setDot(n++, b.x + nx * t, b.z + nz * t, 0.011 - 0.0072 * k); }
+    const vb = r.v * Math.max(0, dx * nx + dz * nz) * (1 + E_BALL) / 2;
+    const stop = firstContact(b.x, b.z, nx, nz, b).s, rb = roll(b.x, b.z, nx, nz, vb, stop);
+    n = trail(n, b.x, b.z, nx, nz, R * 1.6, Math.max(R * 1.6 + 0.05, rb.d), clamp(vb / (MAX_SPEED * 0.5), 0, 1), 0.011);
   }
   aim.dots.count = n; aim.dots.instanceMatrix.needsUpdate = true;
   aim.ring.position.set(c.x, 0.017, c.z); aim.ringBg.position.set(c.x, 0.016, c.z);
@@ -1982,7 +2001,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && lo
   const dare = new URLSearchParams(location.search);
   if (dare.get('dare') && !day.done) setTimeout(() => toast(`A friend did table ${+dare.get('t') || 1} in ${+dare.get('dare')} shots. Beat that!`), 900);
   // expose a tiny hook for automated testing
-  window.__poolsies = { G, shoot, THREE, camera, aimState, toScreen, firstContact, physStep, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
+  window.__poolsies = { G, shoot, THREE, camera, aimState, toScreen, firstContact, physStep, roll, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
 })();
 </script>
 </body>
