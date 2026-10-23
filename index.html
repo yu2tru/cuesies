@@ -1658,7 +1658,9 @@ const touchPts = new Map(); let pinch = null;
 canvas.addEventListener('pointerdown', (e) => {
   Sound.init();
   if (e.pointerType === 'touch') {
+    if (e.isPrimary) { touchPts.clear(); pinch = null; } // a fresh touch with nothing else down: start clean
     touchPts.set(e.pointerId, [e.clientX, e.clientY]);
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
     if (touchPts.size === 2) { // second finger: this is a pinch, not a shot
       const [a, b] = [...touchPts.values()]; pinch = { d0: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, done: false };
       drag = null; aimState.power = 0; return;
@@ -1712,6 +1714,9 @@ function endDrag(e, cancel) {
   void aimed;
 }
 const liftTouch = (e) => { touchPts.delete(e.pointerId); if (pinch && touchPts.size === 0) pinch = null; };
+// fingers can lift anywhere on the page (over the panel, the header...), so listen everywhere
+addEventListener('pointerup', liftTouch, true); addEventListener('pointercancel', liftTouch, true);
+addEventListener('blur', () => { touchPts.clear(); pinch = null; });
 canvas.addEventListener('pointerup', (e) => { liftTouch(e); endDrag(e, false); });
 canvas.addEventListener('pointercancel', (e) => { liftTouch(e); endDrag(e, true); });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
