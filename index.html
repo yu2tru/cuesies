@@ -1725,7 +1725,8 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 (() => {
   const el = $('hint'); let tdrag = null;
   el.addEventListener('pointerdown', (e) => {
-    Sound.init(); if (tdrag || $('overlay').classList.contains('show')) return;
+    Sound.init(); if ($('overlay').classList.contains('show')) return;
+    // a new touch always takes over, so a lift the browser never reported can't leave the strip stuck
     tdrag = { id: e.pointerId, x: e.clientX }; el.classList.add('active');
     try { el.setPointerCapture(e.pointerId); } catch (err) {}
   });
@@ -1736,6 +1737,8 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   });
   const end = (e) => { if (tdrag && e.pointerId === tdrag.id) { tdrag = null; el.classList.remove('active'); } };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  addEventListener('pointerup', end, true); addEventListener('pointercancel', end, true); // lifts anywhere on the page
+  addEventListener('blur', () => { tdrag = null; el.classList.remove('active'); });
 })();
 
 // Keyboard: ←/→ turn the cue, ↓ charges, ↑ lowers the charge, Space shoots. Works alongside dragging.
