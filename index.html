@@ -166,7 +166,7 @@
   .edge-tint.top { top: 12px; height: calc(env(safe-area-inset-top) + 44px); background: linear-gradient(var(--bar) 0, var(--bar) calc(env(safe-area-inset-top) - 12px), transparent 100%); }
   .edge-tint.bottom { bottom: 0; height: calc(env(safe-area-inset-bottom) + 48px); background: linear-gradient(0deg, var(--bar) 0, var(--bar) env(safe-area-inset-bottom), transparent 100%); }
   /* Safari 26 tints its bars from solid fixed strips at the screen edges (read when a strip appears) */
-  .bar-strip { position: fixed; left: 0; right: 0; height: 12px; pointer-events: none; z-index: 50; }
+  .bar-strip { position: fixed; left: 0; right: 0; height: 12px; pointer-events: none; z-index: 0; } /* behind the page: Safari still reads it, but it never covers content */
   .bar-strip.top { top: 0; } .bar-strip.bottom { bottom: 0; }
   /* ---------- home (same layout and sizes as Scoople's and Stopple's home pages) ---------- */
   /* fits one screen: the hero takes whatever height is left after the cards */
