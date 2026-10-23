@@ -96,6 +96,8 @@
   .lvl-title { font-size: 31px; font-weight: 900; letter-spacing: -0.05em; line-height: 1.05; margin-bottom: 8px; }
   .goal-text { font-weight: 800; font-size: 14px; color: rgba(21,21,21,.72); margin-top: 8px; letter-spacing: -0.01em; text-shadow: 0 0 2px var(--bg), 0 0 10px var(--bg); }
   .goal-text small { font-weight: 800; color: var(--muted); }
+  .tilt-chip { display: inline-flex; align-items: center; gap: 3px; margin-left: 4px; padding: 1px 8px 1px 4px; border-radius: 999px; background: #ffd166; color: #151515; font-size: 12px; font-weight: 900; vertical-align: 1px; text-shadow: none; white-space: nowrap; }
+  .tilt-chip svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
   .goal-chip {
     background: var(--card); border-radius: 18px; padding: 10px 18px; font-weight: 900; font-size: 16px; letter-spacing: -0.02em;
     box-shadow: 0 2px 0 rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.06); max-width: 100%;
@@ -361,9 +363,12 @@ const DEG = Math.PI / 180;
 const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const pad2 = (n) => String(n).padStart(2, '0');
 
+try { // the game used to be called Poolsies: carry saved progress over to the new key names once
+  for (const k of ['settings', 'pid', 'day', 'stats']) { const old = localStorage.getItem('poolsies:' + k); if (old != null && localStorage.getItem('cuesies:' + k) == null) localStorage.setItem('cuesies:' + k, old); }
+} catch (e) {}
 const store = {
-  get(k, d) { try { const v = localStorage.getItem('poolsies:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem('poolsies:' + k, JSON.stringify(v)); } catch (e) { /* storage blocked */ } },
+  get(k, d) { try { const v = localStorage.getItem('cuesies:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('cuesies:' + k, JSON.stringify(v)); } catch (e) { /* storage blocked */ } },
 };
 function localDateStr(d = new Date()) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
 function dayNum(s) { const [y, m, d] = s.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / 86400000); }
@@ -398,6 +403,39 @@ const CM = 0.15;            // corner pocket mouth (cushion gap length along eac
 const SM = 0.115;           // side pocket half-mouth
 const CW = 0.06;            // cushion width
 const CUSH_H = 0.07, RAIL_TOP = 0.085, FLOOR_Y = -1.05;
+
+/* ---------- 3D physics + new obstacles: tuning ----------
+   Only tables that use the new pieces (fan, movable, bumper, bumperRail, slope, ramp, trampoline)
+   run the 3D step; the original tables keep the exact flat physics above. */
+const GRAVITY = 9.0;            // pull on airborne balls (table units / s²)
+const E_LAND = 0.42;            // share of falling speed kept when a ball bounces off the felt
+const LAND_SETTLE = 0.45;       // landing slower than this just settles (no more hops)
+const SLOPE_G = 1.6;            // pull along a tilted table for slope amount 1.0
+const SLOPE_VIS = 0.1;          // how much the table visibly tilts per slope amount (looks only)
+const FAN_ACC = 2.4;            // fan push right at the fan for strength 1.0 (fades to 0 at its range)
+const FAN_SWEEP_RATE = 0.9;     // sweeping fans: radians of their back-and-forth cycle per second of rolling
+const BUMPER_KICK = 1.4;        // speed a bumper adds per 1.0 of kick
+const RAIL_KICK = 0.35;         // speed a bumper rail adds per 1.0 of kick
+const POP_VY = 1.5;             // upward launch from a pop bumper per 1.0 of pop
+const RAMP_ANGLE_DEFAULT = 20;  // ramp angle (degrees) when a level doesn't say
+const TRAMP_BASE = 0.55, TRAMP_PER_SPEED = 0.32, TRAMP_MAX = 2.8; // trampoline launch = bounce × (base + perSpeed × speed)
+const MOVABLE_MU = { box: 1.6, puck: 0.3, car: 0.7, beachBall: 0.9 }; // how quickly each movable slides to a stop
+const MAX_SHOT_TIME = 30;       // safety net: a shot never runs longer than this (seconds of game time)
+// heights of obstacles (above the felt), so airborne balls can fly over the low ones
+const OBST_H = { coffeeMug: 0.2, cocoaMug: 0.2, sodaCan: 0.22, snowGlobe: 0.3, sandcastle: 0.4, cone: 0.33, bowlingPin: 0.38, plant: 0.5,
+  toolbox: 0.21, pizzaBox: 0.07, book: 0.07, napkinHolder: 0.19, block: 0.12, disc: 0.1, fan: 0.32, bumper: 0.1, bumperRail: 0.07,
+  chipStack: 0.11, toyWall: 0.12, bookStack: 0.13, trampoline: 0.012 };
+const NEW_KINDS = ['fan', 'movable', 'bumper', 'bumperRail', 'ramp', 'trampoline'];
+// deterministic sine/cosine (plain arithmetic, identical on every device) for anything that feeds the new physics
+function dsin(x) {
+  const TAU = 6.283185307179586, PI = 3.141592653589793, H = 1.5707963267948966;
+  x -= TAU * Math.round(x / TAU); if (x > H) x = PI - x; else if (x < -H) x = -PI - x;
+  const x2 = x * x; let t = x, s = x;
+  for (let k = 1; k < 10; k++) { t *= -x2 / ((2 * k) * (2 * k + 1)); s += t; }
+  return s;
+}
+const dcos = (x) => dsin(x + 1.5707963267948966);
+const DEBUG = /[?&]debug\b/.test(location.search);
 
 const POCKETS = [
   { id: 'sideR', x: 1.06, z: 0, r: 0.12, vr: 0.1 },
@@ -456,10 +494,15 @@ const THEMES = {
     decor: [['planter', -1.95, -2.9], ['lightPost', 2.0, -2.8], ['lightPost', -2.1, 1.2], ['stool', 2.0, 0.6, 'floor', 0, { color: '#3d2a1f' }], ['glass', 1.2, 2.18, 'rail', 0, { color: '#ff7a59' }]] },
   bowling: { place: 'Bowling alley lounge', floor: { pattern: 'lanes', base: '#e3c08d', alt: '#d8b27c', seam: '#b98f58' }, felt: '#d24f6e', rail: '#f3ead7', accent: '#3a7bd5', zone: 'spill',
     decor: [['pins', -1.85, -2.9], ['bowlingBall', 1.9, -2.6, 'floor', 0, { color: '#3a7bd5' }], ['ballReturn', 2.1, 0.4], ['sodaCan', 1.2, 2.18, 'rail', 0, { color: '#f2c12e' }]] },
+  casino: { place: 'Casino lounge', floor: { pattern: 'casino', base: '#e2c38f', alt: '#9e2632', seam: '#1d2b4f' }, felt: '#1f7a4c', rail: '#c9a227', railMetal: true, body: '#3a1c12', accent: '#e8b923', zone: 'rug', glow: '#ffcf87',
+    decor: [['slotMachine', -1.85, -2.95, 'floor', 8], ['slotMachine', -1.05, -3.15, 'floor', -4], ['stool', 2.0, -1.2, 'floor', 0, { color: '#9e2632' }], ['stool', 2.0, 0.8, 'floor', 0, { color: '#9e2632' }],
+      ['chipStacks', 1.2, 2.17, 'rail', 15], ['dice', -1.2, -2.18, 'rail', 25], ['chipStacks', -1.21, 1.2, 'rail', -30], ['plant', 1.95, -2.95]] },
+  playroom: { place: "Kids' playroom", floor: { pattern: 'foam', base: '#f6ead3', alt: '#8fd0c0', seam: '#ffd166', more: ['#f28fad', '#9bb7f0'] }, felt: '#4f7fe0', rail: '#ffd166', body: '#f28fad', accent: '#ff6b57', zone: 'rug',
+    decor: [['toyBlocks', -1.9, -2.85, 'floor', 12], ['teddy', 1.95, -2.75, 'floor', -20], ['duck', 1.2, 2.17, 'rail', -30], ['toyBlocks', 2.05, 0.7, 'floor', 40], ['beanbag', -2.1, 0.6, 'floor', 0, { color: '#8fd0c0' }]] },
 };
 
 /* =========================== demo levels =========================== */
-// Same JSON shape as rows in the poolsies_levels table. Rotation is in degrees.
+// Same JSON shape as rows in the cuesies_levels table. Rotation is in degrees.
 const DEMO_LEVELS = [
   { order: 1, title: 'Rack Em Up', theme: 'basement',
     goal: { type: 'count', count: 2 }, cueStart: [0, 1.25],
@@ -501,6 +544,77 @@ const DEMO_LEVELS = [
     camera: { tilt: 62, rotation: -8, zoom: 1.04 } },
 ];
 
+/* ============================ new levels ============================ */
+// Twelve tables that show off the new pieces. They are NOT part of the built-in daily set above:
+// they're meant for future days (see supabase-new-levels.sql) and can be tried now with ?debug.
+// Extra optional JSON:  slope {direction, amount}; felt (color);
+//   fan {strength, range, spread, sweep} · movable {model, shape, size/radius, height, mass, bouncy, friction}
+//   bumper {radius, kick, pop} · bumperRail {size, rotation, kick} · ramp {size, rotation, angle} · trampoline {radius, bounce}
+//   goal {type:'last', last: 8} = sink every ball, that one goes last.
+const NEW_LEVELS = [
+  { title: 'Crosswind', theme: 'garage', goal: { type: 'count', count: 2 }, cueStart: [0, 1.3],
+    balls: [{ number: 4, pos: [0.55, -1.55] }, { number: 6, pos: [0.72, -0.25] }, { number: 11, pos: [-0.35, -1.15] }],
+    obstacles: [{ kind: 'fan', shape: 'circle', pos: [-0.84, -0.75], radius: 0.1, rotation: 0, strength: 1, range: 1.5, spread: 30 },
+      { kind: 'sodaCan', shape: 'circle', pos: [0.2, -0.45], radius: 0.06 }],
+    slowZones: [{ kind: 'spill', shape: 'circle', pos: [-0.3, 0.75], radius: 0.22 }], camera: { tilt: 58, rotation: -6, zoom: 1 } },
+  { title: 'Moving Day', theme: 'dorm', goal: { type: 'specific', balls: [8] }, cueStart: [-0.2, 1.3],
+    balls: [{ number: 8, pos: [0.5, -1.4] }, { number: 3, pos: [-0.5, -1.0] }, { number: 12, pos: [-0.55, 0.35] }],
+    obstacles: [{ kind: 'movable', model: 'box', shape: 'box', pos: [0.8, -1.8], size: [0.26, 0.26], rotation: 45, height: 0.16, mass: 3 },
+      { kind: 'movable', model: 'box', shape: 'box', pos: [0.15, -0.35], size: [0.24, 0.24], rotation: 15, height: 0.16, mass: 2 },
+      { kind: 'pizzaBox', shape: 'box', pos: [-0.6, -1.6], size: [0.3, 0.3], rotation: -10 }],
+    slowZones: [], camera: { tilt: 58, rotation: 8, zoom: 1 } },
+  { title: 'Diamond Lights', theme: 'casino', goal: { type: 'count', count: 3 }, cueStart: [0, 1.3],
+    balls: [{ number: 1, pos: [-0.62, -1.45] }, { number: 9, pos: [0.62, -1.45] }, { number: 2, pos: [0, -1.25] }, { number: 10, pos: [-0.72, 0.45] }, { number: 3, pos: [0.74, 0.62] }],
+    obstacles: [{ kind: 'bumper', shape: 'circle', pos: [0, -0.6], radius: 0.1, kick: 1.5 }, { kind: 'bumper', shape: 'circle', pos: [-0.36, -0.25], radius: 0.1, kick: 1.5 },
+      { kind: 'bumper', shape: 'circle', pos: [0.36, -0.25], radius: 0.1, kick: 1.5 }, { kind: 'bumper', shape: 'circle', pos: [0, 0.1], radius: 0.1, kick: 1.5 }],
+    slowZones: [], camera: { tilt: 60, rotation: 0, zoom: 1 } },
+  { title: 'Gentle Grade', theme: 'patio', goal: { type: 'stripes', balls: [9, 14] }, cueStart: [0.2, 1.35], slope: { direction: 180, amount: 0.2 },
+    balls: [{ number: 9, pos: [0.35, -1.25] }, { number: 14, pos: [-0.45, 0.15] }, { number: 2, pos: [-0.15, -1.0] }, { number: 6, pos: [0.55, -0.25] }],
+    obstacles: [{ kind: 'plant', shape: 'circle', pos: [0.5, 0.6], radius: 0.13 }],
+    slowZones: [], camera: { tilt: 58, rotation: 6, zoom: 1 } },
+  { title: 'Book Jump', theme: 'basement', goal: { type: 'colors', balls: [3] }, cueStart: [0.2, 1.35],
+    balls: [{ number: 3, pos: [-0.45, -1.45] }, { number: 7, pos: [0.5, -1.2] }, { number: 13, pos: [-0.6, -0.2] }],
+    obstacles: [{ kind: 'ramp', shape: 'box', pos: [0.05, 0.55], size: [0.34, 0.24], rotation: 256, angle: 22 },
+      { kind: 'bookStack', shape: 'box', pos: [-0.2, -0.45], size: [0.62, 0.2], rotation: 166, height: 0.13 }],
+    slowZones: [], camera: { tilt: 56, rotation: -8, zoom: 1 } },
+  { title: 'Sea Breeze', theme: 'boardwalk', goal: { type: 'count', count: 2 }, cueStart: [0, 1.35],
+    balls: [{ number: 7, pos: [-0.55, -1.35] }, { number: 13, pos: [0.45, -1.55] }, { number: 4, pos: [-0.35, 0.25] }, { number: 15, pos: [0.65, 0.5] }],
+    obstacles: [{ kind: 'fan', shape: 'circle', pos: [0.86, -0.55], radius: 0.1, rotation: 180, strength: 1.1, range: 1.6, spread: 28, sweep: 35 },
+      { kind: 'movable', model: 'beachBall', shape: 'circle', pos: [0.05, -0.75], radius: 0.11, height: 0.22, mass: 0.35, bouncy: true },
+      { kind: 'sandcastle', shape: 'circle', pos: [-0.5, -0.65], radius: 0.1 }],
+    slowZones: [{ kind: 'towel', shape: 'box', pos: [0.45, 1.0], size: [0.4, 0.5], rotation: 10 }], camera: { tilt: 56, rotation: 10, zoom: 1 } },
+  { title: 'Rail Runner', theme: 'casino', felt: '#a3182b', goal: { type: 'order', balls: [1, 2] }, cueStart: [0.25, 1.35],
+    balls: [{ number: 1, pos: [-0.35, -1.15] }, { number: 2, pos: [0.45, -0.55] }, { number: 11, pos: [0.15, -1.6] }, { number: 15, pos: [-0.6, 0.55] }],
+    obstacles: [{ kind: 'bumperRail', shape: 'box', pos: [-0.89, -0.95], size: [0.05, 1.4], rotation: 0, kick: 1.3 },
+      { kind: 'bumperRail', shape: 'box', pos: [0.89, -0.95], size: [0.05, 1.4], rotation: 0, kick: 1.3 }],
+    slowZones: [], camera: { tilt: 60, rotation: -6, zoom: 1 } },
+  { title: 'Black Ice', theme: 'cabin', goal: { type: 'colors', balls: [2, 6] }, cueStart: [-0.4, 1.35], slope: { direction: 0, amount: 0.55 },
+    balls: [{ number: 2, pos: [-0.45, -1.0] }, { number: 6, pos: [-0.25, 0.35] }, { number: 7, pos: [0.15, -1.55] }],
+    obstacles: [{ kind: 'movable', model: 'puck', shape: 'circle', pos: [-0.1, -0.4], radius: 0.08, height: 0.04, mass: 0.6, friction: 0.25 },
+      { kind: 'cocoaMug', shape: 'circle', pos: [-0.62, -0.3], radius: 0.1 }],
+    slowZones: [], camera: { tilt: 58, rotation: 8, zoom: 1 } },
+  { title: 'Updraft', theme: 'rooftop', goal: { type: 'specific', balls: [1, 5], text: 'Sink only the solids.' }, cueStart: [0, 1.3],
+    balls: [{ number: 1, pos: [0.6, -1.5] }, { number: 5, pos: [-0.62, -0.45] }, { number: 12, pos: [0.25, -0.75] }],
+    obstacles: [{ kind: 'ramp', shape: 'box', pos: [0, 0.6], size: [0.32, 0.24], rotation: 270, angle: 20 },
+      { kind: 'fan', shape: 'circle', pos: [-0.86, -1.0], radius: 0.1, rotation: 0, strength: 1, range: 1.5, spread: 30 }],
+    slowZones: [], camera: { tilt: 58, rotation: 0, zoom: 1 } },
+  { title: 'Bouncy Castle', theme: 'playroom', goal: { type: 'count', count: 2 }, cueStart: [0, 1.3],
+    balls: [{ number: 9, pos: [-0.42, -1.2] }, { number: 4, pos: [0.42, -1.3] }, { number: 13, pos: [0, -1.7] }],
+    obstacles: [{ kind: 'toyWall', shape: 'box', pos: [0, -0.45], size: [1.6, 0.1], rotation: 0, height: 0.12 },
+      { kind: 'trampoline', shape: 'circle', pos: [-0.3, 0.05], radius: 0.1, bounce: 1.3 }, { kind: 'trampoline', shape: 'circle', pos: [0.3, 0.05], radius: 0.1, bounce: 1.3 }],
+    slowZones: [], camera: { tilt: 58, rotation: 0, zoom: 1 } },
+  { title: 'Chip Hop', theme: 'casino', goal: { type: 'specific', balls: [8] }, cueStart: [0, 1.3],
+    balls: [{ number: 8, pos: [0.12, -1.55] }, { number: 3, pos: [-0.55, -1.3] }, { number: 10, pos: [0.62, 0.45] }],
+    obstacles: [-0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75].map(x => ({ kind: 'chipStack', shape: 'circle', pos: [x, -0.75], radius: 0.075, height: 0.12 }))
+      .concat([{ kind: 'bumper', shape: 'circle', pos: [-0.2, -0.15], radius: 0.09, kick: 1, pop: 1.2 }, { kind: 'bumper', shape: 'circle', pos: [0.22, -0.1], radius: 0.09, kick: 1, pop: 1.2 }]),
+    slowZones: [], camera: { tilt: 60, rotation: 4, zoom: 1 } },
+  { title: 'High Roller', theme: 'casino', felt: '#a3182b', goal: { type: 'last', last: 8 }, cueStart: [0, 1.3], slope: { direction: 90, amount: 0.25 },
+    balls: [{ number: 8, pos: [0, -0.95] }, { number: 1, pos: [-0.6, -1.5] }, { number: 14, pos: [0.62, -1.4] }],
+    obstacles: [{ kind: 'bumper', shape: 'circle', pos: [-0.42, -0.35], radius: 0.1, kick: 1.4 }, { kind: 'bumper', shape: 'circle', pos: [0.42, -0.35], radius: 0.1, kick: 1.4 },
+      { kind: 'bumper', shape: 'circle', pos: [0, 0.25], radius: 0.1, kick: 1.4 }],
+    slowZones: [], camera: { tilt: 60, rotation: -4, zoom: 1 } },
+];
+
 /* ======================== ball colors & goals ====================== */
 const BALL_COLORS = ['#f4c20d', '#1d4fb8', '#d7262b', '#6b2fa0', '#f47b20', '#18874a', '#7d1e2c', '#151515'];
 const COLOR_NAMES = ['yellow', 'blue', 'red', 'purple', 'orange', 'green', 'maroon', 'black'];
@@ -517,16 +631,15 @@ function normalizeLevel(L, i) {
   if (!balls.length) throw new Error('level has no balls');
   const nums = balls.map(b => b.number);
   const g = L.goal || {};
-  let type = ['count', 'stripes', 'colors', 'specific', 'order'].includes(g.type) ? g.type : 'count';
+  let type = ['count', 'stripes', 'colors', 'specific', 'order', 'last'].includes(g.type) ? g.type : 'count';
   let targets = (g.balls || []).map(Number).filter(n => nums.includes(n));
   if (type === 'stripes' && !targets.length) targets = nums.filter(n => n >= 9);
   if (type === 'specific' && !targets.length && nums.includes(+g.ball)) targets = [+g.ball];
+  let last = null; // 'last': sink every ball, this one goes last
+  if (type === 'last') { last = nums.includes(+g.last) ? +g.last : nums.includes(+g.ball) ? +g.ball : nums.includes(8) ? 8 : nums[nums.length - 1]; targets = nums.filter(n => n !== last).concat(last); }
   if (type !== 'count' && !targets.length) type = 'count';
   const count = type === 'count' ? clamp(+g.count || 1, 1, nums.length) : targets.length;
-  const obstacles = (L.obstacles || []).map(o => ({
-    kind: String(o.kind || 'block'), shape: o.shape === 'circle' ? 'circle' : 'box', pos: arr2(o.pos, [0, 0]),
-    size: arr2(o.size, [0.3, 0.2]), radius: +o.radius || (Array.isArray(o.size) ? +o.size[0] / 2 : 0.1), rotation: +o.rotation || 0, height: +o.height || 0,
-  }));
+  const obstacles = (L.obstacles || []).map(normObstacle);
   const slowZones = (L.slowZones || []).map(z => ({
     kind: z.kind ? String(z.kind) : '', shape: z.shape === 'circle' ? 'circle' : 'box', pos: arr2(z.pos, [0, 0]),
     size: arr2(z.size, [0.5, 0.5]), radius: +z.radius || (Array.isArray(z.size) ? +z.size[0] / 2 : 0.3), rotation: +z.rotation || 0,
@@ -535,10 +648,26 @@ function normalizeLevel(L, i) {
   return {
     date: L.date || TODAY, order: +L.order || i + 1, title: String(L.title || `Table ${i + 1}`).slice(0, 40),
     theme: THEMES[L.theme] ? L.theme : 'basement',
-    goal: { type, count, targets, text: g.text ? String(g.text) : '' },
+    goal: { type, count, targets, last, text: g.text ? String(g.text) : '' },
+    slope: L.slope && +L.slope.amount > 0 ? { direction: +L.slope.direction || 0, amount: clamp(+L.slope.amount, 0, 1) } : null,
+    felt: /^#[0-9a-f]{6}$/i.test(L.felt || '') ? L.felt : null,
     cueStart: arr2(L.cueStart, [0, 1.3]).map((v, k) => clamp(v, k ? -1.9 : -0.9, k ? 1.9 : 0.9)), balls, obstacles, slowZones,
     camera: { tilt: clamp(+c.tilt || 58, 30, 84), rotation: +c.rotation || 0, zoom: clamp(+c.zoom || 1, 0.6, 1.8) },
   };
+}
+function normObstacle(o) {
+  const kind = String(o.kind || 'block'), isNew = NEW_KINDS.includes(kind);
+  const forced = { fan: 'circle', bumper: 'circle', trampoline: 'circle', ramp: 'box', bumperRail: 'box' }[kind];
+  const shape = forced || (kind === 'movable' && !o.shape ? (o.model === 'box' || !o.model ? 'box' : 'circle') : o.shape === 'circle' ? 'circle' : 'box');
+  const n = { kind, shape, pos: arr2(o.pos, [0, 0]),
+    size: arr2(o.size, [0.3, 0.2]), radius: +o.radius || (Array.isArray(o.size) ? +o.size[0] / 2 : 0.1), rotation: +o.rotation || 0, height: +o.height || 0 };
+  if (!isNew) return n;
+  const num = (v, d, lo, hi) => v == null || v === '' || !isFinite(+v) ? d : clamp(+v, lo, hi);
+  return Object.assign(n, {
+    model: ['box', 'puck', 'car', 'beachBall'].includes(o.model) ? o.model : 'box', mass: num(o.mass, 1, 0.1, 20), bouncy: !!o.bouncy, friction: num(o.friction, null, 0, 5),
+    strength: num(o.strength, 1, 0, 3), range: num(o.range, 1.5, 0.2, 5), spread: num(o.spread, 30, 5, 80), sweep: num(o.sweep, 0, 0, 90),
+    kick: num(o.kick, 1, 0, 4), pop: num(o.pop, 0, 0, 3), angle: num(o.angle, RAMP_ANGLE_DEFAULT, 5, 40), bounce: num(o.bounce, 1, 0.2, 3),
+  });
 }
 function listJoin(items, last = 'and') { return items.length < 2 ? items.join('') : items.slice(0, -1).join(', ') + ' ' + last + ' ' + items[items.length - 1]; }
 function goalText(level) {
@@ -551,6 +680,7 @@ function goalText(level) {
     case 'colors': return { main: `Sink ${listJoin(g.targets.map(t => 'the ' + COLOR_NAMES[(t - 1) % 8]))}.`, sub: 'Other balls cost +1.' };
     case 'specific': return { main: `Sink ${listJoin(g.targets.map(t => 'the ' + t))}.`, sub: 'Other balls cost +1.' };
     case 'order': return { main: `Sink ${g.targets.map((t, k) => (k ? 'then ' : '') + 'the ' + t).join(', ')}.`, sub: 'Out of order costs +1.' };
+    case 'last': return { main: `Sink every ball. The ${g.last} goes last.`, sub: `The ${g.last} early costs +1.` };
   }
 }
 
@@ -634,6 +764,7 @@ const Sound = (() => {
     s.connect(f); f.connect(g); g.connect(dest); s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02);
   }
   const ok = () => ac && settings.sound;
+  let lastDing = 0;
   const api = {
     init,
     cue(p) { if (!ok()) return; const t = ac.currentTime; burst(t, 0.07, 0.25 + 0.5 * p, 'bandpass', 2400, 1.5); tone(780, t, 0.06, 0.18 + 0.2 * p, 'triangle', 420); tone(140, t, 0.08, 0.2 * p, 'sine', 70); },
@@ -643,6 +774,9 @@ const Sound = (() => {
       tone(150, t, 0.13, vol, 'sine', 80); burst(t, 0.05, vol * 0.25, 'lowpass', 700); },
     pocket() { if (!ok()) return; const t = ac.currentTime; tone(240, t, 0.18, 0.45, 'sine', 95); burst(t, 0.12, 0.25, 'lowpass', 900);
       [0.07, 0.13, 0.17].forEach((d, i) => tone(1300 - i * 260, t + d, 0.04, 0.16 - i * 0.03, 'triangle')); tone(110, t + 0.16, 0.25, 0.3, 'sine', 60); },
+    ding() { if (!ok()) return; const t = ac.currentTime; if (t - lastDing < 0.05) return; lastDing = t; tone(1568, t, 0.35, 0.16, 'sine'); tone(2093, t + 0.012, 0.3, 0.09, 'sine'); tone(3136, t, 0.07, 0.05, 'triangle'); },
+    boing() { if (!ok()) return; const t = ac.currentTime; tone(150, t, 0.34, 0.3, 'sine', 520); tone(300, t, 0.2, 0.07, 'triangle', 900); },
+    whoosh(v) { if (!ok()) return; const t = ac.currentTime; burst(t, 0.3, Math.min(0.3, 0.08 + v * 0.06), 'bandpass', 900, 0.8); },
     pop() { if (!ok()) return; const t = ac.currentTime; tone(520, t, 0.12, 0.2, 'sine', 900); },
     penalty() { if (!ok()) return; const t = ac.currentTime; tone(330, t, 0.16, 0.2, 'triangle', 220); tone(250, t + 0.12, 0.2, 0.2, 'triangle', 160); },
     chime(big) { if (!ok()) return; const t = ac.currentTime; const notes = big ? [72, 76, 79, 84, 88, 91] : [72, 76, 79, 84];
@@ -791,12 +925,32 @@ function floorTexture(f) {
       for (let i = 0; i < 9000; i++) { g.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,.18)' : 'rgba(120,90,40,.12)'; g.fillRect(rnd() * W, rnd() * H, 2, 2); }
       g.strokeStyle = 'rgba(150,115,60,.12)'; g.lineWidth = 3;
       for (let i = 0; i < 6; i++) { g.beginPath(); const y = rnd() * H; g.moveTo(0, y); for (let x = 0; x <= W; x += 32) g.lineTo(x, y + Math.sin(x / 60 + i) * 8); g.stroke(); }
+    } else if (f.pattern === 'casino') { // casino carpet: a soft diamond lattice with small medallions
+      const n = 4, s = W / n;
+      g.strokeStyle = f.alt; g.globalAlpha = 0.28; g.lineWidth = 3;
+      for (let i = -n; i <= 2 * n; i++) { g.beginPath(); g.moveTo(i * s, 0); g.lineTo(i * s + H, H); g.stroke(); g.beginPath(); g.moveTo(i * s, 0); g.lineTo(i * s - H, H); g.stroke(); }
+      g.globalAlpha = 1;
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+        const cx = i * s + s / 2, cy = j * s;
+        g.fillStyle = f.alt; g.globalAlpha = 0.55; g.beginPath(); g.moveTo(cx, cy - s * 0.16); g.lineTo(cx + s * 0.16, cy); g.lineTo(cx, cy + s * 0.16); g.lineTo(cx - s * 0.16, cy); g.closePath(); g.fill();
+        g.globalAlpha = 0.5; g.fillStyle = f.seam; g.beginPath(); g.arc(i * s, j * s + s / 2, s * 0.06, 0, 7); g.fill(); g.globalAlpha = 1;
+      }
+      speck(5000, 0.05);
+    } else if (f.pattern === 'foam') { // interlocking foam play mats
+      const n = 4, s = W / n, cols = [f.base, f.alt, f.seam].concat(f.more || []);
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { g.fillStyle = cols[(i + j * 2) % cols.length]; g.fillRect(i * s, j * s, s, s); }
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { // puzzle tabs poking into the next tile
+        g.fillStyle = cols[(i + j * 2) % cols.length];
+        for (const k of [0.3, 0.7]) { g.beginPath(); g.arc((i + 1) * s, j * s + k * s, s * 0.06, 0, 7); g.fill(); g.beginPath(); g.arc(i * s + k * s, (j + 1) * s, s * 0.06, 0, 7); g.fill(); }
+      }
+      g.fillStyle = 'rgba(0,0,0,.08)'; for (let i = 0; i <= n; i++) { g.fillRect(i * s - 1, 0, 2, H); g.fillRect(0, i * s - 1, W, 2); }
+      speck(3000, 0.04);
     } else { // carpet
       for (let i = 0; i < 14000; i++) { g.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.08)'; g.fillRect(rnd() * W, rnd() * H, 1.5, 1.5); }
     }
   });
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  const unit = { planks: 2.6, deck: 2.4, lanes: 2.8, checker: 2.0, tiles: 2.6, concrete: 4, sand: 3, carpet: 2 }[f.pattern] || 2.5;
+  const unit = { planks: 2.6, deck: 2.4, lanes: 2.8, checker: 2.0, tiles: 2.6, concrete: 4, sand: 3, carpet: 2, casino: 2.2, foam: 2.4 }[f.pattern] || 2.5;
   tex.repeat.set(60 / unit, 60 / unit);
   return tex;
 }
@@ -846,7 +1000,7 @@ function railHolePath(m) {
 }
 function buildTable(th) {
   const g = new THREE.Group();
-  const railMat = mat(th.rail, 0.55), feltMat = mat('#ffffff', 0.92, { map: feltTexture(th.felt) });
+  const railMat = th.railMetal ? mat(th.rail, 0.28, { metalness: 0.75, envMap: envTex }) : mat(th.rail, 0.55), feltMat = mat('#ffffff', 0.92, { map: feltTexture(th.felt) });
   // felt bed with pocket holes
   const bed = rrShape(2.4, 4.4, 0.1);
   for (const p of POCKETS) { const h = new THREE.Path(); h.absarc(p.x, p.z, p.vr, 0, Math.PI * 2, true); bed.holes.push(h); }
@@ -877,12 +1031,12 @@ function buildTable(th) {
   for (const x of [-0.5, 0, 0.5]) dots.push([x, 2.19], [x, -2.19]);
   for (const [x, z] of dots) { const d = mesh(cyl(0.016, 0.016, 0.006, 12), dMat, false); d.position.set(x, RAIL_TOP - 0.001, z); g.add(d); }
   // body + legs
-  const bodyMat = mat(shade(th.rail, -0.08), 0.6);
+  const bodyMat = mat(shade(th.body || th.rail, -0.08), 0.6);
   const apron = mesh(rbox(2.48, 0.3, 4.48, 0.08), bodyMat); apron.position.y = -0.62; g.add(apron);
   const legH = -0.6 - FLOOR_Y;
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     const leg = mesh(rbox(0.3, legH, 0.3, 0.06), bodyMat); leg.position.set(sx * 0.98, FLOOR_Y, sz * 1.92); g.add(leg);
-    const foot = mesh(rbox(0.38, 0.08, 0.38, 0.04), mat(shade(th.rail, -0.16), 0.6)); foot.position.set(sx * 0.98, FLOOR_Y, sz * 1.92); g.add(foot);
+    const foot = mesh(rbox(0.38, 0.08, 0.38, 0.04), mat(shade(th.body || th.rail, -0.16), 0.6)); foot.position.set(sx * 0.98, FLOOR_Y, sz * 1.92); g.add(foot);
   }
   return g;
 }
@@ -935,7 +1089,114 @@ const OBST = {
   beachBall(o) { const r = o.r, g = new THREE.Group(); const m = mesh(sph(r, 28, 18), mat('#ffffff', 0.35, { map: getStripeTex('bb', ['#ff6b57', '#ffffff', '#2e8fd1', '#ffffff', '#f4c20d', '#ffffff']) })); m.position.y = r; m.name = 'ball'; g.add(m);
     const cap = mesh(sph(r * 0.16, 12, 8), mat('#ffffff', 0.3)); cap.position.y = r * 2 - r * 0.06; m.add(cap); cap.position.set(0, r * 0.94, 0); return g; },
   plant(o) { const g = DECOR.plant({}, null, o.r / 0.16); return g; },
-  bumper(o, th) { const r = o.r, g = new THREE.Group(); g.add(mesh(cyl(r, r, 0.08, 28), mat(th.accent, 0.45))); const t = mesh(cyl(r * 0.6, r * 0.8, 0.04, 24), mat('#ffffff', 0.4)); t.position.y = 0.08; g.add(t); return g; },
+  disc(o, th) { const r = o.r, g = new THREE.Group(); g.add(mesh(cyl(r, r, 0.08, 28), mat(th.accent, 0.45))); const t = mesh(cyl(r * 0.6, r * 0.8, 0.04, 24), mat('#ffffff', 0.4)); t.position.y = 0.08; g.add(t); return g; },
+  // ---- new pieces ----
+  fan(o, th) { // desk fan on a weighted base; the head turns with the sweep, the blades spin
+    const r = o.r, g = new THREE.Group(), dark = mat('#2b2f36', 0.45), metal = mat('#c9ced3', 0.25, { metalness: 0.6, envMap: envTex });
+    g.add(mesh(cyl(r * 0.9, r, 0.03, 28), dark));
+    const pole = mesh(cyl(0.012, 0.015, 0.2, 10), metal); pole.position.y = 0.03; g.add(pole);
+    const head = new THREE.Group(); head.name = 'head'; head.position.y = 0.222; g.add(head);
+    const motor = mesh(cyl(0.034, 0.028, 0.07, 18), dark); motor.rotation.z = Math.PI / 2; head.add(motor);
+    const hub = mesh(sph(0.018, 14, 10), mat(th.accent, 0.4)); hub.position.x = 0.03; head.add(hub);
+    for (const [x, rr] of [[0.05, 0.094], [0.0, 0.088]]) { const ring = mesh(torus(rr, 0.004, 6, 40), metal); ring.rotation.y = Math.PI / 2; ring.position.x = x; head.add(ring); }
+    for (let k = 0; k < 6; k++) { const spoke = mesh(rbox(0.003, 0.09, 0.004, 0.001), metal, false); const p = new THREE.Group(); p.add(spoke); spoke.position.y = 0.045; p.rotation.x = k * Math.PI / 3; p.position.x = 0.05; head.add(p); }
+    const blades = new THREE.Group(); blades.name = 'blades'; blades.position.x = 0.026; head.add(blades);
+    const bladeMat = new THREE.MeshStandardMaterial({ color: '#8cc4ef', roughness: 0.3, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+    for (let k = 0; k < 4; k++) { const bl = mesh(cached('blade', () => { const s = new THREE.Shape(); s.moveTo(0, -0.012); s.quadraticCurveTo(0.05, -0.03, 0.078, 0); s.quadraticCurveTo(0.05, 0.026, 0, 0.012); const gg = new THREE.ShapeGeometry(s); gg.rotateY(Math.PI / 2); return gg; }), bladeMat, false);
+      const p = new THREE.Group(); p.add(bl); bl.rotation.z = 0.35; p.rotation.x = k * Math.PI / 2; blades.add(p); }
+    return g;
+  },
+  bumper(o, th) { // pinball bumper: rubber ring, white body and a cap that lights up when hit
+    const r = o.r, src = o.src || {}, g = new THREE.Group(), pop = src.pop > 0, col = pop ? '#ffd166' : th.accent;
+    g.add(mesh(cyl(r * 0.92, r * 0.98, 0.022, 32), mat('#1d1d1d', 0.4)));
+    const ring = mesh(torus(r * 0.86, r * 0.14, 12, 36), mat('#151515', 0.6)); ring.rotation.x = Math.PI / 2; ring.position.y = 0.04; g.add(ring);
+    const body = mesh(cyl(r * 0.7, r * 0.76, 0.07, 28), mat('#f7f1e1', 0.3)); body.position.y = 0.018; g.add(body);
+    const capMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.25, emissive: new THREE.Color(col), emissiveIntensity: 0.15 });
+    const cap = mesh(cyl(r * 0.62, r * 0.7, 0.014, 28), capMat); cap.position.y = 0.086; g.add(cap); g.userData.flash = capMat;
+    const dot = mesh(cyl(r * 0.24, r * 0.24, 0.004, 20), mat('#ffffff', 0.3), false); dot.position.y = 0.1; g.add(dot);
+    if (pop) { const spring = mesh(torus(r * 0.4, 0.004, 6, 24), mat('#c9ced3', 0.3, { metalness: 0.6 })); spring.rotation.x = Math.PI / 2; spring.position.y = 0.1; g.add(spring); }
+    return g;
+  },
+  bumperRail(o, th) { // a springy rubber rail with a light strip
+    const { w, d } = o, g = new THREE.Group(), m = Math.min(w, d);
+    g.add(mesh(rbox(w, 0.048, d, m * 0.45), mat('#151515', 0.6)));
+    const capMat = new THREE.MeshStandardMaterial({ color: th.accent, roughness: 0.3, emissive: new THREE.Color(th.accent), emissiveIntensity: 0.15 });
+    const strip = mesh(rbox(w * 0.62, 0.022, d * 0.97, m * 0.3), capMat); strip.position.y = 0.048; g.add(strip); g.userData.flash = capMat;
+    for (const sz of [-1, 1]) { const post = mesh(cyl(m * 0.55, m * 0.55, 0.075, 16), mat('#c9a227', 0.3, { metalness: 0.7, envMap: envTex })); post.position.set(0, 0, sz * (d / 2 - m * 0.55)); if (w > d) post.position.set(sz * (w / 2 - m * 0.55), 0, 0); g.add(post); }
+    return g;
+  },
+  ramp(o) { // a wedge rising toward its arrow
+    const { w, d } = o, src = o.src || {}, A = (src.angle || RAMP_ANGLE_DEFAULT) * DEG, H = w * Math.tan(A), g = new THREE.Group();
+    const sh = new THREE.Shape([new THREE.Vector2(-w / 2, 0), new THREE.Vector2(w / 2, 0), new THREE.Vector2(w / 2, H)]);
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: d, bevelEnabled: false }); geo.translate(0, 0, -d / 2); geo.computeVertexNormals();
+    g.add(mesh(geo, mat('#e9a23b', 0.5)));
+    const tex = canvasTex(256, 128, (c, W, Hh) => {
+      c.fillStyle = '#d6862a'; c.fillRect(0, 0, W, Hh); c.fillStyle = '#fff6e0';
+      c.fillRect(0, 0, W, 10); c.fillRect(0, Hh - 10, W, 10);
+      for (const x of [60, 125, 190]) { c.beginPath(); c.moveTo(x - 22, 30); c.lineTo(x + 14, 64); c.lineTo(x - 22, 98); c.lineTo(x - 6, 98); c.lineTo(x + 30, 64); c.lineTo(x - 6, 30); c.closePath(); c.fill(); }
+    });
+    const L = w / Math.cos(A), pg = new THREE.PlaneGeometry(L, d); pg.rotateX(-Math.PI / 2); pg.rotateZ(A);
+    const top = new THREE.Mesh(pg, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 })); top.receiveShadow = true;
+    top.position.set(-Math.sin(A) * 0.0015, H / 2 + Math.cos(A) * 0.0015, 0); g.add(top);
+    return g;
+  },
+  trampoline(o) { // a bounce pad set into the felt
+    const r = o.r, g = new THREE.Group();
+    const frame = mesh(torus(r * 0.9, r * 0.1, 10, 40), mat('#ff6b57', 0.4)); frame.rotation.x = Math.PI / 2; frame.position.y = 0.004; g.add(frame);
+    const pad = new THREE.Group(); pad.name = 'pad'; g.add(pad);
+    const m = mesh(cyl(r * 0.82, r * 0.82, 0.006, 36), mat('#1d2b4f', 0.55), false); pad.add(m);
+    const ring = mesh(torus(r * 0.48, 0.006, 6, 30), mat('#ffd166', 0.5), false); ring.rotation.x = Math.PI / 2; ring.position.y = 0.007; pad.add(ring);
+    const dot = mesh(cyl(r * 0.16, r * 0.16, 0.002, 20), mat('#ffd166', 0.5), false); dot.position.y = 0.006; pad.add(dot);
+    return g;
+  },
+  chipStack(o) { // casino chips
+    const r = o.r, src = o.src || {}, H = src.height || OBST_H.chipStack, n = Math.max(3, Math.round(H / 0.012)), g = new THREE.Group();
+    const cols = ['#d7262b', '#151515', '#1d4fb8', '#18874a'], key = Math.round(((src.pos || [0, 0])[0] + 1) * 4) + Math.round(((src.pos || [0, 0])[1] + 2) * 3);
+    for (let i = 0; i < n; i++) {
+      const col = cols[(key + (i > n - 3 ? 1 : 0)) % cols.length];
+      const c = mesh(cyl(r * 0.95, r * 0.95, H / n * 0.94, 26), chipMat(col)); c.position.set(((i * 37) % 5 - 2) * 0.0016, i * H / n, ((i * 53) % 5 - 2) * 0.0016); g.add(c);
+    }
+    return g;
+  },
+  toyWall(o) { // a row of toy building blocks
+    const { w, d } = o, src = o.src || {}, H = src.height || OBST_H.toyWall, g = new THREE.Group(), cols = ['#ff6b57', '#ffd166', '#4f7fe0', '#36b37e', '#f28fad'];
+    const long = w >= d, Lx = long ? w : d, D = long ? d : w, n = Math.max(1, Math.round(Lx / D)), bw = Lx / n, row = new THREE.Group();
+    for (let i = 0; i < n; i++) {
+      const b = mesh(rbox(bw * 0.97, H, D, 0.012), mat(cols[i % 5], 0.45)); b.position.x = -Lx / 2 + bw * (i + 0.5); row.add(b);
+      const stud = mesh(cyl(D * 0.17, D * 0.17, 0.012, 14), mat(cols[i % 5], 0.45)); stud.position.set(b.position.x, H, 0); row.add(stud);
+    }
+    if (!long) row.rotation.y = Math.PI / 2; g.add(row); return g;
+  },
+  bookStack(o) { // three hardcovers piled up
+    const { w, d } = o, src = o.src || {}, H = src.height || OBST_H.bookStack, g = new THREE.Group(), n = 3, bt = H / n, long = w >= d, Lx = long ? w : d, D = long ? d : w, holder = new THREE.Group();
+    for (let i = 0; i < n; i++) {
+      const design = BOOK_COVERS[(i * 2 + 1) % BOOK_COVERS.length];
+      const b = makeBook(Lx * (0.95 - i * 0.03), bt, D * (0.9 - i * 0.04) - bt / 2, design.bg, i === n - 1 ? design : null);
+      b.position.y = i * bt; b.rotation.y = (i - 1) * 0.035; holder.add(b);
+    }
+    if (!long) holder.rotation.y = Math.PI / 2; g.add(holder); return g;
+  },
+  movable(o, th) { // things that slide when hit: cardboard box, hockey puck, toy car, beach ball
+    const src = o.src || {}, model = src.model || 'box', H = src.height || 0.16, g = new THREE.Group();
+    if (model === 'beachBall') return OBST.beachBall(o);
+    if (model === 'puck') {
+      g.add(mesh(cyl(o.r, o.r, src.height || 0.04, 36), mat('#1b1b1b', 0.35)));
+      const ring = mesh(torus(o.r * 0.6, 0.004, 6, 30), mat('#d7262b', 0.4), false); ring.rotation.x = Math.PI / 2; ring.position.y = (src.height || 0.04) + 0.001; g.add(ring); return g;
+    }
+    const w = o.w || o.r * 1.5, d = o.d || o.r * 1.5;
+    if (model === 'car') {
+      const long = w >= d, L = long ? w : d, D = long ? d : w, car = new THREE.Group();
+      const body = mesh(rbox(L, H * 0.45, D * 0.9, 0.02), mat(th.accent, 0.3)); body.position.y = H * 0.18; car.add(body);
+      const cab = mesh(rbox(L * 0.5, H * 0.35, D * 0.8, 0.02), new THREE.MeshStandardMaterial({ color: '#bfe3ff', roughness: 0.1, transparent: true, opacity: 0.8 })); cab.position.set(-L * 0.06, H * 0.6, 0); car.add(cab);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const wh = mesh(cyl(H * 0.18, H * 0.18, D * 0.14, 14), mat('#151515', 0.7)); wh.rotation.x = Math.PI / 2; wh.position.set(sx * L * 0.32, H * 0.18, sz * D * 0.42 - D * 0.07); car.add(wh); }
+      if (!long) car.rotation.y = Math.PI / 2; g.add(car); return g;
+    }
+    g.add(mesh(rbox(w, H, d, 0.008), mat('#c89a63', 0.85)));
+    const tape = mesh(rbox(w * 0.24, 0.003, d + 0.003, 0.002), mat('#e9d9b0', 0.45), false); tape.position.y = H - 0.001; g.add(tape);
+    const seam = mesh(rbox(0.004, 0.003, d * 0.98, 0.001), mat('#8a6438', 0.8), false); seam.position.y = H; g.add(seam);
+    const label = mesh(rbox(w * 0.32, 0.003, d * 0.2, 0.004), mat('#d7262b', 0.6), false); label.position.set(w * 0.22, H, -d * 0.3); g.add(label);
+    return g;
+  },
   // boxes
   toolbox(o) {
     const { w, d } = o, g = new THREE.Group(), red = mat('#d23b2f', 0.45);
@@ -966,6 +1227,11 @@ const OBST = {
   block(o, th) { return mesh(rbox(o.w, 0.12, o.d, 0.03), mat(th.accent, 0.5)); },
 };
 const stripeTexCache = {};
+const chipTexCache = {};
+function chipMat(col) { // poker chip: color with white edge spots
+  const t = chipTexCache[col] || (chipTexCache[col] = canvasTex(256, 32, (c, W, H) => { c.fillStyle = col; c.fillRect(0, 0, W, H); c.fillStyle = '#fbf8ef'; for (let i = 0; i < 8; i++) c.fillRect(i * W / 8 + 6, 0, 14, H); }));
+  return mat('#ffffff', 0.4, { map: t });
+}
 // A drink can: silver tapered ends, rolled rim, pull tab and a printed (logo-free) label
 const canLabelCache = {};
 function makeCan(r, h, color) {
@@ -1041,6 +1307,57 @@ function getStripeTex(key, colors, n) { return stripeTexCache[key] || (stripeTex
 
 /* ============================= decor =============================== */
 const DECOR = {
+  chipStacks() { const g = new THREE.Group(); [[0, 0, 7, '#d7262b'], [0.06, 0.03, 5, '#151515'], [-0.03, 0.06, 4, '#1d4fb8']].forEach(([x, z, n, col]) => { for (let i = 0; i < n; i++) { const c = mesh(cyl(0.028, 0.028, 0.0085, 22), chipMat(col)); c.position.set(x + ((i * 37) % 5 - 2) * 0.0008, i * 0.009, z); g.add(c); } }); return g; },
+  dice() {
+    const t = canvasTex(64, 64, (c, W) => { c.fillStyle = '#c8102e'; c.fillRect(0, 0, W, W); c.fillStyle = '#fff'; for (const [x, y] of [[16, 16], [48, 48], [32, 32], [16, 48], [48, 16]]) { c.beginPath(); c.arc(x, y, 6, 0, 7); c.fill(); } });
+    const m = mat('#ffffff', 0.25, { map: t }), g = new THREE.Group();
+    const a = mesh(rbox(0.045, 0.045, 0.045, 0.008), m); a.rotation.y = 0.4; g.add(a);
+    const b = mesh(rbox(0.045, 0.045, 0.045, 0.008), m); b.position.set(0.06, 0, 0.03); b.rotation.y = -0.3; g.add(b); return g;
+  },
+  slotMachine() {
+    const g = new THREE.Group(), gold = mat('#c9a227', 0.3, { metalness: 0.7, envMap: envTex });
+    g.add(mesh(rbox(0.6, 0.8, 0.5, 0.05), mat('#9e2632', 0.4)));
+    const top = mesh(rbox(0.6, 0.55, 0.38, 0.05), mat('#9e2632', 0.4)); top.position.set(0, 0.8, -0.06); g.add(top);
+    const trim = mesh(rbox(0.62, 0.04, 0.52, 0.02), gold); trim.position.y = 0.78; g.add(trim);
+    const reels = canvasTex(256, 96, (c, W, H) => { c.fillStyle = '#fff8e6'; c.fillRect(0, 0, W, H); c.fillStyle = '#1d2b4f'; c.fillRect(84, 0, 4, H); c.fillRect(168, 0, 4, H);
+      c.font = '56px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; ['🍒', '7️⃣', '🍋'].forEach((e, i) => c.fillText(e, 42 + i * 86, H / 2 + 4)); });
+    const scr = mesh(rbox(0.46, 0.2, 0.02, 0.02), mat('#ffffff', 0.3, { map: reels, emissive: '#ffffff', emissiveMap: reels, emissiveIntensity: 0.35 })); scr.position.set(0, 0.95, 0.13); g.add(scr);
+    const lamp = mesh(cyl(0.08, 0.1, 0.1, 18), mat('#ffd166', 0.3, { emissive: '#ffb703', emissiveIntensity: 1.1 })); lamp.position.set(0, 1.35, -0.06); g.add(lamp);
+    const lever = mesh(cyl(0.015, 0.015, 0.35, 8), gold); lever.position.set(0.33, 0.75, 0); g.add(lever);
+    const knob = mesh(sph(0.04, 12, 10), mat('#d7262b', 0.3)); knob.position.set(0.33, 1.12, 0); g.add(knob);
+    return g;
+  },
+  toyBlocks() {
+    const g = new THREE.Group(), cols = ['#ff6b57', '#ffd166', '#4f7fe0', '#36b37e'], L = ['A', 'B', 'C', '1'];
+    [[0, 0, 0], [0.24, 0, 0.05], [0.1, 0.22, 0.02], [-0.1, 0, 0.26]].forEach(([x, y, z], i) => {
+      const t = canvasTex(64, 64, (c, W) => { c.fillStyle = cols[i]; c.fillRect(0, 0, W, W); c.fillStyle = '#fff'; c.font = '900 40px Nunito, Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(L[i], 32, 35); });
+      const b = mesh(rbox(0.22, 0.22, 0.22, 0.02), mat('#ffffff', 0.5, { map: t })); b.position.set(x, y, z); b.rotation.y = i * 0.4; g.add(b);
+    });
+    return g;
+  },
+  teddy() {
+    const g = new THREE.Group(), fur = mat('#a8703f', 0.95), light = mat('#e3c08d', 0.9), eye = mat('#151515', 0.3);
+    const body = mesh(sph(0.2, 20, 14), fur); body.scale.set(1, 1.1, 0.9); body.position.y = 0.2; g.add(body);
+    const belly = mesh(sph(0.13, 16, 12), light); belly.scale.set(1, 1.1, 0.5); belly.position.set(0, 0.2, 0.13); g.add(belly);
+    const head = mesh(sph(0.15, 20, 14), fur); head.position.y = 0.5; g.add(head);
+    const snout = mesh(sph(0.06, 14, 10), light); snout.position.set(0, 0.47, 0.13); g.add(snout);
+    const nose = mesh(sph(0.02, 10, 8), eye); nose.position.set(0, 0.49, 0.19); g.add(nose);
+    for (const s of [-1, 1]) {
+      const ear = mesh(sph(0.055, 12, 10), fur); ear.position.set(s * 0.11, 0.63, 0); g.add(ear);
+      const e = mesh(sph(0.016, 8, 6), eye); e.position.set(s * 0.055, 0.54, 0.13); g.add(e);
+      const arm = mesh(sph(0.07, 12, 10), fur); arm.scale.set(0.8, 1.4, 0.8); arm.position.set(s * 0.2, 0.28, 0.04); arm.rotation.z = s * 0.5; g.add(arm);
+      const leg = mesh(sph(0.08, 12, 10), fur); leg.scale.set(0.9, 0.8, 1.4); leg.position.set(s * 0.12, 0.06, 0.12); g.add(leg);
+    }
+    return g;
+  },
+  duck() {
+    const g = new THREE.Group(), y = mat('#ffd23f', 0.3);
+    const body = mesh(sph(0.05, 18, 12), y); body.scale.set(1.2, 0.8, 1); body.position.y = 0.04; g.add(body);
+    const head = mesh(sph(0.032, 16, 12), y); head.position.set(0.035, 0.09, 0); g.add(head);
+    const beak = mesh(sph(0.016, 10, 8), mat('#ff8a3d', 0.4)); beak.scale.set(1.6, 0.6, 1); beak.position.set(0.068, 0.085, 0); g.add(beak);
+    for (const s of [-1, 1]) { const e = mesh(sph(0.006, 6, 6), mat('#151515', 0.3)); e.position.set(0.05, 0.1, s * 0.018); g.add(e); }
+    return g;
+  },
   sodaCan(o) { return makeCan(0.045, 0.165, o.color || '#d83a34'); },
   chalk() { const g = new THREE.Group(); g.add(mesh(rbox(0.06, 0.05, 0.06, 0.008), mat('#3d7fd6', 0.8))); const t = mesh(rbox(0.04, 0.004, 0.04, 0.008), mat('#2a5fae', 0.9), false); t.position.y = 0.05; g.add(t); return g; },
   plant(o, th, s = 1) {
@@ -1179,6 +1496,7 @@ const G = {
   balls: [], cue: null, active: [], obstacles: [], zones: [],
   shots: 0, orderIdx: 0, sunk: [], complete: false, moving: false, inputLocked: true,
   lastPocket: null, acc: 0, drops: [], pops: [], hadScratch: false,
+  fx: { on: false }, falls: [], fanT: 0, shotT: 0, flyT: 0, step: 0, list: null, root: null,
 };
 let day = store.get('day', null);
 const levelsKey = () => G.levels.map(l => l.title + l.theme).join('|');
@@ -1241,42 +1559,46 @@ function oPhys(o) {
   return o.shape === 'circle' ? { shape: 'circle', x: o.pos[0], z: o.pos[1], r: o.radius } : { shape: 'box', x: o.pos[0], z: o.pos[1], hw: o.size[0] / 2, hd: o.size[1] / 2, c, s, deg };
 }
 
-function loadTable(idx, restore, practice = false) {
+function loadTable(idx, restore, practice = false, list = G.levels) {
   G.practice = practice;
-  G.idx = idx; const L = G.level = G.levels[idx]; const th = G.theme = THEMES[L.theme];
+  G.idx = idx; G.list = list; const L = G.level = list[idx];
+  let th = THEMES[L.theme]; if (L.felt) th = { ...th, felt: L.felt }; G.theme = th;
   if (levelGroup) { scene.remove(levelGroup); disposeGroup(levelGroup); }
   levelGroup = new THREE.Group(); scene.add(levelGroup);
+  G.root = new THREE.Group(); levelGroup.add(G.root); // the table and everything on it (leans on sloped tables)
   setThemeColors(th);
   // floor
   if (floorMesh) { scene.remove(floorMesh); floorMesh.material.map.dispose(); floorMesh.material.dispose(); }
   floorMesh = new THREE.Mesh(cached('floor', () => { const p = new THREE.PlaneGeometry(60, 60); p.rotateX(-Math.PI / 2); return p; }), new THREE.MeshStandardMaterial({ map: floorTexture(th.floor), roughness: 0.95 }));
   floorMesh.position.y = FLOOR_Y; floorMesh.receiveShadow = true; scene.add(floorMesh);
-  levelGroup.add(buildTable(th));
+  G.root.add(buildTable(th));
+  if (th.glow) { const gl = new THREE.PointLight(th.glow, 3.5, 0, 2); gl.position.set(0, 2.2, 0); levelGroup.add(gl); }
   // decor
   for (const [type, x, z, on = 'floor', rot = 0, opts = {}] of th.decor) {
     const b = DECOR[type]; if (!b) continue;
     const d = b(opts, th); d.position.set(x, on === 'rail' ? RAIL_TOP : FLOOR_Y, z); d.rotation.y = -rot * DEG;
     if (on === 'floor') { d.position.y += 0.001; }
-    levelGroup.add(d);
+    (on === 'rail' ? G.root : levelGroup).add(d);
   }
   // obstacles
   G.obstacles = L.obstacles.map((o, oi) => {
     const p = oPhys(o);
-    const builder = OBST[o.kind] || (o.shape === 'circle' ? OBST.bumper : OBST.block);
-    const shapeArgs = o.shape === 'circle' ? { r: o.radius } : { w: o.size[0], d: o.size[1], seed: oi };
+    const builder = OBST[o.kind] || (o.shape === 'circle' ? OBST.disc : OBST.block);
+    const shapeArgs = o.shape === 'circle' ? { r: o.radius, src: o } : { w: o.size[0], d: o.size[1], seed: oi, src: o };
     let m = builder(shapeArgs, th);
     // circle builders used with a box shape (or vice versa) fall back to the generic piece so physics always matches
-    const boxKinds = ['toolbox', 'pizzaBox', 'book', 'napkinHolder', 'block'];
-    if ((o.shape === 'box') !== boxKinds.includes(o.kind) && OBST[o.kind]) m = o.shape === 'circle' ? OBST.bumper(shapeArgs, th) : OBST.block(shapeArgs, th);
+    const boxKinds = ['toolbox', 'pizzaBox', 'book', 'napkinHolder', 'block', 'ramp', 'bumperRail', 'toyWall', 'bookStack'];
+    if (o.kind !== 'movable' && (o.shape === 'box') !== boxKinds.includes(o.kind) && OBST[o.kind]) m = o.shape === 'circle' ? OBST.disc(shapeArgs, th) : OBST.block(shapeArgs, th);
     m.position.set(o.pos[0], 0, o.pos[1]); m.rotation.y = -(p.deg || 0) * DEG;
-    levelGroup.add(m); p.mesh = m; p.baseQ = m.quaternion.clone(); p.wig = null;
+    G.root.add(m); p.mesh = m; p.baseQ = m.quaternion.clone(); p.wig = null;
     if (o.kind === 'beachBall' && o.shape === 'circle') { // light ball: rolls when hit, never pocketed
       Object.assign(p, { dynamic: true, vx: 0, vz: 0, hy: 0, vy: 0, squash: 0, start: o.pos.slice(), px: p.x, pz: p.z, ball: m.getObjectByName('ball') });
     }
     return p;
   });
+  G.fx = setupFx(L);
   G.zones = L.slowZones.map(z => {
-    const m = zoneMesh(z, th); m.position.x = z.pos[0]; m.position.z = z.pos[1]; m.position.y = Math.max(m.position.y, 0.001); m.rotation.y = -z.rotation * DEG; levelGroup.add(m);
+    const m = zoneMesh(z, th); m.position.x = z.pos[0]; m.position.z = z.pos[1]; m.position.y = Math.max(m.position.y, 0.001); m.rotation.y = -z.rotation * DEG; G.root.add(m);
     return oPhys(z);
   });
   // balls
@@ -1286,12 +1608,13 @@ function loadTable(idx, restore, practice = false) {
     const qx = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
     const qy = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), n * 1.3 + 0.3);
     m.quaternion.copy(qy.multiply(qx));
-    levelGroup.add(m);
-    return { n, x: pos[0], z: pos[1], vx: 0, vz: 0, sunk: false, pending: false, start: pos.slice(), mesh: m, px: pos[0], pz: pos[1] };
+    G.root.add(m);
+    return { n, x: pos[0], z: pos[1], vx: 0, vz: 0, sunk: false, pending: false, start: pos.slice(), mesh: m, px: pos[0], pz: pos[1], y: 0, vy: 0, py: 0, ramp: null };
   };
   G.cue = mk(0, L.cueStart);
   G.balls = [G.cue, ...L.balls.map(b => mk(b.number, b.pos))];
   G.shots = 0; G.orderIdx = 0; G.sunk = []; G.out = []; G.complete = false; G.moving = false; G.lastPocket = null; G.drops = []; G.pops = []; G.acc = 0; G.hadScratch = false;
+  G.falls = []; G.fanT = 0; G.shotT = 0; G.flyT = 0; G.step = 0; G.dbgTrail = null;
   if (restore && restore.idx === idx) {
     G.shots = restore.shots || 0; G.orderIdx = restore.orderIdx || 0; G.sunk = restore.sunk || []; G.out = restore.out || [];
     for (const b of G.balls) {
@@ -1299,11 +1622,14 @@ function loadTable(idx, restore, practice = false) {
       if (b.n !== 0 && (G.sunk.includes(b.n) || G.out.includes(b.n))) { b.sunk = true; b.mesh.visible = false; }
     }
     const ob = restore.pos && restore.pos.obs;
-    if (ob) G.obstacles.forEach((o, i) => { if (o.dynamic && ob[i]) { o.x = o.px = ob[i][0]; o.z = o.pz = ob[i][1]; o.mesh.position.set(o.x, 0, o.z); } });
+    G.fanT = (restore.pos && restore.pos.fanT) || 0;
+    if (ob) G.obstacles.forEach((o, i) => { if ((o.dynamic || o.movable) && ob[i]) { o.x = o.px = ob[i][0]; o.z = o.pz = ob[i][1]; o.mesh.position.set(o.x, 0, o.z); } });
   }
   refreshActive();
   for (const b of G.balls) { b.px = b.x; b.pz = b.z; b.mesh.position.set(b.x, R, b.z); b.mesh.scale.setScalar(1); }
-  aim.group.visible = false; levelGroup.add(aim.group);
+  aim.group.visible = false; G.root.add(aim.group);
+  if (G.fx.on) buildFxVisuals();
+  buildDebug();
   sunburst.visible = false; $('stamp').classList.remove('show');
   G.inputLocked = false; aimState.power = 0; drag = null; defaultAim(); setStickOpacity(0); stick.strike = 0;
   G.yawTarget = 0; G.yawSmooth = 0;
@@ -1346,6 +1672,7 @@ function bounce(b, c, e) {
   return 0;
 }
 function physStep() {
+  if (G.fx.on) { physStep3D(); return; } // tables with the new pieces; the originals keep the exact flat physics below
   const A = G.active;
   for (const b of A) {
     if (b.vx === 0 && b.vz === 0) continue;
@@ -1426,12 +1753,299 @@ function physStep() {
   if (G.activeDirty) { refreshActive(); G.activeDirty = false; }
 }
 function allStopped() {
+  if (G.fx.on) return allStopped3D();
   for (const b of G.active) if (b.vx !== 0 || b.vz !== 0) return false;
   for (const o of G.obstacles) if (o.dynamic && (o.vx !== 0 || o.vz !== 0 || o.hy > 0 || o.vy !== 0)) return false;
   return true;
 }
 // hits make obstacles wobble in place (looks only; physics never moves them)
 function wiggle(o, nx, nz, v) { if (o.dynamic || v < 0.12) return; const amp = Math.min(0.13, v * 0.04); if (!o.wig || amp > o.wig.amp * Math.exp(-o.wig.t * 5)) o.wig = { t: 0, amp, ax: -nz, az: nx }; }
+
+/* ===================== 3D physics (new tables only) ==================== */
+// Balls get a height (y = how far the bottom of the ball is above the felt) and a vertical speed (vy).
+// A ball on the felt behaves like the flat physics; ramps, pop bumpers and trampolines send it flying,
+// gravity brings it down, and it bounces a little lower each time until it settles.
+function setupFx(L) {
+  const fx = { on: !!L.slope || L.obstacles.some(o => NEW_KINDS.includes(o.kind)), slope: null, fans: [], pads: [], ramps: [], movs: [] };
+  if (L.slope) { const a = L.slope.direction * DEG, k = SLOPE_G * L.slope.amount; fx.slope = { ax: dcos(a) * k, az: dsin(a) * k, dx: dcos(a), dz: dsin(a), amount: L.slope.amount }; }
+  G.obstacles.forEach((p, i) => {
+    const o = L.obstacles[i]; p.kind = o.kind; p.h = o.height || OBST_H[o.kind] || 0.15;
+    if (o.kind === 'fan') { const sp = o.spread * DEG; Object.assign(p, { fan: true, dir: o.rotation * DEG, strength: o.strength, range: o.range, cosSpread: dcos(sp), spread: sp, sweep: o.sweep * DEG, ux: 1, uz: 0 }); fx.fans.push(p); }
+    else if (o.kind === 'bumper') Object.assign(p, { bumper: true, kick: o.kick, pop: o.pop, flash: 0 });
+    else if (o.kind === 'bumperRail') Object.assign(p, { rail: true, kick: o.kick, flash: 0 });
+    else if (o.kind === 'trampoline') { Object.assign(p, { pad: true, bounce: o.bounce, squash: 0 }); fx.pads.push(p); }
+    else if (o.kind === 'ramp') { const A = o.angle * DEG, sn = dsin(A), cs = dcos(A); Object.assign(p, { ramp: true, sin: sn, cos: cs, tan: sn / cs, h: 2 * p.hw * sn / cs }); fx.ramps.push(p); }
+    else if (o.kind === 'movable') {
+      Object.assign(p, { movable: true, model: o.model, mass: o.mass, bouncy: o.bouncy, mu: o.friction != null ? o.friction : (MOVABLE_MU[o.model] || 1),
+        vx: 0, vz: 0, hy: 0, vy: 0, start: [p.x, p.z], px: p.x, pz: p.z, ball: p.mesh.getObjectByName('ball'),
+        rr: p.shape === 'circle' ? p.r : Math.min(p.hw, p.hd) * 1.15 }); // rough round size for bumping into other things
+      fx.movs.push(p);
+    }
+  });
+  return fx;
+}
+const fanAngle = (f) => f.dir + (f.sweep ? f.sweep * dsin(G.fanT * FAN_SWEEP_RATE) : 0);
+// push from the slope (felt only) and from any fan whose cone covers this spot
+function fieldAt(x, z, onFelt) {
+  let ax = 0, az = 0; const fx = G.fx;
+  if (fx.slope && onFelt) { ax += fx.slope.ax; az += fx.slope.az; }
+  for (const f of fx.fans) {
+    const dx = x - f.x, dz = z - f.z, d = Math.sqrt(dx * dx + dz * dz);
+    if (d > f.range || d < 1e-6) continue;
+    const cosT = (dx * f.ux + dz * f.uz) / d; if (cosT <= f.cosSpread) continue;
+    const k = FAN_ACC * f.strength * (1 - d / f.range) * (cosT - f.cosSpread) / (1 - f.cosSpread);
+    ax += dx / d * k; az += dz / d * k;
+  }
+  return [ax, az];
+}
+function groundStep(b) {
+  if (b.vx === 0 && b.vz === 0) return; // resting balls stay put until something hits them (static friction)
+  const [ax, az] = fieldAt(b.x, b.z, true), f = G.zones.length && inZone(b.x, b.z) ? SLOW_MULT : 1;
+  b.vx += ax * DT; b.vz += az * DT;
+  const sp = Math.sqrt(b.vx * b.vx + b.vz * b.vz);
+  let ns = sp - (MU * f + KV * f * sp) * DT;
+  if (ns <= STOP_V) {
+    if (ax * ax + az * az <= (MU * f) * (MU * f)) { b.vx = 0; b.vz = 0; return; } // friction can hold it here
+    ns = Math.max(ns, 0); // too steep (or too windy) to stop: keeps creeping
+  }
+  if (sp > 0) { const k = ns / sp; b.vx *= k; b.vz *= k; }
+  b.x += b.vx * DT; b.z += b.vz * DT;
+}
+function nearPocket(x, z) { for (const p of POCKETS) { const dx = x - p.x, dz = z - p.z; if (dx * dx + dz * dz < p.r * p.r) return p; } return null; }
+function airStep(b) {
+  const [ax, az] = fieldAt(b.x, b.z, false); // fans still push in the air; the slope doesn't
+  b.py = b.y;
+  b.vx += ax * DT; b.vz += az * DT; b.vy -= GRAVITY * DT;
+  b.x += b.vx * DT; b.z += b.vz * DT; b.y += b.vy * DT;
+  const ox = Math.abs(b.x), oz = Math.abs(b.z);
+  if (ox > 1.32 || oz > 2.32) { if (b.y < RAIL_TOP) offTable(b); return; } // past the rails: over the edge it goes
+  if ((ox > 1 || oz > 2) && b.y < RAIL_TOP && !nearPocket(b.x, b.z)) {
+    // came down on the rail: hop off it, toward whichever side is closer
+    const vin = -b.vy; b.y = RAIL_TOP; b.vy = Math.max(vin * E_LAND, 0.9); Sound.thump(Math.max(1, vin));
+    if (ox > 1) { const sx = Math.sign(b.x); b.vx += (ox - 1 < 1.32 - ox ? -sx : sx) * 0.5; }
+    if (oz > 2) { const sz = Math.sign(b.z); b.vz += (oz - 2 < 2.32 - oz ? -sz : sz) * 0.5; }
+    return;
+  }
+  if (b.y <= 0) land(b);
+}
+function land(b) {
+  const vin = -b.vy, p = nearPocket(b.x, b.z);
+  b.y = 0; b.vy = 0;
+  if (p) { pocketBall(b, p); return; } // came down over a pocket
+  for (const o of G.fx.pads) { const dx = b.x - o.x, dz = b.z - o.z; if (dx * dx + dz * dz < o.r * o.r) { trampoline(b, o, vin); return; } }
+  if (vin > LAND_SETTLE) { b.vy = vin * E_LAND; b.vx *= 0.94; b.vz *= 0.94; Sound.thump(vin * 1.3); }
+}
+function trampoline(b, o, vin) {
+  const sp = Math.sqrt(b.vx * b.vx + b.vz * b.vz);
+  let vy = sp < 0.25 ? vin * 0.55 : Math.max(vin * 0.8, o.bounce * (TRAMP_BASE + TRAMP_PER_SPEED * sp));
+  vy = Math.min(TRAMP_MAX, vy); b.lastPad = o; b.y = 0;
+  if (vy > LAND_SETTLE) { b.vy = vy; o.squash = 1; Sound.boing(); } else b.vy = 0;
+}
+function rampStep(b) {
+  const o = b.ramp;
+  let va = b.vx * o.c + b.vz * o.s, vp = -b.vx * o.s + b.vz * o.c; // along the ramp / across it
+  va -= GRAVITY * o.sin * o.cos * DT;                               // gravity slows it on the way up
+  const sp = Math.sqrt(va * va + vp * vp);
+  if (sp > 0) { const ns = Math.max(0, sp - (MU + KV * sp) * DT); va *= ns / sp; vp *= ns / sp; }
+  b.vx = va * o.c - vp * o.s; b.vz = va * o.s + vp * o.c;
+  b.x += b.vx * DT; b.z += b.vz * DT;
+  const dx = b.x - o.x, dz = b.z - o.z, lx = dx * o.c + dz * o.s, lz = -dx * o.s + dz * o.c, up = lx + o.hw;
+  if (up <= 0) { b.ramp = null; b.y = 0; b.vy = 0; return; }               // rolled back down off the low end
+  b.py = b.y; b.y = Math.min(o.h, up * o.tan);
+  if (up >= 2 * o.hw) { b.ramp = null; b.y = o.h; b.vy = Math.max(0, va) * o.tan; Sound.whoosh(va); return; } // off the top: launched
+  if (Math.abs(lz) > o.hd) { b.ramp = null; b.vy = 0; }                     // rolled off a side: drops
+}
+function touch(b, c) { b.cnx = c.nx; b.cnz = c.nz; b.cstep = G.step; }
+function bumperHit(b, o, c) {
+  b.x += c.nx * c.pen; b.z += c.nz * c.pen;
+  const vn = b.vx * c.nx + b.vz * c.nz; if (vn >= 0) return;
+  // reflect, plus a kick; every further bumper hit in the same shot kicks a little less, so shots always settle
+  const k = o.kick * Math.pow(0.75, b.kicks || 0); b.kicks = (b.kicks || 0) + 1;
+  const out = Math.max(-vn * 0.92, -vn * 0.6 + BUMPER_KICK * k);
+  b.vx += (out - vn) * c.nx; b.vz += (out - vn) * c.nz;
+  const sp = Math.sqrt(b.vx * b.vx + b.vz * b.vz), cap = MAX_SPEED * 1.1; if (sp > cap) { b.vx *= cap / sp; b.vz *= cap / sp; }
+  if (o.pop > 0 && b.y < 0.02) b.vy = Math.max(b.vy, POP_VY * o.pop);
+  o.flash = 1; Sound.ding(); haptic(6);
+}
+function railHit(b, o, c) {
+  b.x += c.nx * c.pen; b.z += c.nz * c.pen;
+  const vn = b.vx * c.nx + b.vz * c.nz; if (vn >= 0) return;
+  const k = o.kick * Math.pow(0.75, b.kicks || 0); b.kicks = (b.kicks || 0) + 1;
+  const out = -vn * Math.max(0.72, 1 + 0.9 * (k - 1)) + RAIL_KICK * k;
+  b.vx += (out - vn) * c.nx; b.vz += (out - vn) * c.nz;
+  const sp = Math.sqrt(b.vx * b.vx + b.vz * b.vz), cap = MAX_SPEED * 1.1; if (sp > cap) { b.vx *= cap / sp; b.vz *= cap / sp; }
+  o.flash = 1; Sound.ding();
+}
+// a ball comes down on top of an obstacle: bounce off it and slide toward its nearest edge
+function topHit(b, o, c) {
+  const vin = Math.max(0, -b.vy); b.y = o.h; b.vy = Math.max(vin * E_LAND, 0.6);
+  b.vx += c.nx * 0.35; b.vz += c.nz * 0.35; Sound.thump(Math.max(0.8, vin)); wiggle(o, c.nx, c.nz, Math.max(0.5, vin));
+}
+function ballMovable(b, m, c) {
+  const air = b.y > 0 || b.vy > 0;
+  if (b.y >= m.h) return;
+  if (air && b.py >= m.h) { topHit(b, m, c); return; }
+  const mb = 1, mm = m.mass, sh = c.pen / (mb + mm);
+  b.x += c.nx * sh * mm; b.z += c.nz * sh * mm; m.x -= c.nx * sh * mb; m.z -= c.nz * sh * mb;
+  const vn = (b.vx - m.vx) * c.nx + (b.vz - m.vz) * c.nz;
+  if (vn < 0) {
+    const e = m.bouncy ? 0.8 : 0.45, j = -(1 + e) * vn / (1 / mb + 1 / mm);
+    b.vx += j / mb * c.nx; b.vz += j / mb * c.nz; m.vx -= j / mm * c.nx; m.vz -= j / mm * c.nz;
+    const sp = Math.sqrt(m.vx * m.vx + m.vz * m.vz); if (sp > 3) { m.vx *= 3 / sp; m.vz *= 3 / sp; }
+    if (m.bouncy) m.vy = Math.min(1.2, Math.max(m.vy, 0) + 0.3 + (-vn) * 0.3);
+    Sound.thump(-vn * 0.6);
+  }
+  touch(b, c);
+}
+function movablesStep() {
+  for (const m of G.fx.movs) {
+    m.hy += m.vy * DT; m.vy -= GRAVITY * DT; // little hops (looks only)
+    if (m.hy <= 0) { m.hy = 0; m.vy = m.vy < -0.3 ? -m.vy * 0.45 : 0; }
+    if (m.vx === 0 && m.vz === 0) continue;
+    const [ax, az] = fieldAt(m.x, m.z, true), w = 0.4 / m.mass; // light things get blown around more
+    m.vx += ax * w * DT; m.vz += az * w * DT;
+    const sp = Math.sqrt(m.vx * m.vx + m.vz * m.vz), ns = sp - (m.mu + 0.6 * sp) * DT;
+    if (ns <= STOP_V) { m.vx = 0; m.vz = 0; continue; }
+    m.vx *= ns / sp; m.vz *= ns / sp; m.x += m.vx * DT; m.z += m.vz * DT;
+    // cushions hold it (too big for the pockets)
+    const ex = m.shape === 'circle' ? m.r : Math.abs(m.c) * m.hw + Math.abs(m.s) * m.hd, ez = m.shape === 'circle' ? m.r : Math.abs(m.s) * m.hw + Math.abs(m.c) * m.hd;
+    const e = m.bouncy ? 0.7 : 0.4;
+    if (m.x > 1 - ex) { m.x = 1 - ex; m.vx = -Math.abs(m.vx) * e; } else if (m.x < -1 + ex) { m.x = -1 + ex; m.vx = Math.abs(m.vx) * e; }
+    if (m.z > 2 - ez) { m.z = 2 - ez; m.vz = -Math.abs(m.vz) * e; } else if (m.z < -2 + ez) { m.z = -2 + ez; m.vz = Math.abs(m.vz) * e; }
+    for (const o of G.obstacles) {
+      if (o === m || o.pad) continue;
+      if (o.movable) { // movable vs movable: round bodies, equal-and-opposite push
+        const dx = m.x - o.x, dz = m.z - o.z, d2 = dx * dx + dz * dz, rr = m.rr + o.rr; if (d2 >= rr * rr) continue;
+        const d = Math.sqrt(d2) || 1e-6, nx = dx / d, nz = dz / d, pen = rr - d; m.x += nx * pen / 2; m.z += nz * pen / 2; o.x -= nx * pen / 2; o.z -= nz * pen / 2;
+        const vn = (m.vx - o.vx) * nx + (m.vz - o.vz) * nz;
+        if (vn < 0) { const j = -1.4 * vn / (1 / m.mass + 1 / o.mass); m.vx += j / m.mass * nx; m.vz += j / m.mass * nz; o.vx -= j / o.mass * nx; o.vz -= j / o.mass * nz; }
+        continue;
+      }
+      const c = obstacleContact(m.x, m.z, o, m.rr); if (c) { const v = bounce(m, c, 0.4); wiggle(o, c.nx, c.nz, v); }
+    }
+  }
+}
+function collide2D(a, b, dx, dz, d2) {
+  // same contact math as the flat physics (rewind to the exact moment of contact)
+  let d = Math.sqrt(d2), nx = dx / d, nz = dz / d;
+  let rel = (a.vx - b.vx) * nx + (a.vz - b.vz) * nz;
+  let t = 0;
+  if (rel > 0) {
+    const wx = b.vx - a.vx, wz = b.vz - a.vz, qa = wx * wx + wz * wz;
+    if (qa > 1e-12) {
+      const qb = -2 * (dx * wx + dz * wz), qc = d2 - 4 * R * R, disc = qb * qb - 4 * qa * qc;
+      t = Math.min(DT * 1.5, Math.max(0, (-qb + Math.sqrt(Math.max(0, disc))) / (2 * qa)));
+    }
+    a.x -= a.vx * t; a.z -= a.vz * t; b.x -= b.vx * t; b.z -= b.vz * t;
+    const ex = b.x - a.x, ez = b.z - a.z; d = Math.sqrt(ex * ex + ez * ez) || 1e-6; nx = ex / d; nz = ez / d;
+    rel = (a.vx - b.vx) * nx + (a.vz - b.vz) * nz;
+    if (rel > 0) { const j2 = rel * (1 + E_BALL) / 2; a.vx -= j2 * nx; a.vz -= j2 * nz; b.vx += j2 * nx; b.vz += j2 * nz; Sound.clack(rel); }
+    a.x += a.vx * t; a.z += a.vz * t; b.x += b.vx * t; b.z += b.vz * t;
+    const fx = b.x - a.x, fz = b.z - a.z; d = Math.sqrt(fx * fx + fz * fz) || 1e-6; nx = fx / d; nz = fz / d;
+  }
+  if (d < 2 * R) { const ov = (2 * R - d) / 2; a.x -= nx * ov; a.z -= nz * ov; b.x += nx * ov; b.z += nz * ov; }
+  touch(a, { nx: -nx, nz: -nz }); touch(b, { nx, nz });
+}
+function collide3D(a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, d2 = dx * dx + dy * dy + dz * dz;
+  if (d2 >= 4 * R * R || d2 < 1e-12) return;
+  if (a === G.cue || b === G.cue) G.cueTouched = true;
+  if (a.y === 0 && b.y === 0 && !a.ramp && !b.ramp && a.vy === 0 && b.vy === 0) { collide2D(a, b, dx, dz, d2); return; }
+  const d = Math.sqrt(d2), nx = dx / d, ny = dy / d, nz = dz / d;
+  const rel = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny + (a.vz - b.vz) * nz;
+  if (rel > 0) {
+    const j = rel * (1 + E_BALL) / 2;
+    a.vx -= j * nx; a.vy -= j * ny; a.vz -= j * nz; b.vx += j * nx; b.vy += j * ny; b.vz += j * nz; Sound.clack(rel);
+  }
+  const ov = (2 * R - d) / 2; a.x -= nx * ov; a.y -= ny * ov; a.z -= nz * ov; b.x += nx * ov; b.y += ny * ov; b.z += nz * ov;
+  for (const q of [a, b]) {
+    if (q.ramp) { q.vy = 0; continue; } // the ramp sets its height
+    if (q.y <= 0) { q.y = 0; if (q.vy < 0) q.vy = 0; }
+  }
+}
+function contacts3D(b) {
+  if (b.ramp) return;
+  const air = b.y > 0 || b.vy > 0;
+  if (b.y < CUSH_H && !(b.x > -0.9 && b.x < 0.9 && b.z > -1.9 && b.z < 1.9)) {
+    for (const s of SEGS) { const c = segContact(b.x, b.z, s, R); if (c) { const v = bounce(b, c, E_RAIL); if (v) Sound.thump(v); touch(b, c); } }
+  }
+  for (const o of G.obstacles) {
+    if (o.pad) { // trampoline: roll onto it and it throws you up
+      const dx = b.x - o.x, dz = b.z - o.z, on = dx * dx + dz * dz < o.r * o.r;
+      if (!on) { if (b.lastPad === o) b.lastPad = null; continue; }
+      if (!air && b.lastPad !== o && (b.vx || b.vz)) trampoline(b, o, 0);
+      continue;
+    }
+    const c = obstacleContact(b.x, b.z, o, R); if (!c) continue;
+    if (o.movable) { ballMovable(b, o, c); continue; }
+    if (o.ramp && !air) {
+      // the low edge is the way on; every other side is solid
+      const dx = b.x - o.x, dz = b.z - o.z, lx = dx * o.c + dz * o.s, lz = -dx * o.s + dz * o.c;
+      if (Math.abs(lz) <= o.hd && lx < -o.hw + 0.04) {
+        if (lx >= -o.hw && b.vx * o.c + b.vz * o.s > 0) { b.ramp = o; b.y = (lx + o.hw) * o.tan; b.vy = 0; return; }
+        continue;
+      }
+    }
+    if (b.y >= o.h) continue;                                    // flying over it
+    if (air && b.py >= o.h) { topHit(b, o, c); continue; }       // came down on top of it
+    if (o.bumper) { bumperHit(b, o, c); touch(b, c); continue; }
+    if (o.rail) { railHit(b, o, c); touch(b, c); continue; }
+    const v = bounce(b, c, E_OBS); if (v) { Sound.thump(v * 0.8); wiggle(o, c.nx, c.nz, v); } touch(b, c);
+  }
+}
+function offTable(b) {
+  b.sunk = true; G.activeDirty = true; b.ramp = null;
+  G.falls.push({ b, t: 0, x: b.x, y: b.y, z: b.z, vx: b.vx, vy: b.vy, vz: b.vz });
+  b.vx = b.vz = b.vy = 0;
+  if (G.complete) return;
+  if (b.n === 0) { G.hadScratch = true; addShots(2, 'Off the table · +2'); }
+  else { b.pending = true; addShots(1, 'Off the table · +1'); } // comes back to its starting spot
+}
+function physStep3D() {
+  const A = G.active, fx = G.fx;
+  G.step++; G.fanT += DT; G.shotT += DT;
+  for (const f of fx.fans) { const a = fanAngle(f); f.ux = dcos(a); f.uz = dsin(a); }
+  for (const b of A) { b.py = b.y; if (b.ramp) rampStep(b); else if (b.y > 0 || b.vy > 0) airStep(b); else groundStep(b); }
+  movablesStep();
+  for (let it = 0; it < 2; it++) for (let i = 0; i < A.length; i++) for (let j = i + 1; j < A.length; j++) if (!A[i].sunk && !A[j].sunk) collide3D(A[i], A[j]);
+  for (const b of A) {
+    if (b.sunk) continue;
+    contacts3D(b);
+    // pressed against something by the slope/fan and nearly still: friction holds it there
+    if (!b.ramp && b.y === 0 && b.vy === 0 && (b.vx || b.vz) && b.cstep === G.step) {
+      const sp = Math.sqrt(b.vx * b.vx + b.vz * b.vz);
+      if (sp < 0.12) {
+        let [ax, az] = fieldAt(b.x, b.z, true); const an = ax * b.cnx + az * b.cnz;
+        if (an < 0) { ax -= an * b.cnx; az -= an * b.cnz; }
+        if (ax * ax + az * az <= MU * MU) { b.vx = 0; b.vz = 0; }
+      }
+    }
+  }
+  // pockets: only balls rolling on the felt (a flying ball drops in when it lands over one)
+  for (const b of A) {
+    if (b.sunk || b.ramp || b.y > 0 || b.vy > 0) continue;
+    if (b.x > -0.85 && b.x < 0.85 && b.z > -1.85 && b.z < 1.85 && Math.abs(b.z) > 0.16) continue;
+    const off = b.x > 1 || b.x < -1 || b.z > 2 || b.z < -2;
+    let best = null, bd = 1e9;
+    for (const p of POCKETS) { const dx = b.x - p.x, dz = b.z - p.z, d2 = dx * dx + dz * dz; if (d2 < bd) { bd = d2; best = p; } }
+    if (off) { pocketBall(b, best); continue; }
+    if (bd < best.r * best.r) {
+      const d = Math.sqrt(bd) || 1e-6, nx = (b.x - best.x) / d, nz = (b.z - best.z) / d;
+      const vn = b.vx * nx + b.vz * nz, sp = Math.sqrt(b.vx * b.vx + b.vz * b.vz);
+      if (vn <= 0 || sp < 1.2) pocketBall(b, best);
+    }
+  }
+  if (G.activeDirty) { refreshActive(); G.activeDirty = false; }
+  if (G.shotT > MAX_SHOT_TIME) { // safety net: stop everything where it is
+    for (const b of G.active) { b.vx = b.vz = b.vy = 0; b.y = 0; b.ramp = null; }
+    for (const m of fx.movs) { m.vx = m.vz = 0; }
+  }
+}
+function allStopped3D() {
+  for (const b of G.active) if (b.vx !== 0 || b.vz !== 0 || b.y > 0 || b.vy !== 0 || b.ramp) return false;
+  for (const m of G.fx.movs) if (m.vx !== 0 || m.vz !== 0) return false;
+  return true;
+}
 
 /* ============================ game rules =========================== */
 function isTarget(n) { return G.level.goal.type === 'count' ? true : G.level.goal.targets.includes(n); }
@@ -1446,10 +2060,11 @@ function pocketBall(b, p) {
   if (goal.type === 'count') { G.sunk.push(b.n); G.lastPocket = p; }
   else if (isTarget(b.n)) {
     // a target ball always counts; sinking one ahead of its turn on an order table costs +1
-    const early = goal.type === 'order' && goal.targets[G.orderIdx] !== b.n;
+    const early = goal.type === 'order' ? goal.targets[G.orderIdx] !== b.n
+      : goal.type === 'last' && b.n === goal.last && goal.targets.some(t => t !== b.n && !G.sunk.includes(t));
     G.sunk.push(b.n); G.lastPocket = p;
     while (G.orderIdx < goal.targets.length && G.sunk.includes(goal.targets[G.orderIdx])) G.orderIdx++;
-    if (early) addShots(1, 'Out of order · +1');
+    if (early) addShots(1, goal.type === 'last' ? `The ${b.n} went early · +1` : 'Out of order · +1');
   }
   else { G.out.push(b.n); addShots(1, 'Wrong ball · +1'); } // stays down, just costs a shot
   renderTracker();
@@ -1477,6 +2092,7 @@ function findClear(start, self) {
 }
 function respawn(b) {
   const [x, z] = findClear(b.start, b); b.x = b.px = x; b.z = b.pz = z; b.vx = b.vz = 0; b.sunk = false; b.pending = false;
+  b.y = 0; b.vy = 0; b.ramp = null; b.lastPad = null;
   b.mesh.visible = true; b.mesh.position.set(x, R, z); b.mesh.scale.setScalar(0.01); G.pops.push({ b, t: 0 });
   if (b.n !== 0) Sound.pop();
 }
@@ -1491,14 +2107,15 @@ function onRest() {
   saveMid(); updatePill(); 
   G.inputLocked = false; defaultAim(); G.camMode = 'ready';
 }
-function snapshot() { const pos = {}; for (const b of G.balls) pos[b.n] = [b.x, b.z]; pos.obs = G.obstacles.map(o => o.dynamic ? [o.x, o.z] : null); return pos; }
+function snapshot() { const pos = {}; for (const b of G.balls) pos[b.n] = [b.x, b.z]; pos.obs = G.obstacles.map(o => o.dynamic || o.movable ? [o.x, o.z] : null); if (G.fx.on) pos.fanT = G.fanT; return pos; }
 function saveMid(pos) { if (G.practice) return; day.current = { idx: G.idx, shots: G.shots, orderIdx: G.orderIdx, sunk: G.sunk.slice(), out: G.out.slice(), pos: pos || snapshot() }; saveDay(); }
 
 function shoot(dx, dz, power) {
   if (G.inputLocked || G.moving || G.complete) return;
   Sound.init();
   const pre = snapshot();
-  G.shots += 1; G.hadScratch = false; G.cueTouched = false;
+  G.shots += 1; G.hadScratch = false; G.cueTouched = false; G.shotT = 0; if (G.dbgTrail) G.dbgTrail.n = 0;
+  for (const b of G.balls) b.kicks = 0;
   saveMid(pre); // a refresh mid-shot keeps the shot spent
   const sp = MAX_SPEED * power;
   G.cue.vx = dx * sp; G.cue.vz = dz * sp;
@@ -1508,6 +2125,7 @@ function shoot(dx, dz, power) {
 }
 function completeTable(capped) {
   G.complete = true; G.inputLocked = true; G.camMode = 'done';
+  if (G.searching) return; // automated solver runs
   const shots = G.shots;
   const oneAndDone = shots === 1 && !capped;
   if (!G.practice) { // replays from Levels don't count toward today
@@ -1645,8 +2263,8 @@ const aimState = { angle: -Math.PI / 2, target: -Math.PI / 2, power: 0 }; // ang
 const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -R), hitP = new THREE.Vector3();
 const aimDir = () => [Math.cos(aimState.angle), Math.sin(aimState.angle)];
 function canShoot() { return !homeOpen && !G.inputLocked && !G.moving && !G.complete && !$('overlay').classList.contains('show'); }
-function toScreen(x, z) { const v = new THREE.Vector3(x, R, z).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; }
-function screenToTable(sx, sy) { ndc.set(sx / innerWidth * 2 - 1, -(sy / innerHeight) * 2 + 1); raycaster.setFromCamera(ndc, camera); return raycaster.ray.intersectPlane(plane, hitP) ? [hitP.x, hitP.z] : null; }
+function toScreen(x, z) { const v = new THREE.Vector3(x, R, z); if (G.fx.slope && G.root) G.root.localToWorld(v); v.project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; }
+function screenToTable(sx, sy) { ndc.set(sx / innerWidth * 2 - 1, -(sy / innerHeight) * 2 + 1); raycaster.setFromCamera(ndc, camera); if (!raycaster.ray.intersectPlane(plane, hitP)) return null; if (G.fx.slope && G.root) G.root.worldToLocal(hitP); return [hitP.x, hitP.z]; }
 const maxPull = () => clamp(Math.min(innerWidth, innerHeight) * 0.32, 110, 190);
 function stickAxis() { // the aim direction as seen on screen (unit vector, pointing where the ball will go)
   const [dx, dz] = aimDir(), a = toScreen(G.cue.x, G.cue.z), b = toScreen(G.cue.x + dx * 0.4, G.cue.z + dz * 0.4);
@@ -1657,7 +2275,7 @@ function defaultAim() {
   const g = G.level.goal; let best = null, bd = 1e9;
   for (const b of G.active) {
     if (b === G.cue) continue;
-    const want = g.type === 'count' ? true : g.type === 'order' ? b.n === g.targets[G.orderIdx] : g.targets.includes(b.n) && !G.sunk.includes(b.n);
+    const want = g.type === 'count' ? true : g.type === 'last' ? b.n !== g.last || g.targets.every(t => t === g.last || G.sunk.includes(t)) : g.type === 'order' ? b.n === g.targets[G.orderIdx] : g.targets.includes(b.n) && !G.sunk.includes(b.n);
     const d = (b.x - G.cue.x) ** 2 + (b.z - G.cue.z) ** 2 + (want ? 0 : 100);
     if (d < bd) { bd = d; best = b; }
   }
@@ -1794,7 +2412,7 @@ function updateAimVisuals(dt) {
   const [dx, dz] = aimDir();
   if (stick.strike > 0) { stick.gap = Math.max(R + 0.004, stick.gap - dt * (2 + stick.strike * 8)); }
   else stick.gap = lerp(stick.gap, R + 0.02 + aimState.power * 0.42, 1 - Math.exp(-dt * 30));
-  if (!G.moving) { stick.root.position.set(G.cue.x, R, G.cue.z); stick.root.rotation.y = Math.atan2(-dx, -dz); }
+  if (!G.moving) { stick.root.position.set(G.cue.x, R, G.cue.z); if (G.fx.slope) G.root.localToWorld(stick.root.position); stick.root.rotation.y = Math.atan2(-dx, -dz); }
   if (want && stick.op > 0.9) stick.strike = 0;
   stick.body.position.z = stick.gap;
   if (ready && !G.inputLocked) drawAim(dx, dz, aimState.power); else aim.group.visible = false;
@@ -1848,10 +2466,12 @@ function poseFor(mode) {
     p.dist = view.base * 0.6; p.tilt = clamp(L.tilt - 18, 34, 48); p.rot = L.rotation;
   }
   else if (mode === 'far' || mode === 'outro') { p.dist = view.base * 1.32; p.tilt = Math.min(84, L.tilt + view.tiltAdj + 8); p.tz = -0.3; }
+  if (G.flyT > 0) p.dist *= 1 + 0.14 * G.flyT; // eases back while balls are in the air
   return p;
 }
 function snapCamera(mode) { Object.assign(cam, poseFor(mode)); applyCam(); }
 function applyCam() {
+  if (window.__camHook) { window.__camHook(camera); return; } // test screenshots only
   placeCam(camera, cam.tx, cam.tz, cam.dist, cam.tilt, cam.rot + G.yawSmooth); // + the player's own turn
   scene.fog.near = cam.dist * 1.15; scene.fog.far = cam.dist * 2.6;
 }
@@ -1918,6 +2538,123 @@ function updateFx(dt) {
   if (!confetti.length) fxc.clearRect(0, 0, innerWidth, innerHeight);
 }
 
+/* ================= new-piece visuals (fans, bumpers, shadows…) ============== */
+let shadowTexC = null;
+const shadowTex = () => shadowTexC || (shadowTexC = canvasTex(64, 64, (c, W) => { const g = c.createRadialGradient(W / 2, W / 2, 2, W / 2, W / 2, W / 2); g.addColorStop(0, 'rgba(0,0,0,.9)'); g.addColorStop(0.55, 'rgba(0,0,0,.45)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(0, 0, W, W); }));
+function buildFxVisuals() {
+  const fx = G.fx;
+  for (const f of fx.fans) {
+    f.head = f.mesh.getObjectByName('head'); f.blades = f.mesh.getObjectByName('blades');
+    const n = 36, geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#ffffff', size: 0.022, transparent: true, opacity: 0.55, depthWrite: false })); pts.frustumCulled = false; G.root.add(pts);
+    f.parts = { pts, n, q: Array.from({ length: n }, (_, i) => ({ d: 0.12 + (i / n) * (f.range - 0.12), o: Math.random() * 2 - 1, v: 0.7 + Math.random() * 0.7, y: 0.14 + Math.random() * 0.14 })) };
+  }
+  for (const o of fx.pads) o.padMesh = o.mesh.getObjectByName('pad');
+  // soft shadows under balls: they show once a ball leaves the felt, shrinking and fading as it rises
+  const sg = cached('blobShadow', () => { const g = new THREE.CircleGeometry(R * 1.15, 24); g.rotateX(-Math.PI / 2); return g; });
+  for (const b of G.balls) { const s = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ map: shadowTex(), transparent: true, opacity: 0.4, depthWrite: false })); s.visible = false; s.renderOrder = 1; G.root.add(s); b.shadow = s; }
+  // the table visibly leans toward the downhill side
+  if (fx.slope) G.root.setRotationFromAxisAngle(new THREE.Vector3(fx.slope.dz, 0, -fx.slope.dx).normalize(), Math.atan(fx.slope.amount * SLOPE_VIS));
+  G.root.updateMatrixWorld(true);
+}
+function fxFrame(dt) {
+  const fx = G.fx;
+  // the camera pulls back a little while anything is in the air
+  const flying = G.active.some(b => b.y > 0.02 || b.ramp);
+  G.flyT += ((flying ? 1 : 0) - G.flyT) * (1 - Math.exp(-dt * (flying ? 3 : 1.4)));
+  if (G.flyT < 1e-4) G.flyT = 0;
+  for (const b of G.balls) if (b.shadow) {
+    const s = b.shadow, up = b.y || 0; s.visible = !b.sunk && up > 0.004;
+    if (s.visible) { const k = 1 / (1 + up * 5); s.position.set(b.x, 0.003, b.z); s.scale.setScalar(k); s.material.opacity = 0.42 * k; }
+  }
+  for (const m of fx.movs) {
+    const dx = m.x - m.px, dz = m.z - m.pz, d = Math.sqrt(dx * dx + dz * dz);
+    if (d > 1e-6 && m.ball) { axis.set(dz / d, 0, -dx / d); qd.setFromAxisAngle(axis, d / m.r); m.ball.quaternion.premultiply(qd); }
+    m.px = m.x; m.pz = m.z; m.mesh.position.set(m.x, m.hy, m.z);
+    if (m.dbg) m.dbg.position.set(m.x, m.dbg.position.y, m.z);
+  }
+  for (const f of fx.fans) {
+    const a0 = fanAngle(f);
+    if (f.head) f.head.rotation.y = -(a0 - f.dir);
+    if (f.blades && !reduceMotion) f.blades.rotation.x += dt * 26;
+    const P = f.parts; if (P) {
+      const pos = P.pts.geometry.attributes.position.array;
+      for (let i = 0; i < P.n; i++) {
+        const q = P.q[i]; q.d += dt * q.v * (reduceMotion ? 0 : 1);
+        if (q.d > f.range) { q.d = 0.12; q.o = Math.random() * 2 - 1; q.y = 0.14 + Math.random() * 0.14; }
+        const a = a0 + q.o * f.spread * 0.85; pos[i * 3] = f.x + Math.cos(a) * q.d; pos[i * 3 + 1] = q.y * (1 - 0.5 * q.d / f.range); pos[i * 3 + 2] = f.z + Math.sin(a) * q.d;
+      }
+      P.pts.geometry.attributes.position.needsUpdate = true;
+    }
+    if (f.cone) { // debug: the fan's push zone, following the sweep
+      const p = f.cone.geometry.attributes.position.array, n = p.length / 3 - 2; p[0] = f.x; p[2] = f.z;
+      for (let i = 0; i <= n - 1; i++) { const a = a0 - f.spread + 2 * f.spread * i / (n - 1); p[(i + 1) * 3] = f.x + Math.cos(a) * f.range; p[(i + 1) * 3 + 2] = f.z + Math.sin(a) * f.range; }
+      p[(n + 1) * 3] = f.x; p[(n + 1) * 3 + 2] = f.z; f.cone.geometry.attributes.position.needsUpdate = true;
+    }
+  }
+  for (const o of G.obstacles) {
+    if ((o.bumper || o.rail) && o.flash > 0) { o.flash = Math.max(0, o.flash - dt * 3.2); const m = o.mesh.userData.flash; if (m) m.emissiveIntensity = 0.15 + o.flash * 1.8; if (o.bumper) o.mesh.scale.setScalar(1 + o.flash * 0.07); }
+    if (o.pad && o.padMesh) { if (o.squash > 0) o.squash = Math.max(0, o.squash - dt * 2.4); const k = o.squash || 0; o.padMesh.position.y = -0.012 * Math.sin((1 - k) * Math.PI * 3) * k; o.padMesh.scale.set(1 + 0.05 * k, 1, 1 + 0.05 * k); }
+  }
+  // balls that went over the edge tumble down to the floor
+  for (const f of G.falls) {
+    f.t += dt; f.vy -= GRAVITY * dt; f.x += f.vx * dt; f.z += f.vz * dt; f.y += f.vy * dt;
+    if (f.y < FLOOR_Y) { f.y = FLOOR_Y; f.vy = Math.abs(f.vy) * 0.35; f.vx *= 0.6; f.vz *= 0.6; if (!f.thud) { f.thud = 1; Sound.thump(2.4); } }
+    const m = f.b.mesh; m.visible = true; m.position.set(f.x, R + f.y, f.z);
+    axis.set(f.vz, 0, -f.vx); const sp = axis.length(); if (sp > 1e-6) { axis.divideScalar(sp); qd.setFromAxisAngle(axis, sp * dt / R); m.quaternion.premultiply(qd); }
+    if (f.t > 1.0) m.scale.setScalar(Math.max(0.01, 1 - (f.t - 1.0) * 4));
+    if (f.t > 1.25) { m.visible = false; m.scale.setScalar(1); f.done = true; }
+  }
+  G.falls = G.falls.filter(f => !f.done);
+  if (fx.slope) { // point the "Tilted table" arrow downhill as seen on screen
+    const el = $('tilt-arr'); if (el) { const a = toScreen(0, 0), b = toScreen(fx.slope.dx * 0.6, fx.slope.dz * 0.6); el.style.transform = `rotate(${(Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI - 90).toFixed(1)}deg)`; }
+  }
+  if (G.dbgTrail && G.moving) { // debug: dots along every flight path
+    const T = G.dbgTrail, p = T.pts.geometry.attributes.position.array;
+    for (const b of G.active) if ((b.y > 0.005 || b.ramp) && T.n < T.max) { p[T.n * 3] = b.x; p[T.n * 3 + 1] = R + b.y; p[T.n * 3 + 2] = b.z; T.n++; }
+    T.pts.geometry.setDrawRange(0, T.n); T.pts.geometry.attributes.position.needsUpdate = true;
+  }
+}
+
+/* ============================ ?debug mode ============================ */
+// Add ?debug to the URL: physics outlines with heights, fan zones, slope arrow, flight paths and a level picker.
+// Nothing played in debug mode is ever sent to the leaderboard.
+function dbgLabel(text, color = '#ffffff') {
+  const t = canvasTex(256, 48, (c, W, H) => { c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(0, 0, W, H); c.fillStyle = color; c.font = '700 26px ui-monospace, Menlo, monospace'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, W / 2, H / 2 + 1); });
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true })); s.scale.set(0.34, 0.064, 1); s.renderOrder = 10; return s;
+}
+function buildDebug() {
+  if (!DEBUG) return;
+  const g = new THREE.Group(); G.root.add(g);
+  const lm = (color) => new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.95, depthTest: false });
+  for (const o of G.obstacles) {
+    const h = Math.max(0.012, o.pad ? 0.012 : (o.h || OBST_H[o.kind] || 0.15));
+    const col = o.movable ? '#00e5ff' : o.pad ? '#ff40ff' : o.ramp ? '#ffea00' : (o.bumper || o.rail) ? '#ff5a1f' : o.fan ? '#76ff03' : '#ffffff';
+    const geo = o.shape === 'circle' ? new THREE.CylinderGeometry(o.r, o.r, h, 24, 1, true) : new THREE.BoxGeometry(o.hw * 2, h, o.hd * 2);
+    const w = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 10), lm(col)); w.renderOrder = 9;
+    w.position.set(o.x, h / 2, o.z); w.rotation.y = -(o.deg || 0) * DEG; g.add(w); o.dbg = w;
+    const lab = dbgLabel(`${o.kind}${o.model ? ':' + o.model : ''} h ${(o.ramp ? o.h : h).toFixed(2)}`, col); lab.position.set(o.x, h + 0.07, o.z); g.add(lab);
+    if (o.movable) { g.remove(lab); lab.position.set(0, h / 2 + 0.07, 0); w.add(lab); }
+    if (o.fan) { const geo2 = new THREE.BufferGeometry(); geo2.setAttribute('position', new THREE.BufferAttribute(new Float32Array(24 * 3).map((v, i) => i % 3 === 1 ? 0.02 : 0), 3)); o.cone = new THREE.Line(geo2, lm('#76ff03')); o.cone.frustumCulled = false; o.cone.renderOrder = 9; g.add(o.cone); }
+  }
+  for (const p of POCKETS) { const c = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(Array.from({ length: 32 }, (_, i) => new THREE.Vector3(p.x + Math.cos(i / 32 * 6.283) * p.r, 0.006, p.z + Math.sin(i / 32 * 6.283) * p.r))), lm('#ff4d4d')); c.renderOrder = 9; g.add(c); }
+  if (G.fx.slope) { const s = G.fx.slope, a = new THREE.ArrowHelper(new THREE.Vector3(s.dx, 0, s.dz), new THREE.Vector3(-s.dx * 0.6, 0.03, -s.dz * 0.6), 1.2, 0xffea00, 0.18, 0.1); a.traverse(m => { if (m.material) { m.material.depthTest = false; m.renderOrder = 9; } }); g.add(a);
+    const lab = dbgLabel(`slope ${G.level.slope.direction}° × ${s.amount}`, '#ffea00'); lab.position.set(0, 0.25, 0); g.add(lab); }
+  const max = 6000, tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(max * 3), 3)); tg.setDrawRange(0, 0);
+  const pts = new THREE.Points(tg, new THREE.PointsMaterial({ color: '#ff40ff', size: 0.018, depthTest: false })); pts.frustumCulled = false; pts.renderOrder = 9; g.add(pts);
+  G.dbgTrail = { pts, n: 0, max };
+}
+let newLibC = null;
+const newLib = () => newLibC || (newLibC = NEW_LEVELS.map((l, i) => normalizeLevel({ ...l, date: TODAY, order: i + 1 }, i)));
+function debugPicker() {
+  const sel = document.createElement('select'); sel.id = 'dbgPick';
+  sel.style.cssText = 'position:fixed;z-index:60;right:8px;top:calc(env(safe-area-inset-top) + 58px);max-width:58vw;font:700 12px Nunito,system-ui,sans-serif;padding:6px 8px;border-radius:10px;border:2px solid #ff40ff;background:#fffdf8;color:#151515';
+  sel.innerHTML = `<option value="">🛠 Debug: pick a level</option><optgroup label="Today">${G.levels.map((l, i) => `<option value="d:${i}">${i + 1}. ${esc(l.title)}</option>`).join('')}</optgroup>`
+    + `<optgroup label="New levels">${newLib().map((l, i) => `<option value="n:${i}">N${i + 1}. ${esc(l.title)} (${l.theme})</option>`).join('')}</optgroup>`;
+  sel.onchange = () => { if (!sel.value) return; const [k, i] = sel.value.split(':'); if (homeOpen) hideHome(); if ($('overlay').classList.contains('show')) closeOverlay(); loadTable(+i, null, true, k === 'n' ? newLib() : G.levels); sel.value = ''; sel.blur(); };
+  document.body.appendChild(sel);
+}
+
 /* ============================ render loop ========================== */
 const axis = new THREE.Vector3(), qd = new THREE.Quaternion();
 let lastT = performance.now();
@@ -1928,13 +2665,13 @@ function frame(now) {
       G.acc += dt; let n = 0;
       while (G.acc >= DT && n < 30) { physStep(); G.acc -= DT; n++; }
       if (n >= 30) G.acc = 0;
-      if (allStopped() && !G.drops.length) onRest();
+      if (allStopped() && !G.drops.length && !G.falls.length) onRest();
     }
     for (const b of G.balls) {
       if (b.sunk) continue;
       const dx = b.x - b.px, dz = b.z - b.pz, d = Math.sqrt(dx * dx + dz * dz);
       if (d > 1e-6) { axis.set(dz / d, 0, -dx / d); qd.setFromAxisAngle(axis, d / R); b.mesh.quaternion.premultiply(qd); }
-      b.px = b.x; b.pz = b.z; b.mesh.position.set(b.x, R, b.z);
+      b.px = b.x; b.pz = b.z; b.mesh.position.set(b.x, R + b.y, b.z);
     }
     for (const d of G.drops) {
       d.t += dt; const m = d.b.mesh, a = Math.min(1, d.t / 0.14), k = Math.max(0, (d.t - 0.08) / 0.32);
@@ -1956,6 +2693,7 @@ function frame(now) {
     }
     for (const p of G.pops) { p.t += dt; const k = Math.min(1, p.t / 0.28); p.b.mesh.scale.setScalar(k < 1 ? 1 + Math.sin(k * Math.PI) * 0.25 - (1 - k) * 0.6 : 1); if (k >= 1) p.done = true; }
     G.pops = G.pops.filter(p => !p.done);
+    if (G.fx.on) fxFrame(dt);
     updateAimVisuals(dt);
     updateCamera(dt);
     updateFade(dt);
@@ -1991,7 +2729,7 @@ function miniBall(n, extra = '') {
 function renderTracker() {
   const g = G.level.goal; let html = '';
   if (g.type === 'count') { for (let i = 0; i < g.count; i++) html += G.sunk[i] != null ? miniBall(G.sunk[i], 'got count') : miniBall(null); }
-  else html = g.targets.map((t, i) => (g.type === 'order' && i ? '<span class="arrow">›</span>' : '') + miniBall(t, G.sunk.includes(t) ? 'got' : '')).join('');
+  else html = g.targets.map((t, i) => ((g.type === 'order' && i) || (g.type === 'last' && i && i === g.targets.length - 1) ? '<span class="arrow">›</span>' : '') + miniBall(t, G.sunk.includes(t) ? 'got' : '')).join('');
   $('tracker').innerHTML = html;
 }
 function updatePill() {
@@ -2003,7 +2741,8 @@ function updateUI() {
   $('pno').textContent = `No. ${PUZZLE_NO}`;
   $('lvl-label').textContent = G.practice ? 'PRACTICE' : `${pad2(G.idx + 1)} / ${pad2(G.levels.length)} · ${tableLabel(G.idx)}`;
   $('lvl-title').textContent = L.title;
-  $('goal-chip').innerHTML = `${esc(gt.main)}${gt.sub ? ` <small>${esc(gt.sub)}</small>` : ''}`;
+  $('goal-chip').innerHTML = `${esc(gt.main)}${gt.sub ? ` <small>${esc(gt.sub)}</small>` : ''}`
+    + (L.slope ? ` <span class="tilt-chip"><svg id="tilt-arr" viewBox="0 0 24 24"><path d="M12 4v15M6 13l6 6 6-6"/></svg>Tilted table</span>` : '');
   renderProgress(); renderTracker(); updatePill();
 }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -2027,7 +2766,7 @@ const badgeFor = (s) => s <= 2 ? ['green', 'CLEAN'] : s <= 5 ? ['yellow', 'NOT B
 function goToTable(next, practice) { // leaving: ease out with the white fade, then the next table eases in
   $('stamp').classList.remove('show'); G.inputLocked = true;
   tweenCamera('outro', 0.7, easeIn);
-  setTimeout(() => { fade.onFull = () => loadTable(next, null, practice); fadeTo(true, 300); barsTo('#ffffff', 300); }, reduceMotion ? 0 : 380);
+  setTimeout(() => { fade.onFull = () => loadTable(next, null, practice, practice ? G.list : G.levels); fadeTo(true, 300); barsTo('#ffffff', 300); }, reduceMotion ? 0 : 380);
 }
 function showResults(shots, capped, rankP) {
   const [bc, bt] = badgeFor(shots); const last = G.idx >= G.levels.length - 1;
@@ -2041,7 +2780,7 @@ function showResults(shots, capped, rankP) {
       <div class="btn-row" style="margin-top:10px"><button class="btn" id="home-btn">Home</button><button class="btn" id="again">Play again</button></div>`, { dismiss: false });
     sheet.querySelector('#home-btn').onclick = () => { Sound.tap(); closeOverlay(); showHome(); };
     sheet.querySelector('#again').onclick = () => { Sound.tap(); closeOverlay(); goToTable(G.idx, true); };
-    sheet.querySelector('#next').onclick = () => { Sound.tap(); closeOverlay(); goToTable((G.idx + 1) % G.levels.length, true); };
+    sheet.querySelector('#next').onclick = () => { Sound.tap(); closeOverlay(); goToTable((G.idx + 1) % G.list.length, true); };
     return;
   }
   const sheet = openOverlay(`
@@ -2146,7 +2885,7 @@ syncToggles();
 
 /* ============================== home page ============================= */
 let homeOpen = false;
-const ROOM_ICON = { basement: '🎯', diner: '🍔', garage: '🔧', patio: '🌿', boardwalk: '🏖️', cabin: '🏔️', dorm: '🍕', rooftop: '🌇', bowling: '🎳' };
+const ROOM_ICON = { basement: '🎯', diner: '🍔', garage: '🔧', patio: '🌿', boardwalk: '🏖️', cabin: '🏔️', dorm: '🍕', rooftop: '🌇', bowling: '🎳', casino: '🎰', playroom: '🧸' };
 function markRoom(theme) { stats.rooms = stats.rooms || {}; if (!stats.rooms[theme]) { stats.rooms[theme] = 1; saveStats(); } }
 const dailyIdx = () => Math.min(day.results.filter(v => v != null).length, G.levels.length - 1);
 function renderHome() {
@@ -2217,7 +2956,7 @@ async function initBackend() {
   try {
     const mod = await withTimeout(import(SUPABASE_JS), 8000);
     const sb = mod.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
-    const { data, error } = await withTimeout(sb.from('poolsies_levels').select('level_date, level_order, data').eq('level_date', TODAY).order('level_order', { ascending: true }), 8000);
+    const { data, error } = await withTimeout(sb.from('cuesies_levels').select('level_date, level_order, data').eq('level_date', TODAY).order('level_order', { ascending: true }), 8000);
     if (error || !data || data.length < 5) throw new Error(error ? error.message : 'not enough levels for today');
     const levels = data.slice(0, 5).map((r, i) => normalizeLevel({ ...(r.data || {}), date: r.level_date, order: r.level_order }, i));
     G.levels = levels; G.sb = sb; G.remote = true;
@@ -2227,13 +2966,13 @@ async function initBackend() {
   }
 }
 async function submitAndRank(tableOrder, shots) {
-  if (!G.remote || !G.sb) return null;
+  if (DEBUG || !G.remote || !G.sb) return null; // ?debug never submits
   try {
     if (!day.submitted[tableOrder]) {
-      const { error } = await withTimeout(G.sb.from('poolsies_scores').insert({ player_id: playerId, play_date: TODAY, puzzle_no: PUZZLE_NO, table_order: tableOrder, shots }), 8000);
+      const { error } = await withTimeout(G.sb.from('cuesies_scores').insert({ player_id: playerId, play_date: TODAY, puzzle_no: PUZZLE_NO, table_order: tableOrder, shots }), 8000);
       if (!error || String(error.code) === '23505') { day.submitted[tableOrder] = true; saveDay(); }
     }
-    const q = () => G.sb.from('poolsies_scores').select('id', { count: 'exact', head: true }).eq('play_date', TODAY).eq('table_order', tableOrder);
+    const q = () => G.sb.from('cuesies_scores').select('id', { count: 'exact', head: true }).eq('play_date', TODAY).eq('table_order', tableOrder);
     const [a, b, c] = await withTimeout(Promise.all([q(), q().lt('shots', shots), q().gt('shots', shots)]), 8000);
     if (a.error || b.error || c.error) return null;
     const total = Math.max(1, a.count || 0);
@@ -2260,6 +2999,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && lo
   const doneCount = day.results.filter(v => v != null).length;
   const idx = Math.min(doneCount, G.levels.length - 1);
   loadTable(idx, day.current);
+  if (DEBUG) debugPicker();
   requestAnimationFrame(frame);
   $('loading').style.opacity = 0; setTimeout(() => $('loading').remove(), 450);
   if (day.done || doneCount >= G.levels.length) {
@@ -2271,7 +3011,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && lo
   const dare = new URLSearchParams(location.search);
   if (dare.get('dare') && !day.done) setTimeout(() => toast(`A friend did table ${+dare.get('t') || 1} in ${+dare.get('dare')} shots. Beat that!`), 900);
   // expose a tiny hook for automated testing
-  window.__poolsies = { G, shoot, showHome, playToday, zoomTo, THREE, camera, aimState, toScreen, firstContact, physStep, roll, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
+  window.__cuesies = { G, loadTable, NEW_LEVELS, newLib, onRest, allStopped, shoot, showHome, playToday, zoomTo, THREE, camera, aimState, toScreen, firstContact, physStep, roll, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
 })();
 </script>
 </body>
