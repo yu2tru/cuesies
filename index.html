@@ -456,7 +456,7 @@ const Sound = (() => {
   let ac = null, sfx = null, mus = null, noise = null, timer = null, nextT = 0, step = 0, lastClack = 0, lastThump = 0;
   // iPhones mute web audio when the ringer switch is on silent. Marking the page as media playback
   // (and keeping a silent media element running) moves it onto the media volume, like a video or game.
-  let unmuter = null;
+  let unmuter = null, ourPause = false;
   function mediaSession(on) {
     try { if (navigator.audioSession) navigator.audioSession.type = on ? 'playback' : 'auto'; } catch (e) {}
     try {
@@ -467,8 +467,12 @@ const Sound = (() => {
         for (let i = 0; i < n; i++) v.setUint8(44 + i, 128); // 8-bit silence
         unmuter = document.createElement('audio'); unmuter.src = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
         unmuter.loop = true; unmuter.setAttribute('playsinline', ''); unmuter.setAttribute('x-webkit-airplay', 'deny'); unmuter.preload = 'auto';
+        // if something else (another app's music, a call, a video) pauses our track, our audio was taken away:
+        // rebuild everything on the next touch
+        unmuter.addEventListener('pause', () => { if (!ourPause && settings.sound) rebuildPending = true; });
+        unmuter.style.display = 'none'; document.body.appendChild(unmuter);
       }
-      if (on) { const p = unmuter.play(); if (p && p.catch) p.catch(() => {}); } else unmuter.pause();
+      if (on) { const p = unmuter.play(); if (p && p.catch) p.catch(() => {}); } else { ourPause = true; unmuter.pause(); ourPause = false; }
       // how it shows up in the phone's "now playing" panel
       if (on && 'mediaSession' in navigator && window.MediaMetadata && !navigator.mediaSession.metadata) navigator.mediaSession.metadata = new MediaMetadata({ title: 'Cuesies', artist: 'Game sound' });
     } catch (e) {}
@@ -480,17 +484,20 @@ const Sound = (() => {
   let hiddenAt = 0, rebuildPending = false;
   function rebuild() {
     rebuildPending = false; stopMusic();
-    try { if (ac) ac.close(); } catch (e) {}
+    try { if (ac) { ac.onstatechange = null; ac.close(); } } catch (e) {}
     ac = null; sfx = null; mus = null; lastClack = 0; lastThump = 0; // new engine = new clock
-    if (unmuter) { try { unmuter.pause(); URL.revokeObjectURL(unmuter.src); } catch (e) {} unmuter = null; }
+    if (unmuter) { try { ourPause = true; unmuter.pause(); ourPause = false; URL.revokeObjectURL(unmuter.src); unmuter.remove(); } catch (e) {} unmuter = null; }
+    // flip the page's audio session off and on so iOS hands the audio back to us
+    try { if (navigator.audioSession) { navigator.audioSession.type = 'auto'; navigator.audioSession.type = 'playback'; } } catch (e) {}
     init();
   }
+  try { if (navigator.audioSession) navigator.audioSession.addEventListener('statechange', () => { const st = navigator.audioSession.state; if (ac && (st === 'interrupted' || st === 'inactive')) rebuildPending = true; }); } catch (e) {}
   // Leaving: leave everything as it is (iOS pauses audio itself and normally reconnects it on return).
   // Returning: just resume the same engine; only if it's still stuck a moment later does the next touch rebuild it.
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { hiddenAt = performance.now(); return; }
     wake();
-    setTimeout(() => { if (ac && !document.hidden && ac.state !== 'running') rebuildPending = true; }, 600);
+    setTimeout(() => { if (ac && !document.hidden && (ac.state !== 'running' || (unmuter && unmuter.paused && settings.sound))) rebuildPending = true; }, 600);
   });
   addEventListener('pageshow', (e) => { wake(); if (e.persisted) setTimeout(() => { if (ac && ac.state !== 'running') rebuildPending = true; }, 600); });
   addEventListener('focus', wake);
@@ -504,6 +511,8 @@ const Sound = (() => {
     if (settings.sound) mediaSession(true);
     if (ac) { if (ac.state !== 'running') { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } return; }
     try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+    let wasRunning = false; // the engine dropping out after it had been playing = an interruption
+    ac.onstatechange = () => { if (ac.state === 'running') wasRunning = true; else if (wasRunning) rebuildPending = true; };
     sfx = ac.createGain(); sfx.gain.value = settings.sound ? 0.9 : 0; sfx.connect(ac.destination);
     mus = ac.createGain(); mus.gain.value = settings.music ? 0.5 : 0; mus.connect(ac.destination);
     noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
