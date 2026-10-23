@@ -483,14 +483,14 @@ const Sound = (() => {
     if (unmuter) { try { unmuter.pause(); URL.revokeObjectURL(unmuter.src); } catch (e) {} unmuter = null; }
     init();
   }
+  // Leaving: leave everything as it is (iOS pauses audio itself and normally reconnects it on return).
+  // Returning: just resume the same engine; only if it's still stuck a moment later does the next touch rebuild it.
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { hiddenAt = performance.now(); if (unmuter) unmuter.pause(); return; }
-    if (ac && performance.now() - hiddenAt > 1200) {
-      rebuild(); // try straight away; if iOS keeps it paused, the next touch (tap or drag) finishes the job
-      setTimeout(() => { if (ac && ac.state !== 'running') rebuildPending = true; }, 400);
-    } else wake();
+    if (document.hidden) { hiddenAt = performance.now(); return; }
+    wake();
+    setTimeout(() => { if (ac && !document.hidden && ac.state !== 'running') rebuildPending = true; }, 600);
   });
-  addEventListener('pageshow', (e) => { if (e.persisted && ac) rebuildPending = true; wake(); });
+  addEventListener('pageshow', (e) => { wake(); if (e.persisted) setTimeout(() => { if (ac && ac.state !== 'running') rebuildPending = true; }, 600); });
   addEventListener('focus', wake);
   // iOS only lets audio (re)start from a tap, so do the rebuild / restart on the next touch, click or key
   for (const ev of ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'click', 'keydown']) addEventListener(ev, () => {
