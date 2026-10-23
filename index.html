@@ -2037,7 +2037,7 @@ function rankHtml(r) {
 function totalShots() { return day.results.reduce((a, b) => a + (b || 0), 0); }
 // shot counts as keycap emoji: 3 -> 3️⃣, 10 -> 🔟, 12 -> 1️⃣2️⃣
 const keycaps = (n) => n === 10 ? '🔟' : String(n).split('').map(d => d + '\uFE0F\u20E3').join('');
-function shareText() { return `Cuesies No. ${PUZZLE_NO} · ${totalShots()} shots\n🎱 ${day.results.map(keycaps).join(' ')}\n${GAME_URL}`; }
+function shareText() { return `🎱 Cuesies No. ${PUZZLE_NO} · ${totalShots()} shots\n${day.results.map(keycaps).join(' · ')}\n${GAME_URL}`; }
 function bumpStreak() {
   if (stats.last === TODAY) return;
   stats.streak = stats.last === addDays(TODAY, -1) ? stats.streak + 1 : 1;
