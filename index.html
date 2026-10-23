@@ -1355,6 +1355,7 @@ function physStep() {
   for (let it = 0; it < 2; it++) for (let i = 0; i < A.length; i++) for (let j = i + 1; j < A.length; j++) {
     const a = A[i], b = A[j]; const dx = b.x - a.x, dz = b.z - a.z, d2 = dx * dx + dz * dz;
     if (d2 >= 4 * R * R || d2 < 1e-12) continue;
+    if (a === G.cue || b === G.cue) G.cueTouched = true; // any contact at all counts as hitting a ball
     let d = Math.sqrt(d2), nx = dx / d, nz = dz / d;
     let rel = (a.vx - b.vx) * nx + (a.vz - b.vz) * nz;
     let t = 0;
@@ -1466,6 +1467,8 @@ function respawn(b) {
 function onRest() {
   G.moving = false;
   if (G.complete) return;
+  // missing every ball is a scratch too (unless the cue ball already scratched into a pocket this shot)
+  if (!G.cueTouched && !G.hadScratch) { G.hadScratch = true; addShots(2, 'No ball hit · +2'); }
   if (G.cue.sunk) respawn(G.cue);
   for (const b of G.balls) if (b.pending) respawn(b);
   refreshActive();
@@ -1479,7 +1482,7 @@ function shoot(dx, dz, power) {
   if (G.inputLocked || G.moving || G.complete) return;
   Sound.init();
   const pre = snapshot();
-  G.shots += 1; G.hadScratch = false;
+  G.shots += 1; G.hadScratch = false; G.cueTouched = false;
   saveMid(pre); // a refresh mid-shot keeps the shot spent
   const sp = MAX_SPEED * power;
   G.cue.vx = dx * sp; G.cue.vz = dz * sp;
@@ -2097,7 +2100,7 @@ const HELP = [
     art: `<svg viewBox="0 0 230 130"><rect x="20" y="8" width="190" height="114" rx="18" fill="#2f8d5a"/><g fill="#fff">${[0, 1, 2, 3, 4, 5].map(i => `<circle cx="${115}" cy="${84 - i * 10}" r="2.6"/>`).join('')}</g><circle cx="115" cy="32" r="9" fill="#d7262b"/><circle cx="115" cy="94" r="9" fill="#fbf8ef"/><path d="M150 70 v38" stroke="#151515" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 8"/><path d="M142 100 l8 9 l8-9" stroke="#151515" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
   { t: 'Every table has a goal', p: 'Sink a number of balls, only the stripes, certain colors, one special ball, or balls in order. Fewest shots wins.',
     art: `<svg viewBox="0 0 230 130"><rect x="30" y="34" width="170" height="62" rx="31" fill="#fffdf8"/><circle cx="72" cy="65" r="15" fill="#d7262b"/><circle cx="115" cy="65" r="15" fill="#1d4fb8"/><circle cx="158" cy="65" r="15" fill="#151515"/><circle cx="72" cy="65" r="16" fill="#2fa654"/><path d="M65 65l5 5 9-10" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
-  { t: 'Scratches cost +2', p: 'Sink the cue ball and it\'s +2 shots. Sink a ball the goal says to leave, or one out of order, and it\'s +1.',
+  { t: 'Scratches cost +2', p: 'Sink the cue ball, or miss every ball, and it\'s +2 shots. Sink a ball the goal says to leave, or one out of order, and it\'s +1.',
     art: `<svg viewBox="0 0 230 130"><circle cx="100" cy="72" r="34" fill="#151515"/><circle cx="100" cy="62" r="16" fill="#fbf8ef"/><rect x="138" y="30" width="62" height="38" rx="19" fill="#e2483c"/><text x="169" y="56" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="22" fill="#fff">+2</text></svg>` },
 ];
 function showHelp(step = 0) {
