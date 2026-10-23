@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#c79a6a">
-<meta name="description" content="Poolsies: a daily pool puzzle. Five tables, one goal each, as few shots as you can.">
-<title>poolsies · a daily pool puzzle</title>
+<meta name="description" content="Cuesies: a daily pool puzzle. Five tables, one goal each, as few shots as you can.">
+<title>cuesies · a daily pool puzzle</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
@@ -201,7 +201,7 @@
 <div id="ui">
   <div class="col">
     <header>
-      <div class="brand"><div class="wordmark">poolsies</div><div class="pno" id="pno">No. 1</div></div>
+      <div class="brand"><div class="wordmark">cuesies</div><div class="pno" id="pno">No. 1</div></div>
       <div class="icons">
         <button class="icon-btn" id="btn-help" aria-label="How to play">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4"/><circle cx="12" cy="17.4" r=".6" fill="currentColor"/></svg>
@@ -233,8 +233,8 @@
 <div id="overlay"></div>
 <div id="fade"></div>
 <div id="toast"></div>
-<div id="loading"><div class="wordmark">poolsies</div></div>
-<noscript><p style="position:fixed;inset:0;display:grid;place-items:center;font-family:sans-serif">Poolsies needs JavaScript and WebGL.</p></noscript>
+<div id="loading"><div class="wordmark">cuesies</div></div>
+<noscript><p style="position:fixed;inset:0;display:grid;place-items:center;font-family:sans-serif">Cuesies needs JavaScript and WebGL.</p></noscript>
 
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js';
@@ -470,7 +470,7 @@ const Sound = (() => {
       }
       if (on) { const p = unmuter.play(); if (p && p.catch) p.catch(() => {}); } else unmuter.pause();
       // how it shows up in the phone's "now playing" panel
-      if (on && 'mediaSession' in navigator && window.MediaMetadata && !navigator.mediaSession.metadata) navigator.mediaSession.metadata = new MediaMetadata({ title: 'Poolsies', artist: 'Game sound' });
+      if (on && 'mediaSession' in navigator && window.MediaMetadata && !navigator.mediaSession.metadata) navigator.mediaSession.metadata = new MediaMetadata({ title: 'Cuesies', artist: 'Game sound' });
     } catch (e) {}
   }
   // Coming back from another app: iOS leaves audio "interrupted"/"suspended" — wake everything up again
@@ -1478,7 +1478,7 @@ function drawAim(dx, dz, power) {
   setGuide(aim.guideCue, c.x + dx * R, c.z + dz * R, dx, dz, s - R);
   if (hit && hit.type === 'ball') {
     const b = hit.ball; let nx = b.x - gx, nz = b.z - gz; const d = Math.sqrt(nx * nx + nz * nz) || 1; nx /= d; nz /= d;
-    setGuide(aim.guideObj, b.x + nx * R, b.z + nz * R, nx, nz, Math.min(0.6, firstContact(b.x, b.z, nx, nz, b).s - R));
+    setGuide(aim.guideObj, b.x + nx * R, b.z + nz * R, nx, nz, firstContact(b.x, b.z, nx, nz, b).s - R);
   } else aim.guideObj.visible = false;
   if (reaches && hit.type === 'ball') {
     // object ball: speed it picks up from this hit, and how far that carries it (no bounces shown)
@@ -1868,7 +1868,7 @@ function showResults(shots, capped, rankP) {
     <div class="btn-row"><button class="btn" id="dare">Dare a friend</button><button class="btn primary" id="next">${last ? 'See your day' : 'Next table'}</button></div>`, { dismiss: false });
   if (!G.remote) sheet.querySelector('#lb').style.display = 'none';
   rankP.then(r => { const el = sheet.querySelector('#lb'); if (!el) return; if (r) el.innerHTML = rankHtml(r); else el.style.display = 'none'; });
-  sheet.querySelector('#dare').onclick = () => share(`I sank "${G.level.title}" (table ${G.idx + 1}) on Poolsies No. ${PUZZLE_NO} in ${shots} shot${shots === 1 ? '' : 's'}. Bet you can't beat that 🎱\n${GAME_URL}?dare=${shots}&t=${G.idx + 1}`);
+  sheet.querySelector('#dare').onclick = () => share(`I sank "${G.level.title}" (table ${G.idx + 1}) on Cuesies No. ${PUZZLE_NO} in ${shots} shot${shots === 1 ? '' : 's'}. Bet you can't beat that 🎱\n${GAME_URL}?dare=${shots}&t=${G.idx + 1}`);
   sheet.querySelector('#next').onclick = () => { Sound.tap(); closeOverlay(); if (last) { showEndOfDay(); return; }
     $('stamp').classList.remove('show'); G.inputLocked = true;
     tweenCamera('outro', 0.7, easeIn); // leaving: ease in
@@ -1880,7 +1880,7 @@ function rankHtml(r) {
   return `<b>#${r.rank} of ${r.total}</b> on the leaderboard<br><span class="muted">${r.total} players today · you beat ${r.beat}%</span>`;
 }
 function totalShots() { return day.results.reduce((a, b) => a + (b || 0), 0); }
-function shareText() { return `Poolsies No. ${PUZZLE_NO} · ${totalShots()} shots\n🎱 ${day.results.join(' · ')}\n${GAME_URL}`; }
+function shareText() { return `Cuesies No. ${PUZZLE_NO} · ${totalShots()} shots\n🎱 ${day.results.join(' · ')}\n${GAME_URL}`; }
 function bumpStreak() {
   if (stats.last === TODAY) return;
   stats.streak = stats.last === addDays(TODAY, -1) ? stats.streak + 1 : 1;
@@ -1895,7 +1895,7 @@ function showEndOfDay() {
   const rows = G.levels.map((l, i) => { const s = day.results[i]; const [bc] = badgeFor(s); const col = { green: 'var(--green)', yellow: 'var(--yellow)', red: 'var(--red)' }[bc];
     return `<div class="brow"><span class="n">${pad2(i + 1)}</span><span class="t">${esc(l.title)}</span><i class="dot" style="background:${col}"></i><span class="s">${s}</span></div>`; }).join('');
   const sheet = openOverlay(`
-    <div class="eyebrow">POOLSIES NO. ${PUZZLE_NO} · DAILY TOTAL</div>
+    <div class="eyebrow">CUESIES NO. ${PUZZLE_NO} · DAILY TOTAL</div>
     <div class="big">${total} <small>shots</small></div>
     <div class="streak">🔥 ${currentStreak()} day streak</div>
     <div class="lb" id="lb">${G.remote ? '<span class="muted">Checking the leaderboard…</span>' : ''}</div>
@@ -1972,7 +1972,7 @@ async function initBackend() {
     const levels = data.slice(0, 5).map((r, i) => normalizeLevel({ ...(r.data || {}), date: r.level_date, order: r.level_order }, i));
     G.levels = levels; G.sb = sb; G.remote = true;
   } catch (e) {
-    console.warn('[poolsies] using demo levels:', e && e.message);
+    console.warn('[cuesies] using demo levels:', e && e.message);
     G.remote = false; G.sb = null;
   }
 }

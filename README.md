@@ -1,6 +1,6 @@
-# poolsies
+# cuesies
 
-A daily pool puzzle for the browser. Five tables a day, one goal each, fewest shots wins.
+Cuesies is a daily pool puzzle for the browser. Five tables a day, one goal each, fewest shots wins.
 Everything lives in `index.html` (Three.js + Supabase client from pinned jsDelivr URLs). Host it as a static page.
 
 ## Setup

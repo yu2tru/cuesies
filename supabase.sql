@@ -1,4 +1,4 @@
--- Poolsies: Supabase schema
+-- Cuesies: Supabase schema (table names keep the original "poolsies_" prefix)
 -- Run this in the Supabase SQL editor (Database > SQL Editor > New query).
 
 -- ---------------------------------------------------------------
