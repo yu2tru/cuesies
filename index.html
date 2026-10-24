@@ -421,7 +421,7 @@ const RAMP_ANGLE_DEFAULT = 20;  // ramp angle (degrees) when a level doesn't say
 const TRAMP_BASE = 0.55, TRAMP_PER_SPEED = 0.32, TRAMP_MAX = 2.8; // trampoline launch = bounce × (base + perSpeed × speed)
 const MOVABLE_MU = { box: 1.6, puck: 0.3, car: 0.7, beachBall: 0.9 }; // how quickly each movable slides to a stop
 const ICE_FRICTION = 1 / 1.5;  // "surface":"ice" tables: balls and movables (not the puck) glide about 1.5x farther
-const MAX_SHOT_TIME = 30;       // safety net: a shot never runs longer than this (seconds of game time)
+const MAX_SHOT_TIME = 15;       // safety net: a shot never runs longer than this (seconds of game time)
 // heights of obstacles (above the felt), so airborne balls can fly over the low ones
 const OBST_H = { coffeeMug: 0.2, cocoaMug: 0.2, sodaCan: 0.22, snowGlobe: 0.3, sandcastle: 0.4, cone: 0.33, bowlingPin: 0.38, plant: 0.5,
   toolbox: 0.21, pizzaBox: 0.07, book: 0.07, napkinHolder: 0.19, block: 0.12, disc: 0.1, fan: 0.32, bumper: 0.1, bumperRail: 0.07,
@@ -622,7 +622,7 @@ const NEW_LEVELS = [
       [-0.75, -0.98, 9], [-0.38, -1.0, 5], [0.18, -1.05, 8], [0.62, -1.05, 12]].map(([x, z, n]) => ({ kind: 'chipStack', shape: 'circle', pos: [x, z], radius: 0.085, height: Math.round(n * 12) / 1000 }))
       .concat([{ kind: 'bumper', shape: 'circle', pos: [-0.2, -0.15], radius: 0.09, kick: 1, pop: 1.2 }, { kind: 'bumper', shape: 'circle', pos: [0.22, -0.1], radius: 0.09, kick: 1, pop: 1.2 }]),
     slowZones: [], camera: { tilt: 60, rotation: 4, zoom: 1 } },
-  { title: 'High Roller', theme: 'casino', felt: '#a3182b', goal: { type: 'last', last: 8 }, cueStart: [0, 1.3], slope: { direction: 90, amount: 0.25 },
+  { title: 'High Roller', theme: 'casino', felt: '#a3182b', goal: { type: 'last', last: 8 }, cueStart: [0, 1.3], slope: { direction: 90, amount: 0.18 },
     balls: [{ number: 8, pos: [0, -0.95] }, { number: 1, pos: [-0.6, -1.5] }, { number: 14, pos: [0.62, -1.4] }],
     obstacles: [{ kind: 'bumper', shape: 'circle', pos: [-0.42, -0.35], radius: 0.1, kick: 1.4 }, { kind: 'bumper', shape: 'circle', pos: [0.42, -0.35], radius: 0.1, kick: 1.4 },
       { kind: 'bumper', shape: 'circle', pos: [0, 0.25], radius: 0.1, kick: 1.4 },
@@ -1970,7 +1970,7 @@ function bumperHit(b, o, c) {
   b.x += c.nx * c.pen; b.z += c.nz * c.pen;
   const vn = b.vx * c.nx + b.vz * c.nz; if (vn >= 0) return;
   // reflect, plus a kick; every further bumper hit in the same shot kicks a little less, so shots always settle
-  const k = o.kick * Math.pow(0.75, b.kicks || 0); b.kicks = (b.kicks || 0) + 1;
+  const k = o.kick * Math.pow(0.6, b.kicks || 0); b.kicks = (b.kicks || 0) + 1;
   const out = Math.max(-vn * 0.92, -vn * 0.6 + BUMPER_KICK * k);
   b.vx += (out - vn) * c.nx; b.vz += (out - vn) * c.nz;
   const sp = Math.sqrt(b.vx * b.vx + b.vz * b.vz), cap = MAX_SPEED * 1.1; if (sp > cap) { b.vx *= cap / sp; b.vz *= cap / sp; }
@@ -1980,7 +1980,7 @@ function bumperHit(b, o, c) {
 function railHit(b, o, c) {
   b.x += c.nx * c.pen; b.z += c.nz * c.pen;
   const vn = b.vx * c.nx + b.vz * c.nz; if (vn >= 0) return;
-  const k = o.kick * Math.pow(0.75, b.kicks || 0); b.kicks = (b.kicks || 0) + 1;
+  const k = o.kick * Math.pow(0.6, b.kicks || 0); b.kicks = (b.kicks || 0) + 1;
   const out = -vn * Math.max(0.72, 1 + 0.9 * (k - 1)) + RAIL_KICK * k;
   b.vx += (out - vn) * c.nx; b.vz += (out - vn) * c.nz;
   const sp = Math.sqrt(b.vx * b.vx + b.vz * b.vz), cap = MAX_SPEED * 1.1; if (sp > cap) { b.vx *= cap / sp; b.vz *= cap / sp; }
