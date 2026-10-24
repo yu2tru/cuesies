@@ -2800,7 +2800,7 @@ function dbgLabel(text, color = '#ffffff') {
 }
 function buildDebug() {
   if (!DEBUG) return;
-  const g = new THREE.Group(); G.root.add(g);
+  const g = new THREE.Group(); g.visible = dbgShow; G.root.add(g); G.dbgGroup = g;
   const lm = (color) => new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.95, depthTest: false });
   for (const o of G.obstacles) {
     const h = Math.max(0.012, o.pad ? 0.012 : (o.h || OBST_H[o.kind] || 0.15));
@@ -2819,15 +2819,21 @@ function buildDebug() {
   const pts = new THREE.Points(tg, new THREE.PointsMaterial({ color: '#ff40ff', size: 0.018, depthTest: false })); pts.frustumCulled = false; pts.renderOrder = 9; g.add(pts);
   G.dbgTrail = { pts, n: 0, max };
 }
-let newLibC = null;
+let newLibC = null, dbgShow = true; // debug outlines on/off (the button next to the level picker)
 const newLib = () => newLibC || (newLibC = NEW_LEVELS.map((l, i) => normalizeLevel({ ...l, date: TODAY, order: i + 1 }, i)));
 function debugPicker() {
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;z-index:60;right:8px;top:calc(env(safe-area-inset-top) + 58px);display:flex;gap:6px;align-items:center';
+  const look = 'font:700 12px Nunito,system-ui,sans-serif;padding:6px 8px;border-radius:10px;border:2px solid #ff40ff;background:#fffdf8;color:#151515';
+  const btn = document.createElement('button'); btn.id = 'dbgBoxes'; btn.style.cssText = look + ';cursor:pointer;white-space:nowrap';
+  const label = () => { btn.textContent = dbgShow ? '▣ Hitboxes on' : '▢ Hitboxes off'; btn.style.opacity = dbgShow ? '1' : '0.7'; };
+  btn.onclick = () => { dbgShow = !dbgShow; if (G.dbgGroup) G.dbgGroup.visible = dbgShow; label(); btn.blur(); }; label();
   const sel = document.createElement('select'); sel.id = 'dbgPick';
-  sel.style.cssText = 'position:fixed;z-index:60;right:8px;top:calc(env(safe-area-inset-top) + 58px);max-width:58vw;font:700 12px Nunito,system-ui,sans-serif;padding:6px 8px;border-radius:10px;border:2px solid #ff40ff;background:#fffdf8;color:#151515';
+  sel.style.cssText = look + ';max-width:46vw';
   sel.innerHTML = `<option value="">🛠 Debug: pick a level</option><optgroup label="Today">${G.levels.map((l, i) => `<option value="d:${i}">${i + 1}. ${esc(l.title)}</option>`).join('')}</optgroup>`
     + `<optgroup label="New levels">${newLib().map((l, i) => `<option value="n:${i}">N${i + 1}. ${esc(l.title)} (${l.theme})</option>`).join('')}</optgroup>`;
   sel.onchange = () => { if (!sel.value) return; const [k, i] = sel.value.split(':'); if (homeOpen) hideHome(); if ($('overlay').classList.contains('show')) closeOverlay(); loadTable(+i, null, true, k === 'n' ? newLib() : G.levels); sel.value = ''; sel.blur(); };
-  document.body.appendChild(sel);
+  box.append(btn, sel); document.body.appendChild(box);
 }
 
 /* ============================ render loop ========================== */
