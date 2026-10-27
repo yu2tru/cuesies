@@ -257,9 +257,6 @@
   #loading { position: fixed; inset: 0; display: grid; place-items: center; z-index: 40; background: var(--bg); transition: opacity .4s; }
   #loading .wordmark { font-size: 44px; animation: bob 1s ease-in-out infinite alternate; }
   @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-6px); } }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
-  }
   @media (min-width: 700px) { .lvl-title { font-size: 34px; } }
   @media (max-height: 640px) { .lvl-title { font-size: 25px; } .goal-chip { padding: 8px 14px; font-size: 15px; } header { height: 46px; } }
 </style>
@@ -360,7 +357,8 @@ const $ = (id) => document.getElementById(id);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const DEG = Math.PI / 180;
-const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Always animate. (School/office computers often have "reduce motion" switched on, which made every move jump.)
+const reduceMotion = false;
 const pad2 = (n) => String(n).padStart(2, '0');
 
 try { // the game used to be called Poolsies: carry saved progress over to the new key names once
@@ -1689,7 +1687,7 @@ function loadTable(idx, restore, practice = false, list = G.levels) {
     // circle builders used with a box shape (or vice versa) fall back to the generic piece so physics always matches
     const boxKinds = ['toolbox', 'pizzaBox', 'book', 'napkinHolder', 'block', 'ramp', 'bumperRail', 'toyWall', 'bookStack', 'dice'];
     if (o.kind !== 'movable' && (o.shape === 'box') !== boxKinds.includes(o.kind) && OBST[o.kind]) m = o.shape === 'circle' ? OBST.disc(shapeArgs, th) : OBST.block(shapeArgs, th);
-    m.position.set(o.pos[0], 0, o.pos[1]); m.rotation.y = -(p.deg || 0) * DEG;
+    m.position.set(o.pos[0], 0, o.pos[1]); m.rotation.y = -(p.deg != null ? p.deg : o.rotation || 0) * DEG; // round ones too (fans face where they blow)
     G.root.add(m); p.mesh = m; p.baseQ = m.quaternion.clone(); p.wig = null;
     if (o.kind === 'beachBall' && o.shape === 'circle') { // light ball: rolls when hit, never pocketed
       Object.assign(p, { dynamic: true, vx: 0, vz: 0, hy: 0, vy: 0, squash: 0, start: o.pos.slice(), px: p.x, pz: p.z, ball: m.getObjectByName('ball') });
@@ -2255,16 +2253,21 @@ function completeTable(capped) {
 }
 
 /* ============================== aiming ============================= */
+// a see-through material where every instance has its own opacity (attribute aAlpha)
+function alphaMat(color, opacity = 1) {
+  const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
+  m.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aAlpha;\nvarying float vAlpha;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvAlpha = aAlpha;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vAlpha;').replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.a *= vAlpha;');
+  };
+  return m;
+}
 const aim = (() => {
   const group = new THREE.Group();
   const dotGeo = cached('dot', () => { const g = new THREE.CircleGeometry(1, 12); g.rotateX(-Math.PI / 2); return g; });
   // each dot has its own opacity, so new dots can fade in as they grow
   const dg = dotGeo.clone(), dotAlpha = new THREE.InstancedBufferAttribute(new Float32Array(260).fill(1), 1); dg.setAttribute('aAlpha', dotAlpha);
-  const dm = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.92, depthWrite: false });
-  dm.onBeforeCompile = (sh) => {
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aAlpha;\nvarying float vAlpha;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvAlpha = aAlpha;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vAlpha;').replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.a *= vAlpha;');
-  };
+  const dm = alphaMat('#ffffff', 0.92);
   const dots = new THREE.InstancedMesh(dg, dm, 260);
   dots.frustumCulled = false; dots.renderOrder = 3; group.add(dots);
   const ghost = new THREE.Mesh(cached('ghost', () => { const g = new THREE.RingGeometry(R * 0.82, R, 32); g.rotateX(-Math.PI / 2); return g; }), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.9, depthWrite: false }));
@@ -2335,27 +2338,43 @@ function trailPts(n, seg, pts, strength, size) {
   }
   return n;
 }
-// where a ball sent up a ramp goes: the ride up, the flight, and where it lands (no bounces, fans or slopes)
+// The flight of a ball once it leaves the felt: up to where it lands (no bounces, fans or slopes)
+function flyPath(b, pts, skip) {
+  for (let i = 0; i < 2400; i++) {
+    b.vy -= GRAVITY * DT; b.x += b.vx * DT; b.z += b.vz * DT; b.y += b.vy * DT;
+    const ox = Math.abs(b.x), oz = Math.abs(b.z);
+    if (ox > 1.32 || oz > 2.32 || ((ox > 1 || oz > 2) && b.y < RAIL_TOP && !nearPocket(b.x, b.z))) { pts.push([b.x, Math.max(0, b.y), b.z]); return { pts, off: true }; }
+    if (b.y <= 0) { pts.push([b.x, 0, b.z]); return { pts, land: { x: b.x, z: b.z, vx: b.vx, vz: b.vz } }; }
+    for (const q of G.obstacles) if (q !== skip && !q.pad && b.y < (q.h || 0) && obstacleContact(b.x, b.z, q, R)) { pts.push([b.x, b.y, b.z]); return { pts, blocked: true }; }
+    if (i % 3 === 0) pts.push([b.x, b.y, b.z]);
+  }
+  return { pts };
+}
+// where a ball sent up a ramp goes: the ride up, then the flight
 function rampFlight(x, z, vx, vz, o) {
   const sp = Math.hypot(vx, vz); if (sp < 1e-6 || (vx * o.c + vz * o.s) / sp < 0.15) return null;
   const b = { x, z, vx, vz, y: 0, vy: 0, py: 0, ramp: null }, pts = [[x, 0, z]];
   for (let i = 0; i < 200 && !b.ramp; i++) {
     const dx = b.x - o.x, dz = b.z - o.z, lx = dx * o.c + dz * o.s, lz = -dx * o.s + dz * o.c;
-    if (Math.abs(lz) > o.hd) return null; if (lx >= -o.hw) { b.ramp = o; break; } b.x += b.vx * DT; b.z += b.vz * DT;
+    if (Math.abs(lz) > o.hd + 0.02) return null; if (lx >= -o.hw) { b.ramp = o; break; } b.x += b.vx * DT; b.z += b.vz * DT;
   }
   if (!b.ramp) return null;
-  for (let i = 0; i < 2400; i++) {
-    if (b.ramp) { rampStep(b, true); if (!b.ramp && b.y === 0 && b.vy === 0) { pts.push([b.x, 0, b.z]); return { pts, back: true }; } }
-    else {
-      b.vy -= GRAVITY * DT; b.x += b.vx * DT; b.z += b.vz * DT; b.y += b.vy * DT;
-      const ox = Math.abs(b.x), oz = Math.abs(b.z);
-      if (ox > 1.32 || oz > 2.32 || ((ox > 1 || oz > 2) && b.y < RAIL_TOP && !nearPocket(b.x, b.z))) { pts.push([b.x, Math.max(0, b.y), b.z]); return { pts, off: true }; }
-      if (b.y <= 0) { pts.push([b.x, 0, b.z]); return { pts, land: { x: b.x, z: b.z, vx: b.vx, vz: b.vz } }; }
-      for (const q of G.obstacles) if (q !== o && !q.pad && b.y < (q.h || 0) && obstacleContact(b.x, b.z, q, R)) { pts.push([b.x, b.y, b.z]); return { pts, blocked: true }; }
-    }
+  for (let i = 0; i < 2400 && b.ramp; i++) {
+    rampStep(b, true);
+    if (!b.ramp && b.y === 0 && b.vy === 0) { pts.push([b.x, 0, b.z]); return { pts, back: true }; } // not enough speed: rolls back down
     if (i % 3 === 0) pts.push([b.x, b.y, b.z]);
   }
-  return { pts };
+  return flyPath(b, pts, o);
+}
+// the first trampoline the ball's center would roll onto, before distance maxS
+function padAhead(x, z, dx, dz, maxS) {
+  let best = null;
+  for (const o of (G.fx.pads || [])) {
+    const ox = o.x - x, oz = o.z - z, along = ox * dx + oz * dz, perp2 = ox * ox + oz * oz - along * along;
+    if (perp2 >= o.r * o.r) continue;
+    const t = along - Math.sqrt(o.r * o.r - perp2); if (t > 0 && t < maxS && (!best || t < best.t)) best = { o, t };
+  }
+  return best;
 }
 function setGuide(m, x, z, dx, dz, len) {
   m.visible = len > 0.01; m.position.set(x, 0.012, z); m.rotation.y = -Math.atan2(dz, dx); m.scale.x = Math.max(0.001, len);
@@ -2365,12 +2384,17 @@ function drawAim(dx, dz, power) {
   const c = G.cue, v0 = MAX_SPEED * power, { s, hit } = firstContact(c.x, c.z, dx, dz);
   let n = 0; dotAnim.cnt = [0, 0, 0];
   const r = roll(c.x, c.z, dx, dz, v0, s); let reaches = hit && r.v > 0;
-  const strength = reaches ? clamp(r.v / (MAX_SPEED * 0.6), 0, 1) : clamp(v0 / MAX_SPEED, 0, 1) * 0.5;
-  if (power > 0) n = trail(n, 0, c.x, c.z, dx, dz, R * 2.1, reaches ? s : Math.min(r.d, s), strength, 0.012);
+  // rolling onto a trampoline on the way: the ball gets thrown up there
+  const pad = power > 0 ? padAhead(c.x, c.z, dx, dz, s) : null, rp = pad ? roll(c.x, c.z, dx, dz, v0, pad.t) : null;
+  const padVy = rp && rp.v > 0 ? Math.min(TRAMP_MAX, pad.o.bounce * (TRAMP_BASE + TRAMP_PER_SPEED * rp.v)) : 0, onPad = padVy > LAND_SETTLE;
+  const strength = onPad ? clamp(rp.v / (MAX_SPEED * 0.6), 0, 1) : reaches ? clamp(r.v / (MAX_SPEED * 0.6), 0, 1) : clamp(v0 / MAX_SPEED, 0, 1) * 0.5;
+  if (power > 0) n = trail(n, 0, c.x, c.z, dx, dz, R * 2.1, onPad ? pad.t : reaches ? s : Math.min(r.d, s), strength, 0.012);
   // the circle always shows where you're pointing; it lights up once the charge will actually get there
   let gx = c.x + dx * s, gz = c.z + dz * s, showGhost = hit && hit.type !== 'pocket';
-  // heading up a ramp: follow the ball up it, through the air, and on from where it lands
-  const flight = reaches && hit.o && hit.o.ramp ? rampFlight(gx, gz, dx * r.v, dz * r.v, hit.o) : null;
+  // heading up a ramp or onto a trampoline: follow the ball through the air and on from where it lands
+  const flight = onPad ? flyPath({ x: c.x + dx * pad.t, z: c.z + dz * pad.t, vx: dx * rp.v, vz: dz * rp.v, y: 0, vy: padVy }, [[c.x + dx * pad.t, 0, c.z + dz * pad.t]], pad.o)
+    : reaches && hit.o && hit.o.ramp ? rampFlight(gx, gz, dx * r.v, dz * r.v, hit.o) : null;
+  if (onPad) reaches = true;
   if (flight) {
     n = trailPts(n, 0, flight.pts, strength, 0.012);
     showGhost = !!flight.land;
@@ -2553,23 +2577,39 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 })();
 
 // Keyboard: ←/→ turn the cue, ↓ charges, ↑ lowers the charge, Space shoots. Works alongside dragging.
-const keys = { left: 0, right: 0, down: 0, up: 0 };
+// Keyboard (works alongside dragging):
+//   ← →  turn the cue slowly · Shift + ← →  turn it fast · Alt + ← →  turn the camera (like the strip at the bottom)
+//   ↓  pull back to charge · ↑  ease the charge off · Alt + ↑ ↓  zoom in / out · Space  shoot
+const keys = { left: 0, right: 0, down: 0, up: 0 }, keyMod = { shift: false, alt: false };
+const arrowOf = (e) => ({ ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', ArrowUp: 'up' }[e.key]);
+const overlayBlocks = () => { const o = $('overlay').classList; return o.contains('show') && !o.contains('peek'); };
 addEventListener('keydown', (e) => {
-  const k = { ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', ArrowUp: 'up' }[e.key];
-  if (k || e.code === 'Space') { if ($('overlay').classList.contains('show')) return; e.preventDefault(); Sound.init(); }
-  if (k) { if (!keys[k]) keys[k] = performance.now(); return; }
+  keyMod.shift = e.shiftKey; keyMod.alt = e.altKey;
+  if (e.key === 'Alt') { e.preventDefault(); return; } // keep Alt from opening the browser menu
+  const k = arrowOf(e);
+  if (k || e.code === 'Space') { if (overlayBlocks()) return; e.preventDefault(); Sound.init(); }
+  if (k) {
+    if (e.altKey && (k === 'up' || k === 'down')) { if (!e.repeat) zoomTo(k === 'up' ? 1 : -1); return; }
+    keys[k] = 1; return;
+  }
   if (e.code === 'Space' && !e.repeat && !drag && aimState.power >= 0.05 && canShoot()) {
     const p = aimState.power, [dx, dz] = aimDir(); aimState.power = 0; stick.strike = p; shoot(dx, dz, p);
   }
 });
-addEventListener('keyup', (e) => { const k = { ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', ArrowUp: 'up' }[e.key]; if (k) keys[k] = 0; });
-addEventListener('blur', () => { for (const k in keys) keys[k] = 0; });
+addEventListener('keyup', (e) => {
+  keyMod.shift = e.shiftKey; keyMod.alt = e.altKey; if (e.key === 'Alt') e.preventDefault();
+  const k = arrowOf(e); if (k) keys[k] = 0;
+});
+addEventListener('blur', () => { for (const k in keys) keys[k] = 0; keyMod.shift = keyMod.alt = false; });
 function updateKeys(dt) {
   if (homeOpen) return;
+  const lr = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  if (keyMod.alt) { // Alt + ← →: turn the camera, same as dragging the strip
+    if (lr && !overlayBlocks()) { G.yawTarget -= lr * 90 * dt; $('hint').style.backgroundPositionX = (-G.yawTarget / 0.45) + 'px'; }
+    return;
+  }
   if (!canShoot() || drag) return;
-  const now = performance.now(), held = (k) => keys[k] ? (now - keys[k]) / 1000 : 0;
-  const turn = (k) => held(k) ? (held(k) < 0.35 ? 18 : 75) * DEG * dt : 0; // tap for fine moves, hold to sweep
-  aimState.target += turn('right') - turn('left'); // right arrow = clockwise on screen
+  aimState.target += lr * (keyMod.shift ? 75 : 18) * DEG * dt; // right arrow = clockwise on screen
   if (keys.down) aimState.power = Math.min(1, aimState.power + dt * 0.7);
   if (keys.up) aimState.power = Math.max(0, aimState.power - dt * 0.9);
 }
@@ -2715,13 +2755,18 @@ function updateFx(dt) {
 /* ================= new-piece visuals (fans, bumpers, shadows…) ============== */
 let shadowTexC = null;
 const shadowTex = () => shadowTexC || (shadowTexC = canvasTex(64, 64, (c, W) => { const g = c.createRadialGradient(W / 2, W / 2, 2, W / 2, W / 2, W / 2); g.addColorStop(0, 'rgba(0,0,0,.9)'); g.addColorStop(0.55, 'rgba(0,0,0,.45)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(0, 0, W, W); }));
+let windTexC = null; // soft streak: fades in at the tail, bright toward the head, fades out at the tip
+const windTex = () => windTexC || (windTexC = canvasTex(128, 16, (c, W, H) => { const g = c.createLinearGradient(0, 0, W, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.7, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = g; c.fillRect(0, 0, W, H); c.globalCompositeOperation = 'destination-in'; const v = c.createLinearGradient(0, 0, 0, H); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(0.5, 'rgba(0,0,0,1)'); v.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = v; c.fillRect(0, 0, W, H); }));
 function buildFxVisuals() {
   const fx = G.fx;
   for (const f of fx.fans) {
     f.head = f.mesh.getObjectByName('head'); f.blades = f.mesh.getObjectByName('blades');
-    const n = 36, geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
-    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: '#ffffff', size: 0.022, transparent: true, opacity: 0.55, depthWrite: false })); pts.frustumCulled = false; G.root.add(pts);
-    f.parts = { pts, n, q: Array.from({ length: n }, (_, i) => ({ d: 0.12 + (i / n) * (f.range - 0.12), o: Math.random() * 2 - 1, v: 0.7 + Math.random() * 0.7, y: 0.14 + Math.random() * 0.14 })) };
+    // wind: streaks that stream out of the fan, wave a little, and fade in and out along the way
+    const n = 70, sg = cached('windStreak', () => { const q = new THREE.PlaneGeometry(1, 1); q.rotateX(-Math.PI / 2); return q; }).clone();
+    const alpha = new THREE.InstancedBufferAttribute(new Float32Array(n), 1); sg.setAttribute('aAlpha', alpha);
+    const wm = alphaMat('#ffffff'); wm.map = windTex(); const streaks = new THREE.InstancedMesh(sg, wm, n); streaks.frustumCulled = false; streaks.renderOrder = 3; G.root.add(streaks);
+    f.parts = { streaks, alpha, n, q: Array.from({ length: n }, (_, i) => ({ d: 0.1 + (i / n) * (f.range - 0.1), o: Math.random() * 2 - 1, v: 1.3 + Math.random() * 1.0, y: 0.06 + Math.random() * 0.24, len: 0.09 + Math.random() * 0.14, w: 0.007 + Math.random() * 0.008, ph: Math.random() * 6.3 })) };
   }
   for (const o of fx.pads) o.padMesh = o.mesh.getObjectByName('pad');
   // soft shadows under balls: they show once a ball leaves the felt, shrinking and fading as it rises
@@ -2753,13 +2798,16 @@ function fxFrame(dt) {
     if (f.head) f.head.rotation.y = -(a0 - f.dir);
     if (f.blades && !reduceMotion) f.blades.rotation.x += dt * 26;
     const P = f.parts; if (P) {
-      const pos = P.pts.geometry.attributes.position.array;
       for (let i = 0; i < P.n; i++) {
-        const q = P.q[i]; q.d += dt * q.v * (reduceMotion ? 0 : 1);
-        if (q.d > f.range) { q.d = 0.12; q.o = Math.random() * 2 - 1; q.y = 0.14 + Math.random() * 0.14; }
-        const a = a0 + q.o * f.spread * 0.85; pos[i * 3] = f.x + Math.cos(a) * q.d; pos[i * 3 + 1] = q.y * (1 - 0.5 * q.d / f.range); pos[i * 3 + 2] = f.z + Math.sin(a) * q.d;
+        const q = P.q[i]; q.d += dt * q.v;
+        if (q.d > f.range) { q.d = 0.1; q.o = Math.random() * 2 - 1; q.y = 0.06 + Math.random() * 0.24; q.ph = Math.random() * 6.3; }
+        const u = q.d / f.range, a = a0 + q.o * f.spread * 0.9 + Math.sin(q.ph + q.d * 9) * 0.05; // gentle waving
+        tmpV.set(f.x + Math.cos(a) * q.d, q.y * (1 - 0.6 * u) + 0.02, f.z + Math.sin(a) * q.d);
+        tmpQ.setFromAxisAngle(axis.set(0, 1, 0), -a); tmpS.set(q.len * (0.6 + 0.8 * Math.min(1, u * 4)), 1, q.w);
+        tmpM.compose(tmpV, tmpQ, tmpS); P.streaks.setMatrixAt(i, tmpM);
+        P.alpha.setX(i, Math.sin(Math.PI * Math.min(1, u)) * 0.75 * Math.min(1, f.strength + 0.2));
       }
-      P.pts.geometry.attributes.position.needsUpdate = true;
+      P.streaks.instanceMatrix.needsUpdate = true; P.alpha.needsUpdate = true;
     }
     if (f.cone) { // debug: the fan's push zone, following the sweep
       const p = f.cone.geometry.attributes.position.array, n = p.length / 3 - 2; p[0] = f.x; p[2] = f.z;
@@ -3039,7 +3087,7 @@ function showStats() {
   sheet.querySelector('.close-x').onclick = sheet.querySelector('#ok').onclick = () => { Sound.tap(); closeOverlay(); };
 }
 const HELP = [
-  { t: 'Aim and shoot', p: 'Drag around to swing the cue (or ← →). Drag the strip at the bottom to turn the camera. In a new drag, pull back along the cue to power up and let go to shoot. Slide back toward the ball to cancel. Pinch or scroll to zoom in on the cue ball and back out. Keyboard: ↓ charges, ↑ lowers it, Space shoots.',
+  { t: 'Aim and shoot', p: 'Drag around to swing the cue (or ← →). Drag the strip at the bottom to turn the camera. In a new drag, pull back along the cue to power up and let go to shoot. Slide back toward the ball to cancel. Pinch or scroll to zoom in on the cue ball and back out. Keyboard: ← → aim (hold Shift for fast), ↓ charges, ↑ lowers it, Space shoots. Alt + ← → turns the camera, Alt + ↑ ↓ zooms.',
     art: `<svg viewBox="0 0 230 130"><rect x="20" y="8" width="190" height="114" rx="18" fill="#2f8d5a"/><g fill="#fff">${[0, 1, 2, 3, 4, 5].map(i => `<circle cx="${115}" cy="${84 - i * 10}" r="2.6"/>`).join('')}</g><circle cx="115" cy="32" r="9" fill="#d7262b"/><circle cx="115" cy="94" r="9" fill="#fbf8ef"/><path d="M150 70 v38" stroke="#151515" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 8"/><path d="M142 100 l8 9 l8-9" stroke="#151515" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
   { t: 'Every table has a goal', p: 'Sink a number of balls, only the stripes, certain colors, one special ball, or balls in order. Fewest shots wins.',
     art: `<svg viewBox="0 0 230 130"><rect x="30" y="34" width="170" height="62" rx="31" fill="#fffdf8"/><circle cx="72" cy="65" r="15" fill="#d7262b"/><circle cx="115" cy="65" r="15" fill="#1d4fb8"/><circle cx="158" cy="65" r="15" fill="#151515"/><circle cx="72" cy="65" r="16" fill="#2fa654"/><path d="M65 65l5 5 9-10" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
@@ -3192,7 +3240,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && lo
   const dare = new URLSearchParams(location.search);
   if (dare.get('dare') && !day.done) setTimeout(() => toast(`A friend did table ${+dare.get('t') || 1} in ${+dare.get('dare')} shots. Beat that!`), 900);
   // expose a tiny hook for automated testing
-  window.__cuesies = { G, loadTable, NEW_LEVELS, newLib, onRest, allStopped, shoot, showHome, playToday, zoomTo, THREE, camera, aimState, toScreen, firstContact, physStep, roll, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
+  window.__cuesies = { G, aim, keys, keyMod, loadTable, NEW_LEVELS, newLib, onRest, allStopped, shoot, showHome, playToday, zoomTo, THREE, camera, aimState, toScreen, firstContact, physStep, roll, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
 })();
 </script>
 </body>
