@@ -2609,7 +2609,7 @@ function updateKeys(dt) {
     return;
   }
   if (!canShoot() || drag) return;
-  aimState.target += lr * (keyMod.shift ? 75 : 18) * DEG * dt; // right arrow = clockwise on screen
+  aimState.target += lr * (keyMod.shift ? 75 : 9) * DEG * dt; // right arrow = clockwise on screen
   if (keys.down) aimState.power = Math.min(1, aimState.power + dt * 0.7);
   if (keys.up) aimState.power = Math.max(0, aimState.power - dt * 0.9);
 }
