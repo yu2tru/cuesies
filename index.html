@@ -252,6 +252,11 @@
   .coach-cap { position: absolute; left: 0; top: 0; white-space: nowrap; background: var(--card); color: var(--ink); font-weight: 900; font-size: 15px; letter-spacing: -0.02em;
     padding: 8px 14px; border-radius: 999px; box-shadow: 0 2px 0 rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.12); will-change: transform; }
   .coach-cap small { color: var(--muted); font-weight: 800; font-size: 12px; margin-left: 4px; }
+  /* dark rooms (the arcade): light text on the page, cards stay light */
+  html.dark #ui { color: #fffdf8; } html.dark .wordmark, html.dark .pno { color: #fffdf8; }
+  html.dark .lvl-label { color: rgba(255,255,255,.72); } html.dark .goal-text { color: rgba(255,255,255,.86); } html.dark .goal-text small { color: rgba(255,255,255,.62); }
+  html.dark .icon-btn svg { stroke: #fffdf8; } html.dark .icon-btn.off::after { background: #fffdf8; } html.dark .seg { background: rgba(255,255,255,.22); } html.dark .seg.done, html.dark .seg.cur { background: rgba(255,255,255,.7); }
+  html.dark .pill, html.dark .turn span { color: #151515; } html.dark .turn { color: rgba(255,255,255,.75); background-color: rgba(255,255,255,.08); }
   #stamp {
     position: fixed; left: 50%; top: 36%; z-index: 9; pointer-events: none; display: none;
     font-weight: 900; font-size: 44px; letter-spacing: -0.04em; color: #e2483c; white-space: nowrap;
@@ -529,15 +534,29 @@ const THEMES = {
     decor: [['planter', -1.95, -2.9], ['lightPost', 2.0, -2.8], ['lightPost', -2.1, 1.2], ['stool', 2.0, 0.6, 'floor', 0, { color: '#3d2a1f' }], ['glass', 1.2, 2.18, 'rail', 0, { color: '#ff7a59' }], ['big', 2.05, -1.4, 'floor', 0, { kind: 'succulent', w: 0.5, d: 0.26, h: 0.3 }], ['big', -2.1, -1.0, 'floor', 80, { kind: 'speaker', w: 0.4, d: 0.24, h: 0.22 }]] },
   bowling: { place: 'Bowling alley lounge', floor: { pattern: 'lanes', base: '#e3c08d', alt: '#d8b27c', seam: '#b98f58' }, felt: '#d24f6e', rail: '#f3ead7', accent: '#3a7bd5', zone: 'spill',
     decor: [['pins', -1.85, -2.9], ['bowlingBall', 1.9, -2.6, 'floor', 0, { color: '#3a7bd5' }], ['ballReturn', 2.1, 0.4], ['sodaCan', 1.2, 2.18, 'rail', 0, { color: '#f2c12e' }], ['big', -2.05, -1.2, 'floor', 30, { kind: 'bowlingShoe', w: 0.32, d: 0.13 }], ['big', -1.85, -0.9, 'floor', 10, { kind: 'bowlingShoe', w: 0.32, d: 0.13 }], ['big', 2.0, -1.5, 'floor', 0, { kind: 'bowlingBall', r: 0.2, color: '#e2483c' }]] },
-  casino: { place: 'Casino lounge', floor: { pattern: 'casino', base: '#e2c38f', alt: '#9e2632', seam: '#1d2b4f' }, felt: '#1f7a4c', rail: '#ffc93c', railMetal: true, body: '#3a1c12', accent: '#e8b923', zone: 'rug', glow: '#ffcf87',
+  casino: { place: 'Casino lounge', floor: { pattern: 'casino', base: '#e2c38f', alt: '#9e2632', seam: '#1d2b4f' }, felt: '#1f7a4c', rail: '#C9A227', railMetal: true, body: '#3a1c12', accent: '#e8b923', zone: 'rug', glow: '#ffcf87',
     decor: [['slotMachine', -1.85, -2.95, 'floor', 8], ['slotMachine', -1.05, -3.15, 'floor', -4], ['stool', 2.0, -1.2, 'floor', 0, { color: '#9e2632' }], ['stool', 2.0, 0.8, 'floor', 0, { color: '#9e2632' }],
       ['chipStacks', 1.2, 2.17, 'rail', 15], ['dice', -1.2, -2.18, 'rail', 25], ['chipStacks', -1.21, 1.2, 'rail', -30], ['plant', 1.95, -2.95], ['big', 2.05, -0.2, 'floor', 0, { kind: 'rouletteWheel', r: 0.28 }], ['big', 1.2, -0.9, 'rail', 15, { kind: 'cardDeck', w: 0.1, d: 0.12 }]] },
-  records: { place: 'Record store', floor: { pattern: 'checker', base: '#ece3d3', alt: '#3a3446' }, felt: '#2e6f8e', rail: '#2b2b2b', accent: '#ffcf3f', zone: 'rug',
-    decor: [['crate', -2.05, -1.3, 'floor', 10], ['crate', -2.1, -0.7, 'floor', -6], ['big', 2.05, -1.4, 'floor', -10, { kind: 'speaker', w: 0.3, d: 0.5, h: 0.6 }], ['armchair', 2.15, 0.8, 'floor', -70, { color: '#ffcf3f' }], ['plant', 1.95, -2.95],
-      ['big', -1.2, 1.2, 'rail', 0, { kind: 'turntable', r: 0.06 }]] },
-  sushi: { place: 'Sushi bar', floor: { pattern: 'tiles', base: '#e9dcc2', alt: '#dccdb0', seam: '#f6efe0' }, felt: '#3a7a5e', rail: '#6b4a2b', accent: '#e2483c', zone: 'rug',
-    decor: [['big', 2.05, -1.4, 'floor', 0, { kind: 'flowerPot', r: 0.2 }], ['stool', 2.0, 0.6, 'floor', 0, { color: '#6b4a2b' }], ['stool', -2.0, 0.6, 'floor', 0, { color: '#6b4a2b' }], ['big', 1.2, 1.4, 'rail', 0, { kind: 'ramen', r: 0.04, h: 0.08 }],
-      ['lantern', -1.2, -1.6, 'rail'], ['planter', -1.95, -2.9], ['lantern', 1.2, -2.18, 'rail']] },
+  records: { place: 'Record store', floor: { pattern: 'checker', base: '#f3ece0', alt: '#1d1d22' }, felt: '#7a1f2e', rail: '#4a2c1a', accent: '#e2a63b', zone: 'rug', glow: '#ffb46b',
+    light: { hemi: 0.85, hemiSky: '#ffe8cf', sun: 2.0, sunColor: '#ffd8a8', exposure: 1.0 },
+    decor: [['recordCrate', -2.05, -1.3, 'floor', 8], ['recordCrate', -2.1, -0.5, 'floor', -6], ['recordCrate', 2.05, 0.3, 'floor', 84], ['listeningBooth', 2.15, -1.6, 'floor', -90], ['posterWall', 0, -3.4, 'floor', 0],
+      ['cassetteStack', -1.2, 1.3, 'rail', 15], ['cassetteStack', 1.2, -0.7, 'rail', -20]] },
+  sushi: { place: 'Sushi bar', floor: { pattern: 'tatami', base: '#e2d3a8', alt: '#cdbf94', seam: '#2e3a2a' }, felt: '#9e1b22', rail: '#d9b783', accent: '#e2483c', zone: 'rug', glow: '#ffb56b', beltStyle: 'sushi',
+    light: { hemi: 0.9, hemiSky: '#fff0dc', sun: 1.9, sunColor: '#ffe0b5', exposure: 1.0 },
+    decor: [['shoji', -2.1, -1.3, 'floor', 90], ['shoji', -2.1, -0.25, 'floor', 90], ['noren', 0, -3.4, 'floor', 0], ['paperLantern', 2.05, -1.6, 'floor', 0, { color: '#d7263d' }], ['paperLantern', 2.05, 0.6, 'floor', 0, { color: '#f4ead8' }],
+      ['bamboo', 1.95, -2.9, 'floor'], ['bonsai', -1.2, 1.3, 'rail', 10], ['sakeSet', 1.2, -0.8, 'rail', 20], ['teapot', -1.2, -1.4, 'rail', -10]] },
+  garden: { place: 'Backyard garden', floor: { pattern: 'grass', base: '#b5dc98', alt: '#8fbf72', seam: '#cfc8b8' }, felt: '#2f8d5a', rail: '#a8743f', accent: '#ff8a3d', zone: 'rug',
+    light: { hemi: 1.15, sun: 3.0, sunColor: '#fff4d6', exposure: 1.04 },
+    decor: [['wateringCan', 2.05, -1.3, 'floor', 30], ['gnome', -2.05, -1.4, 'floor', 25], ['fence', 0, -3.3, 'floor', 0], ['wheelbarrow', 2.15, 0.9, 'floor', -70],
+      ['big', -2.1, 0.5, 'floor', 0, { kind: 'flowerPot', r: 0.24 }], ['big', 1.95, -2.75, 'floor', 0, { kind: 'flowerPot', r: 0.28 }], ['big', -1.9, -2.7, 'floor', 0, { kind: 'flowerPot', r: 0.2 }], ['gnome', 2.0, 2.3, 'floor', -40]] },
+  factory: { place: 'Factory floor', floor: { pattern: 'diamondPlate', base: '#a3abb4', alt: '#8a939c', seam: '#f2c230' }, felt: '#5b7089', rail: '#b9c1c9', railSteel: true, bolts: true, body: '#4a5058', accent: '#ff8a1f', zone: 'spill',
+    pistonStyle: 'press', beltStyle: 'factory', light: { hemi: 0.8, hemiSky: '#e6eeff', sun: 3.4, sunColor: '#f0f5ff', exposure: 1.02 },
+    decor: [['gear', -2.1, -1.5, 'floor', 20, { r: 0.42, color: '#7d868f' }], ['gear', -2.25, -0.75, 'floor', -30, { r: 0.26, color: '#c8392f' }], ['crateStack', 1.9, -2.7, 'floor', 10], ['forklift', 2.25, 0.4, 'floor', -80],
+      ['pipes', 0, -3.4, 'floor', 0], ['warningLight', -1.9, -2.9, 'floor'], ['warningLight', 2.15, 1.9, 'floor']] },
+  arcade: { place: 'Arcade', dark: true, floor: { pattern: 'neon', base: '#2a1648', alt: '#ff4fd8', seam: '#36e2ff', glow: 0.35 }, felt: '#13b5b1', rail: '#151515', body: '#151515', neonTrim: '#ff4fd8', accent: '#ffd23f', zone: 'rug',
+    pistonStyle: 'mole', sliderStyle: 'prize', light: { hemi: 0.5, hemiSky: '#9c8cff', sun: 1.2, sunColor: '#d4c8ff', env: 0.35, exposure: 1.0 }, neonLights: ['#ff4fd8', '#36e2ff'],
+    decor: [['arcadeCabinet', -2.1, -1.6, 'floor', 75, { name: 'STAR BLASTER', color: '#7b2cff', screen: '#36e2ff' }], ['arcadeCabinet', -2.1, -0.85, 'floor', 75, { name: 'PIXEL PONY', color: '#ff4fd8', screen: '#7cff6b' }],
+      ['arcadeCabinet', -2.1, -0.1, 'floor', 75, { name: 'ROBO RALLY', color: '#13b5b1', screen: '#ffd23f' }], ['clawMachine', 2.1, -1.5, 'floor', -80], ['prizeCounter', 0, -3.2, 'floor', 0], ['ticketRolls', 1.2, 1.3, 'rail', 20], ['skeeBall', 2.25, 0.8, 'floor', 180]] },
   playroom: { place: "Kids' playroom", floor: { pattern: 'foam', base: '#f6ead3', alt: '#8fd0c0', seam: '#ffd166', more: ['#f28fad', '#9bb7f0'] }, felt: '#4f7fe0', rail: '#ffd166', body: '#f28fad', accent: '#ff6b57', zone: 'rug',
     decor: [['toyBlocks', -1.9, -2.85, 'floor', 12], ['teddy', 1.95, -2.75, 'floor', -20], ['duck', 1.2, 2.17, 'rail', -30], ['toyBlocks', 2.05, 0.7, 'floor', 40], ['beanbag', -2.1, 0.6, 'floor', 0, { color: '#8fd0c0' }], ['big', -2.05, -1.4, 'floor', 0, { kind: 'stackRings', r: 0.2 }], ['big', 2.05, -1.3, 'floor', -30, { kind: 'rubberDuck', r: 0.2 }]] },
 };
@@ -672,7 +691,7 @@ const NEW_LEVELS = [
       { kind: 'cocktail', shape: 'circle', pos: [0.75, -0.05], radius: 0.05 }, { kind: 'rouletteWheel', shape: 'circle', pos: [-0.3, 1.0], radius: 0.1 }],
     slowZones: [], camera: { tilt: 60, rotation: -4, zoom: 1 } },
   // ---- add-on: shaped tables and moving pieces ----
-  { title: 'Backyard Garden', theme: 'patio', goal: { type: 'specific', balls: [8] }, cueStart: [-0.675, 1.55],
+  { title: 'Backyard Garden', theme: 'garden', goal: { type: 'specific', balls: [8] }, cueStart: [-0.675, 1.55],
     shape: { outline: [[-1, -1.95], [1, -1.95], [1, 1.9], [0.35, 1.9], [0.35, -1.05], [-0.35, -1.05], [-0.35, 1.9], [-1, 1.9]], cornerRadius: 0.1 },
     pockets: [[0.675, 1.9]],
     balls: [{ number: 8, pos: [-0.675, 1.15] }, { number: 12, pos: [0.7, -1.6] }],
@@ -682,29 +701,33 @@ const NEW_LEVELS = [
     slowZones: [], camera: { tilt: 60, rotation: 0, zoom: 1 } },
   { title: 'Record Store', theme: 'records', goal: { type: 'colors', balls: [3, 2] }, cueStart: [0, 1.35],
     balls: [{ number: 3, pos: [0.6, -1.5] }, { number: 2, pos: [-0.62, -1.55] }, { number: 12, pos: [0.05, -1.25] }, { number: 6, pos: [0.7, 0.75] }],
-    obstacles: [{ kind: 'turntable', model: 'record', pos: [-0.45, -0.85], radius: 0.2, spin: 1 }, { kind: 'turntable', model: 'record', pos: [0.45, -0.2], radius: 0.2, spin: -1 },
-      { kind: 'turntable', model: 'record', pos: [-0.4, 0.55], radius: 0.2, spin: 1.2 }, { kind: 'speaker', shape: 'box', pos: [0.62, 1.15], size: [0.1, 0.18], rotation: -10 }],
+    obstacles: [{ kind: 'turntable', model: 'record', pos: [-0.45, -0.85], radius: 0.2, spin: 1, label: '#e2483c' }, { kind: 'turntable', model: 'record', pos: [0.45, -0.2], radius: 0.2, spin: -1, label: '#2e8fd1' },
+      { kind: 'turntable', model: 'record', pos: [-0.4, 0.55], radius: 0.2, spin: 1.2, label: '#ffd23f' }],
     slowZones: [], camera: { tilt: 58, rotation: 4, zoom: 1 } },
-  { title: 'Factory Floor', theme: 'garage', goal: { type: 'count', count: 3 }, cueStart: [0, 1.35],
+  { title: 'Factory Floor', theme: 'factory', goal: { type: 'count', count: 3 }, cueStart: [0, 1.35],
     balls: [{ number: 4, pos: [-0.55, -1.5] }, { number: 6, pos: [0.45, -1.45] }, { number: 9, pos: [0.1, -0.65] }, { number: 11, pos: [-0.5, 0.35] }, { number: 13, pos: [0.55, 0.4] }],
     obstacles: [{ kind: 'conveyor', path: [[-0.85, -0.3], [0.85, -0.3]], width: 0.16, speed: 1 }, { kind: 'conveyor', path: [[0.85, -1.05], [-0.85, -1.05]], width: 0.16, speed: 1 },
-      { kind: 'piston', pos: [0.78, -1.78], size: [0.18, 0.18], height: 0.15, period: 2.5, phase: 0 }, { kind: 'paintCan', shape: 'circle', pos: [-0.7, 1.0], radius: 0.06 }],
+      { kind: 'piston', pos: [0.8, -1.8], size: [0.2, 0.2], height: 0.15, period: 2.5, phase: 0 },      // press guarding the far right corner pocket
+      { kind: 'piston', pos: [-0.88, 0], size: [0.14, 0.26], height: 0.15, period: 3, phase: 0.5 }],  // press gating the left side pocket
     slowZones: [], camera: { tilt: 58, rotation: -6, zoom: 1 } },
-  { title: 'Arcade', theme: 'bowling', goal: { type: 'stripes', balls: [9, 11] }, cueStart: [0, 1.35],
-    balls: [{ number: 9, pos: [-0.45, -1.35] }, { number: 11, pos: [0.5, -1.45] }, { number: 3, pos: [0.05, -1.65] }, { number: 6, pos: [0.62, 0.45] }],
-    obstacles: [-0.72, -0.36, 0, 0.36, 0.72].map((x, i) => ({ kind: 'piston', pos: [x, -0.6], size: [0.28, 0.16], height: 0.14, period: 2, phase: i * 0.2 }))
-      .concat([{ kind: 'slider', from: [-0.45, -1.88], to: [-0.8, -1.88], size: [0.24, 0.12], period: 3, phase: 0 }]),
+  { title: 'Arcade', theme: 'arcade', goal: { type: 'stripes', balls: [9, 11] }, cueStart: [0, 1.35],
+    balls: [{ number: 9, pos: [-0.3, -1.15] }, { number: 11, pos: [0.45, -1.4] }, { number: 3, pos: [0.05, -1.7] }, { number: 6, pos: [0.62, 0.45] }],
+    // a row of whack-a-moles across the way into the far left corner pocket, and a prize drawer sliding across the far right one
+    obstacles: [[-0.42, -1.86], [-0.56, -1.71], [-0.7, -1.56], [-0.85, -1.42]].map(([x, z], i) => ({ kind: 'piston', shape: 'circle', pos: [x, z], radius: 0.075, height: 0.13, period: 2.4, phase: i * 0.25 }))
+      .concat([{ kind: 'slider', from: [0.42, -1.88], to: [0.8, -1.88], size: [0.24, 0.12], period: 3, phase: 0 }]),
     slowZones: [], camera: { tilt: 58, rotation: 6, zoom: 1 } },
   { title: 'Sushi Bar', theme: 'sushi', goal: { type: 'last', last: 8 }, cueStart: [0, 1.3],
-    balls: [{ number: 8, pos: [0, -0.75] }, { number: 1, pos: [-0.45, -1.35] }, { number: 10, pos: [0.45, -1.3] }],
-    obstacles: [{ kind: 'conveyor', path: [[-0.82, -1.82], [0.82, -1.82], [0.82, 1.82], [-0.82, 1.82]], width: 0.14, speed: 0.8, loop: true },
-      { kind: 'turntable', model: 'lazySusan', pos: [0, 0], radius: 0.3, spin: 1 }],
+    balls: [{ number: 8, pos: [0, -0.8] }, { number: 1, pos: [-0.45, -1.35] }, { number: 10, pos: [0.45, -1.3] }],
+    obstacles: [{ kind: 'conveyor', path: [[-0.82, -1.82], [0.82, -1.82], [0.82, 1.82], [-0.82, 1.82]], width: 0.14, speed: 0.8, loop: true, plates: 10 },
+      { kind: 'turntable', model: 'lazySusan', pos: [0, 0], radius: 0.45, spin: 1, plates: 3, plateRadius: 0.065 }],
     slowZones: [], camera: { tilt: 60, rotation: 0, zoom: 1 } },
-  { title: 'Lucky Spin', theme: 'casino', goal: { type: 'colors', balls: [3] }, cueStart: [0, 1.35],
-    shape: { outline: [[-1, -2], [1, -2], [1, 2], [-1, 2]], cornerRadius: 0.12 }, pockets: [],
-    balls: [{ number: 3, pos: [-0.45, 0.25] }, { number: 9, pos: [0.6, -1.5] }, { number: 14, pos: [-0.6, -1.55] }, { number: 5, pos: [0.55, 0.6] }],
-    obstacles: [{ kind: 'roulette', pos: [0, -0.85], radius: 0.35, spin: 1, depth: 0.06, centerIsPocket: true },
-      { kind: 'bumper', shape: 'circle', pos: [-0.25, -0.3], radius: 0.09, kick: 1.2 }, { kind: 'bumper', shape: 'circle', pos: [0.25, -0.3], radius: 0.09, kick: 1.2 }],
+  { title: 'Lucky Spin', theme: 'casino', goal: { type: 'colors', balls: [3] }, cueStart: [0, 1.72],
+    // a narrow hallway that opens into a big round table; the roulette wheel fills it and its center is the only pocket
+    shape: { outline: [[0.3, 1.95], [0.3, -0.046]].concat(Array.from({ length: 23 }, (_, k) => { const a = (72.5 - (k + 1) * 325 / 24) * Math.PI / 180; return [Math.round(Math.cos(a) * 1000) / 1000, Math.round((-1 + Math.sin(a)) * 1000) / 1000]; }), [[-0.3, -0.046], [-0.3, 1.95]]), cornerRadius: 0.06 },
+    pockets: [],
+    balls: [{ number: 3, pos: [0, 0.15] }, { number: 9, pos: [-0.18, 0.8] }],
+    obstacles: [{ kind: 'roulette', pos: [0, -1.0], radius: 0.8, spin: 1, depth: 0.18, centerIsPocket: true },
+      { kind: 'bumper', shape: 'circle', pos: [-0.42, -0.22], radius: 0.07, kick: 1 }, { kind: 'bumper', shape: 'circle', pos: [0.42, -0.22], radius: 0.07, kick: 1 }],
     slowZones: [], camera: { tilt: 60, rotation: 0, zoom: 1 } },
 ];
 
@@ -758,7 +781,7 @@ function normalizeLevel(L, i) {
 }
 function normObstacle(o) {
   const kind = String(o.kind || 'block'), isNew = NEW_KINDS.includes(kind);
-  const forced = { fan: 'circle', bumper: 'circle', trampoline: 'circle', ramp: 'box', bumperRail: 'box', conveyor: 'circle', turntable: 'circle', gopherHole: 'circle', roulette: 'circle', piston: 'box', slider: 'box' }[kind];
+  const forced = { fan: 'circle', bumper: 'circle', trampoline: 'circle', ramp: 'box', bumperRail: 'box', conveyor: 'circle', turntable: 'circle', gopherHole: 'circle', roulette: 'circle', piston: o.shape === 'circle' ? 'circle' : 'box', slider: 'box' }[kind];
   const shape = forced || (kind === 'movable' && !o.shape ? (o.model === 'box' || !o.model ? 'box' : 'circle') : o.shape === 'circle' ? 'circle' : 'box');
   const n = { kind, shape, pos: arr2(o.pos, [0, 0]),
     size: arr2(o.size, [0.3, 0.2]), radius: +o.radius || (Array.isArray(o.size) ? +o.size[0] / 2 : 0.1), rotation: +o.rotation || 0, height: +o.height || 0 };
@@ -771,10 +794,11 @@ function normObstacle(o) {
   });
   if (kind === 'conveyor') {
     const path = (o.path || []).map(q => arr2(q, null)).filter(Boolean);
-    Object.assign(out, { path: path.length >= 2 ? path : [[-0.5, 0], [0.5, 0]], width: num(o.width, 0.15, 0.05, 0.6), speed: num(o.speed, 1, -4, 4), loop: !!o.loop, radius: 0.02 });
+    Object.assign(out, { path: path.length >= 2 ? path : [[-0.5, 0], [0.5, 0]], width: num(o.width, 0.15, 0.05, 0.6), speed: num(o.speed, 1, -4, 4), loop: !!o.loop, radius: 0.02, plates: num(o.plates, 0, 0, 30) });
     out.pos = out.path[0].slice();
   }
-  if (kind === 'turntable') Object.assign(out, { model: o.model === 'lazySusan' ? 'lazySusan' : 'record', radius: num(o.radius, 0.2, 0.08, 0.6), spin: num(o.spin, 1, -5, 5) });
+  if (kind === 'turntable') Object.assign(out, { model: o.model === 'lazySusan' ? 'lazySusan' : 'record', radius: num(o.radius, 0.2, 0.08, 0.7), spin: num(o.spin, 1, -5, 5),
+    plates: num(o.plates, 0, 0, 6), plateRadius: num(o.plateRadius, 0.065, 0.03, 0.15), label: /^#[0-9a-f]{6}$/i.test(o.label || '') ? o.label : null });
   if (kind === 'gopherHole') Object.assign(out, { id: String(o.id || ''), pairId: String(o.pairId || ''), radius: num(o.radius, 0.06, 0.04, 0.12), exitDirection: num(o.exitDirection, 0, -720, 720), exitSpeed: num(o.exitSpeed, 0.3, 0, 3) });
   if (kind === 'piston') Object.assign(out, { height: num(o.height, 0.15, 0.03, 0.4), period: num(o.period, 2.5, 0.5, 30), phase: num(o.phase, 0, -10, 10) });
   if (kind === 'slider') { const from = arr2(o.from, out.pos), to = arr2(o.to, out.pos); Object.assign(out, { from, to, pos: from.slice(), height: num(o.height, 0.1, 0.03, 0.4), period: num(o.period, 3, 0.5, 30), phase: num(o.phase, 0, -10, 10) }); }
@@ -983,6 +1007,20 @@ const roomEnv = (() => {
   const pm = new THREE.PMREMGenerator(renderer), t = pm.fromScene(rs, 0.04).texture; pm.dispose(); return t;
 })();
 scene.environment = roomEnv; scene.environmentIntensity = 0.55;
+// Polished gold: deep warm base, nearly fully metallic, reflecting a warm room so it catches highlights and darkens at the edges
+const GOLD_COLOR = '#C9A227', GOLD_ROUGHNESS = 0.3;
+const goldEnv = (() => {
+  const rs = new THREE.Scene(), add = (geo, color, k, pos, rot) => { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })); m.material.color.multiplyScalar(k); m.position.set(...pos); if (rot) m.rotation.set(...rot); rs.add(m); };
+  add(new THREE.BoxGeometry(14, 8, 14), '#3d2c18', 1, [0, 3, 0]);
+  add(new THREE.PlaneGeometry(14, 14), '#1e140a', 1, [0, -0.99, 0], [-Math.PI / 2, 0, 0]);
+  add(new THREE.PlaneGeometry(5, 3), '#fff1d6', 7, [0, 6.9, 0], [Math.PI / 2, 0, 0]);
+  add(new THREE.PlaneGeometry(2.5, 3), '#ffd9a0', 4, [-6.9, 2.5, 0], [0, Math.PI / 2, 0]);
+  add(new THREE.PlaneGeometry(2, 2.5), '#ffe7c2', 3, [6.9, 2.5, 1], [0, -Math.PI / 2, 0]);
+  const pm = new THREE.PMREMGenerator(renderer), t = pm.fromScene(rs, 0.04).texture; pm.dispose(); return t;
+})();
+let goldC = null, steelC = null;
+const goldMat = () => goldC || (goldC = new THREE.MeshStandardMaterial({ color: GOLD_COLOR, metalness: 0.95, roughness: GOLD_ROUGHNESS, envMap: goldEnv, envMapIntensity: 1.35 }));
+const steelMat = () => steelC || (steelC = new THREE.MeshStandardMaterial({ color: '#b9c1c9', metalness: 0.9, roughness: 0.36, envMap: roomEnv, envMapIntensity: 1.3 }));
 hemi.intensity = 0.95;
 const fill = new THREE.DirectionalLight('#dfe9ff', 0.45);
 fill.position.set(3, 4, -3); scene.add(fill);
@@ -1090,12 +1128,45 @@ function floorTexture(f) {
       }
       g.fillStyle = 'rgba(0,0,0,.08)'; for (let i = 0; i <= n; i++) { g.fillRect(i * s - 1, 0, 2, H); g.fillRect(0, i * s - 1, W, 2); }
       speck(3000, 0.04);
+    } else if (f.pattern === 'grass') { // lush lawn with a winding stepping-stone path
+      for (let i = 0; i < 26000; i++) { g.fillStyle = rnd() < 0.55 ? 'rgba(40,110,40,.16)' : 'rgba(225,255,190,.14)'; g.fillRect(rnd() * W, rnd() * H, 1.4, 3 + rnd() * 6); }
+      for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(30,90,30,.06)'; g.beginPath(); g.arc(rnd() * W, rnd() * H, 20 + rnd() * 50, 0, 7); g.fill(); }
+      for (let k = 0; k < 8; k++) {
+        const t = k / 8, y = t * H + 32, x = W * 0.5 + Math.sin(t * Math.PI * 2) * W * 0.26, rx = 30 + rnd() * 8, ry = 21 + rnd() * 6, rot = rnd() * 0.6;
+        g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(x + 3, y + 4, rx, ry, rot, 0, 7); g.fill();
+        g.fillStyle = f.seam; g.beginPath(); g.ellipse(x, y, rx, ry, rot, 0, 7); g.fill();
+        g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.ellipse(x - 6, y - 5, rx * 0.6, ry * 0.45, rot, 0, 7); g.fill();
+        for (let j = 0; j < 30; j++) { g.fillStyle = rnd() < 0.5 ? 'rgba(0,0,0,.08)' : 'rgba(255,255,255,.1)'; g.fillRect(x + (rnd() - 0.5) * rx * 1.4, y + (rnd() - 0.5) * ry * 1.4, 2, 2); }
+      }
+    } else if (f.pattern === 'diamondPlate') { // steel diamond-plate floor with a yellow/black hazard walkway stripe
+      const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, f.base); gr.addColorStop(1, f.alt); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      for (let y = 0; y < H; y += 32) for (let x = 0; x < W; x += 32) for (const [ox, oy, rot] of [[8, 8, 0.8], [24, 24, -0.8]]) {
+        g.save(); g.translate(x + ox, y + oy); g.rotate(rot); g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(-10, -2, 20, 5); g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(-10, -3, 20, 3); g.restore();
+      }
+      const by = H * 0.72, bh = 44; g.save(); g.beginPath(); g.rect(0, by, W, bh); g.clip(); g.fillStyle = f.seam; g.fillRect(0, by, W, bh); g.fillStyle = '#1b1b1b';
+      for (let x = -bh; x < W + bh; x += 36) { g.beginPath(); g.moveTo(x, by); g.lineTo(x + 18, by); g.lineTo(x + 18 + bh, by + bh); g.lineTo(x + bh, by + bh); g.closePath(); g.fill(); } g.restore();
+      speck(4000, 0.05);
+    } else if (f.pattern === 'neon') { // arcade carpet: stars, planets and squiggles in neon colors on deep purple
+      g.fillStyle = f.base; g.fillRect(0, 0, W, H); const cols = [f.alt, f.seam, '#ffd23f', '#7cff6b'];
+      for (let i = 0; i < 26; i++) { const x = rnd() * W, y = rnd() * H, s = 5 + rnd() * 7; g.fillStyle = cols[i % 4]; g.beginPath(); for (let k = 0; k < 8; k++) { const a = k / 8 * 6.283, rr = k % 2 ? s * 0.35 : s; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); g.fill(); }
+      for (let i = 0; i < 6; i++) { const x = rnd() * W, y = rnd() * H, r = 14 + rnd() * 12; g.fillStyle = cols[(i + 1) % 4]; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.strokeStyle = cols[(i + 2) % 4]; g.lineWidth = 4; g.beginPath(); g.ellipse(x, y, r * 1.7, r * 0.45, -0.4, 0, 7); g.stroke(); }
+      g.lineWidth = 5; g.lineCap = 'round';
+      for (let i = 0; i < 12; i++) { const x = rnd() * W, y = rnd() * H; g.strokeStyle = cols[i % 4]; g.beginPath(); g.moveTo(x, y); for (let k = 1; k < 6; k++) g.lineTo(x + k * 9, y + (k % 2 ? -9 : 9)); g.stroke(); }
+    } else if (f.pattern === 'tatami') { // tatami mats with dark cloth borders
+      const mats = [[0, 0, 256, 512, true], [256, 0, 256, 256, false], [256, 256, 256, 256, false]];
+      for (const [x, y, w, h, vert] of mats) {
+        g.fillStyle = f.base; g.fillRect(x, y, w, h); g.fillStyle = 'rgba(120,110,60,.18)';
+        if (vert) for (let i = 0; i < w; i += 5) g.fillRect(x + i, y, 2, h); else for (let i = 0; i < h; i += 5) g.fillRect(x, y + i, w, 2);
+        g.fillStyle = f.seam; if (vert) { g.fillRect(x, y, 12, h); g.fillRect(x + w - 12, y, 12, h); } else { g.fillRect(x, y, w, 12); g.fillRect(x, y + h - 12, w, 12); }
+        g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(x, y, w, 2); g.fillRect(x, y, 2, h);
+      }
+      speck(2000, 0.03);
     } else { // carpet
       for (let i = 0; i < 14000; i++) { g.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.08)'; g.fillRect(rnd() * W, rnd() * H, 1.5, 1.5); }
     }
   });
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  const unit = { planks: 2.6, deck: 2.4, lanes: 2.8, checker: 2.0, tiles: 2.6, concrete: 4, sand: 3, carpet: 2, casino: 2.2, foam: 2.4 }[f.pattern] || 2.5;
+  const unit = { planks: 2.6, deck: 2.4, lanes: 2.8, checker: 2.0, tiles: 2.6, concrete: 4, sand: 3, carpet: 2, casino: 2.2, foam: 2.4, grass: 5, diamondPlate: 3, neon: 3, tatami: 3.6 }[f.pattern] || 2.5;
   tex.repeat.set(60 / unit, 60 / unit);
   return tex;
 }
@@ -1184,9 +1255,17 @@ function vignetteTex() {
     c.fillStyle = edge(0, 0, 0, H * 0.06); c.fillRect(0, 0, W, H); c.fillStyle = edge(0, H, 0, H * 0.94); c.fillRect(0, 0, W, H);
   }));
 }
+// a glowing neon strip around the outer edge of the rails (plus a soft halo standing in for bloom)
+function neonTrim(color) {
+  const base = G.table ? offsetRing(G.table.outline, CW + SHAPED_RAIL) : orient(rrShape(2.64, 4.64, 0.15).getPoints(10).map(p => [p.x, p.y]), true), V = (p) => new THREE.Vector2(p[0], p[1]), g = new THREE.Group();
+  const band = (a, b, y, m) => { const s = new THREE.Shape(offsetRing(base, -a).map(V)); s.holes.push(new THREE.Path(offsetRing(base, -b).map(V))); const q = new THREE.Mesh(new THREE.ShapeGeometry(s, 4).rotateX(Math.PI / 2), m); q.position.y = y; q.renderOrder = 2; g.add(q); };
+  band(0.012, 0.03, RAIL_TOP + 0.003, new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: color, emissiveIntensity: 2.4, side: THREE.DoubleSide }));
+  band(-0.004, 0.06, RAIL_TOP + 0.002, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  return g;
+}
 function buildTable(th) {
   const g = new THREE.Group();
-  const railMat = th.railMetal ? mat(th.rail, 0.3, { metalness: 0.55, envMap: envTex, envMapIntensity: 1.8 }) : woodMat(th.rail);
+  const railMat = th.railMetal ? goldMat() : th.railSteel ? steelMat() : woodMat(th.rail);
   const feltMat = th.ice ? new THREE.MeshPhysicalMaterial({ map: iceTexture(), roughness: 0.14, clearcoat: 1, clearcoatRoughness: 0.06, envMap: envTex, envMapIntensity: 0.8 })
     : mat('#ffffff', 0.92, { map: feltTexture(th.felt), envMapIntensity: 0.35 }); // felt stays rich and matte
   // felt bed with pocket holes
@@ -1224,7 +1303,7 @@ function buildTable(th) {
     const bottom = new THREE.Mesh(cyl(p.vr, p.vr, 0.01, 20), new THREE.MeshBasicMaterial({ color: '#0b0b0b' })); bottom.position.set(p.x, -0.3, p.z); g.add(bottom);
   }
   // diamond sights
-  const dMat = mat('#f7f1e1', 0.3);
+  const dMat = th.bolts ? steelMat() : mat('#f7f1e1', 0.3);
   const dots = [];
   for (const z of [-1.5, -1, -0.5, 0.5, 1, 1.5]) dots.push([1.19, z], [-1.19, z]);
   for (const x of [-0.5, 0, 0.5]) dots.push([x, 2.19], [x, -2.19]);
@@ -1336,10 +1415,16 @@ function setupTable(L) {
       let A2p = [A[0] + n[0] * CW, A[1] + n[1] * CW], B2p = [Bp[0] + n[0] * CW, Bp[1] + n[1] * CW];
       if (pA) { A2p = jawPoint(A2p[0], A2p[1], -ux, -uz, pA); segs.push([A[0], A[1], A2p[0], A2p[1]]); }
       if (pB) { B2p = jawPoint(B2p[0], B2p[1], ux, uz, pB); segs.push([Bp[0], Bp[1], B2p[0], B2p[1]]); }
-      cush.push([A, Bp, B2p, A2p]);
     }
   }
   for (const s of segs) { s.push(s[2] - s[0], s[3] - s[1]); s.push(s[4] * s[4] + s[5] * s[5]); }
+  for (const r of rings) {
+    const nose = densify(r, 0.02), outer = offsetRing(nose, CW + 0.006), n = nose.length; // reaches just under the rail, so nothing shows between them
+    const cut = nose.map(q => pockets.some(p => (q[0] - p.mx) ** 2 + (q[1] - p.mz) ** 2 < (SM + 0.01) ** 2));
+    if (!cut.some(Boolean)) { cush.push({ ring: true, nose, outer }); continue; }
+    const k0 = cut.findIndex(Boolean); let run = [];
+    for (let k = 1; k <= n; k++) { const i = (k0 + k) % n; if (!cut[i]) run.push(i); else { if (run.length > 1) cush.push({ poly: run.map(j => nose[j]).concat(run.slice().reverse().map(j => outer[j])) }); run = []; } }
+  }
   const cushOuter = offsetRing(outline, CW), railOuter = offsetRing(outline, CW + SHAPED_RAIL);
   const xs = railOuter.map(p => p[0]), zs = railOuter.map(p => p[1]), fit = [];
   for (const x of [Math.min(...xs), Math.max(...xs)]) for (const z of [Math.min(...zs), Math.max(...zs)]) for (const y of [RAIL_TOP, -0.34]) fit.push(new THREE.Vector3(x, y, z));
@@ -1360,24 +1445,31 @@ function nearestSegPoint(x, z) {
 }
 function buildShapedTable(th) {
   const T = G.table, g = new THREE.Group(), V = (p) => new THREE.Vector2(p[0], p[1]);
-  const railMat = th.railMetal ? mat(th.rail, 0.3, { metalness: 0.55, envMap: envTex, envMapIntensity: 1.8 }) : woodMat(th.rail);
+  const railMat = th.railMetal ? goldMat() : th.railSteel ? steelMat() : woodMat(th.rail);
   const feltMat = th.ice ? new THREE.MeshPhysicalMaterial({ map: iceTexture(), roughness: 0.14, clearcoat: 1, envMap: envTex, envMapIntensity: 0.8 }) : mat('#ffffff', 0.92, { map: feltTexture(th.felt), envMapIntensity: 0.35 });
   const playAway = (q) => !pointInPoly(q[0], q[1], T.cushOuter);
   // felt bed (reaches under the cushions; pockets cut out)
   const bed = new THREE.Shape(detourRing(T.cushOuter, T.pockets, 0.1, (q) => !playAway(q)).map(V));
+  for (const o of G.level.obstacles) if (o.kind === 'roulette') { const h = new THREE.Path(); h.absarc(o.pos[0], o.pos[1], o.radius + 0.02, 0, Math.PI * 2, true); bed.holes.push(h); } // the bowl sinks into the table
   const bedGeo = extrudeY(bed, -0.05, 0, 0, 12), uv = bedGeo.attributes.uv, pos = bedGeo.attributes.position;
   for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) / 2.4 + 0.5, pos.getZ(i) / 4.4 + 0.5);
   g.add(mesh(bedGeo, feltMat, false));
   // cushions
   const cushMat = th.ice ? mat('#bcdeed', 0.25, { envMap: envTex }) : mat(shade(th.felt, -0.04), 0.85);
-  for (const poly of T.cush) { const s = new THREE.Shape(poly.map(V)); if (Math.abs(polyArea(poly)) > 1e-6) g.add(mesh(extrudeY(s, 0, CUSH_H, 0.004, 4), cushMat)); }
+  for (const c of T.cush) {
+    let s;
+    if (c.ring) { const [A, B] = Math.abs(polyArea(c.outer)) > Math.abs(polyArea(c.nose)) ? [c.outer, c.nose] : [c.nose, c.outer]; s = new THREE.Shape(A.map(V)); s.holes.push(new THREE.Path(B.map(V))); }
+    else { if (Math.abs(polyArea(c.poly)) < 1e-6) continue; s = new THREE.Shape(c.poly.map(V)); }
+    g.add(mesh(extrudeY(s, 0, CUSH_H, 0.004, 4), cushMat));
+  }
   // rail around the outside, with pocket cut-outs
-  const rail = new THREE.Shape(T.railOuter.map(V)); rail.holes.push(new THREE.Path(detourRing(T.cushOuter, T.pockets, 0.114, playAway).map(V)));
-  g.add(mesh(extrudeY(rail, -0.34, RAIL_TOP, 0.02, 10), railMat));
+  const RB = 0.02, rail = new THREE.Shape(offsetRing(T.outline, CW + SHAPED_RAIL - RB).map(V));
+  rail.holes.push(new THREE.Path(detourRing(offsetRing(T.outline, CW + RB), T.pockets, 0.114 + RB, playAway).map(V)));
+  g.add(mesh(extrudeY(rail, -0.34, RAIL_TOP, RB, 10), railMat));
   // islands: a raised block of rail in the middle
   for (const isl of T.islands) {
-    const top = offsetRing(isl, CW), inIsl = (q) => pointInPoly(q[0], q[1], isl) || pointInPoly(q[0], q[1], top);
-    const s = new THREE.Shape(detourRing(top, T.pockets, 0.114, (q) => !pointInPoly(q[0], q[1], top)).map(V)); void inIsl;
+    const top = offsetRing(isl, CW + 0.02);
+    const s = new THREE.Shape(detourRing(top, T.pockets, 0.134, (q) => !pointInPoly(q[0], q[1], top)).map(V));
     g.add(mesh(extrudeY(s, -0.34, RAIL_TOP, 0.02, 10), railMat));
   }
   // pockets
@@ -1484,7 +1576,7 @@ const OBST = {
     g.add(mesh(rbox(w, 0.048, d, m * 0.45), mat('#151515', 0.6)));
     const capMat = new THREE.MeshStandardMaterial({ color: th.accent, roughness: 0.3, emissive: new THREE.Color(th.accent), emissiveIntensity: 0.15 });
     const strip = mesh(rbox(w * 0.62, 0.022, d * 0.97, m * 0.3), capMat); strip.position.y = 0.048; g.add(strip); g.userData.flash = capMat;
-    for (const sz of [-1, 1]) { const post = mesh(cyl(m * 0.55, m * 0.55, 0.075, 16), mat('#ffc93c', 0.3, { metalness: 0.55, envMap: envTex, envMapIntensity: 1.8 })); post.position.set(0, 0, sz * (d / 2 - m * 0.55)); if (w > d) post.position.set(sz * (w / 2 - m * 0.55), 0, 0); g.add(post); }
+    for (const sz of [-1, 1]) { const post = mesh(cyl(m * 0.55, m * 0.55, 0.075, 16), goldMat()); post.position.set(0, 0, sz * (d / 2 - m * 0.55)); if (w > d) post.position.set(sz * (w / 2 - m * 0.55), 0, 0); g.add(post); }
     return g;
   },
   ramp(o) { // a wedge rising toward its arrow
@@ -1623,16 +1715,26 @@ const OBST = {
     const handle = mesh(torus(r * 0.9, r * 0.03, 8, 30, Math.PI), mat('#9aa0a6', 0.3)); handle.position.y = h; g.add(handle);
     return g;
   },
-  flowerPot(o) { // patio: terracotta pot with flowers
-    const r = o.r, g = new THREE.Group(), h = r * 1.6;
-    g.add(mesh(cyl(r, r * 0.75, h * 0.7, 32), mat('#c8693e', 0.6)));
-    const lip = mesh(cyl(r * 1.06, r * 1.06, h * 0.12, 32), mat('#b85d34', 0.6)); lip.position.y = h * 0.62; g.add(lip);
-    const soil = mesh(cyl(r * 0.92, r * 0.92, 0.006, 24), mat('#4a3020', 1), false); soil.position.y = h * 0.72; g.add(soil);
-    const cols = ['#ff6b8b', '#ffd166', '#ff8a3d', '#b07cf0', '#ffffff'], leaf = mat('#3f9b55', 0.5);
-    for (let i = 0; i < 7; i++) { const a = i * 2.4, rr = r * (0.2 + (i % 3) * 0.22), y = h * (0.95 + (i % 3) * 0.12);
-      const st = mesh(cyl(r * 0.03, r * 0.03, y - h * 0.7, 6), leaf, false); st.position.set(Math.cos(a) * rr, h * 0.7, Math.sin(a) * rr); g.add(st);
-      const fl = mesh(sph(r * 0.17), mat(cols[i % cols.length], 0.45)); fl.scale.set(1, 0.6, 1); fl.position.set(Math.cos(a) * rr, y, Math.sin(a) * rr); g.add(fl);
-      const lf = mesh(sph(r * 0.16), leaf); lf.scale.set(1.5, 0.4, 0.7); lf.position.set(Math.cos(a + 1) * rr * 0.7, h * 0.8, Math.sin(a + 1) * rr * 0.7); lf.rotation.y = -a; g.add(lf); }
+  flowerPot(o) { // terracotta pot, soil, stems, leaves and full blooms (tulips, daisies, roses)
+    const r = o.r, g = new THREE.Group(), h = r * 1.5, V = (x, y) => new THREE.Vector2(x, y);
+    g.add(mesh(cached(`potB${r}`, () => new THREE.LatheGeometry([V(0, 0), V(r * 0.72, 0), V(r * 0.78, h * 0.08), V(r * 0.96, h * 0.82), V(r * 0.96, h * 0.82)], 40)), mat('#c8693e', 0.55)));
+    const lip = mesh(torus(r * 0.98, r * 0.09, 12, 40), mat('#b85d34', 0.55)); lip.rotation.x = Math.PI / 2; lip.position.y = h * 0.84; g.add(lip);
+    const soil = mesh(cyl(r * 0.92, r * 0.92, 0.008, 32), mat('#4a3020', 1), false); soil.position.y = h * 0.8; g.add(soil);
+    const stemM = mat('#3f8f45', 0.5), leafM = mat('#3f9b55', 0.45), leaf2 = mat('#2f8045', 0.45), top = h * 0.8;
+    const kinds = ['tulip', 'daisy', 'rose', 'tulip', 'daisy', 'rose', 'tulip'], cols = { tulip: ['#ff4d6d', '#ffb703', '#c77dff'], rose: ['#d7263d', '#ff8fab', '#fff3f0'] };
+    kinds.forEach((kind, i) => {
+      const a = i * 2.39, rr = i ? r * (0.25 + 0.38 * ((i * 37) % 7) / 7) : 0, len = r * (1.1 + ((i * 53) % 5) * 0.12), x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+      const st = mesh(cyl(r * 0.035, r * 0.04, len, 8), stemM, false); st.position.set(x, top, z); st.rotation.set(Math.sin(a) * 0.12, 0, -Math.cos(a) * 0.12); g.add(st);
+      const fy = top + len * 0.99, fx = x + Math.cos(a) * len * 0.12, fz = z + Math.sin(a) * len * 0.12, bloom = new THREE.Group(); bloom.position.set(fx, fy, fz); g.add(bloom);
+      const s = r * 0.24;
+      if (kind === 'tulip') { const c = mat(cols.tulip[i % 3], 0.35); for (let k = 0; k < 4; k++) { const p = mesh(sph(s * 0.75), c); p.scale.set(0.55, 1.15, 0.55); const q = k / 4 * 6.283; p.position.set(Math.cos(q) * s * 0.32, s * 0.6, Math.sin(q) * s * 0.32); p.rotation.set(Math.sin(q) * 0.25, 0, -Math.cos(q) * 0.25); bloom.add(p); } }
+      else if (kind === 'daisy') { const w = mat('#fffdf6', 0.4); for (let k = 0; k < 10; k++) { const p = mesh(sph(s * 0.55, 12, 8), w); p.scale.set(1.2, 0.22, 0.42); const q = k / 10 * 6.283; p.position.set(Math.cos(q) * s * 0.7, 0, Math.sin(q) * s * 0.7); p.rotation.y = -q; bloom.add(p); }
+        const c = mesh(sph(s * 0.38, 14, 10), mat('#ffc93c', 0.5)); c.scale.y = 0.6; c.position.y = s * 0.05; bloom.add(c); bloom.rotation.x = -0.35; }
+      else { const c = mat(cols.rose[i % 3], 0.4); for (let k = 0; k < 3; k++) { const ring = mesh(torus(s * (0.35 + k * 0.22), s * (0.2 + k * 0.03), 10, 24), c); ring.rotation.x = Math.PI / 2; ring.position.y = s * (0.5 - k * 0.18); bloom.add(ring); }
+        const bud = mesh(sph(s * 0.32, 14, 10), c); bud.position.y = s * 0.55; bloom.add(bud); }
+      for (const sgn of [-1, 1]) { const lf = mesh(sph(r * 0.16, 12, 8), sgn > 0 ? leafM : leaf2); lf.scale.set(1.9, 0.28, 0.7); lf.position.set(x + Math.cos(a + sgn) * r * 0.16, top + len * (0.3 + 0.15 * (sgn + 1)), z + Math.sin(a + sgn) * r * 0.16); lf.rotation.set(0, -a - sgn, sgn * 0.5); g.add(lf); }
+    });
+    for (let i = 0; i < 6; i++) { const a = i * 1.05 + 0.4, lf = mesh(sph(r * 0.2, 12, 8), i % 2 ? leafM : leaf2); lf.scale.set(1.8, 0.3, 0.8); lf.position.set(Math.cos(a) * r * 0.62, top + r * 0.12, Math.sin(a) * r * 0.62); lf.rotation.set(0, -a, 0.35); g.add(lf); }
     return g;
   },
   lemonade(o) { // patio: glass pitcher of lemonade
@@ -1715,7 +1817,7 @@ const OBST = {
     const r = o.r, g = new THREE.Group(), wood = woodMat('#5a2e14');
     g.add(mesh(cyl(r, r * 0.92, 0.035, 48), wood));
     const wheel = mesh(cyl(r * 0.84, r * 0.84, 0.008, 48), mat('#ffffff', 0.35, { map: rouletteTex() })); wheel.position.y = 0.035; g.add(wheel);
-    const hub = mesh(cone(r * 0.2, 0.04, 20), mat('#ffc93c', 0.3, { metalness: 0.55, envMap: envTex, envMapIntensity: 1.8 })); hub.position.y = 0.043; g.add(hub);
+    const hub = mesh(cone(r * 0.2, 0.04, 20), goldMat()); hub.position.y = 0.043; g.add(hub);
     const ball = mesh(sph(r * 0.05), mat('#ffffff', 0.2)); ball.position.set(r * 0.62, 0.05, 0); g.add(ball);
     return g;
   },
@@ -1729,63 +1831,125 @@ const OBST = {
     return g;
   },
   // ---- moving pieces ----
-  conveyor(o) { // a rubber belt with scrolling ridges, rollers at the bends and little side rails
-    const src = o.src, g = new THREE.Group(), w = src.width, base = src.pos, pts = src.path.map(p => [p[0] - base[0], p[1] - base[1]]);
-    if (src.loop) pts.push(pts[0]);
-    const rail = mat('#b9bec4', 0.3, { metalness: 0.5, envMap: envTex }), belts = [];
+  conveyor(o, th) { // rubber belt with a raised frame, rollers at the ends and bold chevrons that scroll the way it runs
+    const src = o.src, g = new THREE.Group(), w = src.width, base = src.pos, style = th.beltStyle || 'plain';
+    const pts = beltPoints(src).map(p => [p[0] - base[0], p[1] - base[1]]); if (src.loop) pts.push(pts[0]);
+    const frameMat = style === 'factory' ? mat('#f2c230', 0.4) : steelMat(), belts = [];
+    const fh = style === 'sushi' ? 0.016 : 0.024, fw = style === 'sushi' ? 0.012 : 0.02;
     for (let i = 0; i + 1 < pts.length; i++) {
       const a = pts[i], b = pts[i + 1], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz); if (L < 1e-4) continue;
-      const tex = beltTex().clone(); tex.needsUpdate = true; tex.repeat.set(L / 0.07, 1); belts.push(tex);
-      const strip = new THREE.Mesh(new THREE.PlaneGeometry(L, w * 0.9).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75 }));
-      strip.receiveShadow = true; strip.position.set((a[0] + b[0]) / 2, 0.004, (a[1] + b[1]) / 2); strip.rotation.y = -Math.atan2(dz, dx); g.add(strip);
-      for (const s of [-1, 1]) { const r = mesh(rbox(L, 0.014, 0.012, 0.004), rail); r.position.set(0, 0, s * w * 0.48); const h = new THREE.Group(); h.add(r); h.position.copy(strip.position); h.position.y = 0; h.rotation.y = strip.rotation.y; g.add(h); }
+      const tex = chevronTex(style).clone(); tex.needsUpdate = true; tex.wrapS = THREE.RepeatWrapping; tex.repeat.set(L / BELT_TILE, 1); belts.push(tex);
+      const ang = -Math.atan2(dz, dx), seg = new THREE.Group(); seg.position.set((a[0] + b[0]) / 2, 0, (a[1] + b[1]) / 2); seg.rotation.y = ang; g.add(seg);
+      const strip = new THREE.Mesh(new THREE.PlaneGeometry(L + (src.loop ? 0.02 : 0), w * 0.86).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: tex, roughness: style === 'sushi' ? 0.4 : 0.85 }));
+      strip.receiveShadow = true; strip.position.y = 0.006; seg.add(strip);
+      for (const sd of [-1, 1]) { const f = mesh(rbox(L + (src.loop ? 0.03 : 0), fh, fw, fw * 0.45), frameMat); f.position.z = sd * (w / 2); seg.add(f); }
     }
-    for (const p of pts) { const roller = mesh(cyl(w * 0.46, w * 0.46, 0.008, 24), rail); roller.position.set(p[0], 0, p[1]); g.add(roller); }
-    g.userData.belts = belts; g.userData.speed = src.speed; return g;
+    if (!src.loop) for (const [p, q] of [[pts[0], pts[1]], [pts[pts.length - 1], pts[pts.length - 2]]]) { // a steel roller across each end
+      const roller = mesh(cyl(0.02, 0.02, w + 0.03, 20), steelMat()); roller.rotation.z = Math.PI / 2; const h = new THREE.Group(); h.add(roller); h.position.set(p[0], 0.012, p[1]); h.rotation.y = -Math.atan2(q[1] - p[1], q[0] - p[0]) + Math.PI / 2; g.add(h);
+      const cap = mesh(rbox(0.05, fh, w + fw * 2, 0.012), frameMat); cap.position.set(0, -0.012, 0); h.add(cap); cap.rotation.y = Math.PI / 2;
+    }
+    g.userData.belts = belts; return g;
   },
-  turntable(o) { // record player platter or a wooden lazy Susan; the top part spins
+  turntable(o, th) { // a record player (vinyl, label, tonearm, wooden base) or a big wooden lazy Susan; the top spins
     const r = o.r, src = o.src || {}, g = new THREE.Group(), spin = new THREE.Group(); spin.name = 'spin'; g.add(spin);
     if (src.model === 'lazySusan') {
-      g.add(mesh(cyl(r * 0.5, r * 0.55, 0.01, 32), mat('#2b2b2b', 0.5)));
-      spin.add(mesh(cyl(r, r, 0.016, 64), woodMat('#c08a52'))); spin.position.y = 0.01;
-      const ring = mesh(torus(r * 0.7, 0.004, 8, 64), woodMat('#8a5a30'), false); ring.rotation.x = Math.PI / 2; ring.position.y = 0.017; spin.add(ring);
-      for (let i = 0; i < 3; i++) { const dot = mesh(cyl(r * 0.07, r * 0.07, 0.003, 16), woodMat('#8a5a30'), false); dot.position.set(Math.cos(i * 2.094) * r * 0.45, 0.017, Math.sin(i * 2.094) * r * 0.45); spin.add(dot); }
-    } else {
-      g.add(mesh(cyl(r * 1.02, r * 1.02, 0.006, 64), mat('#b9bec4', 0.3, { metalness: 0.6, envMap: envTex })));
-      const vinyl = mesh(cyl(r * 0.98, r * 0.98, 0.006, 64), mat('#ffffff', 0.35, { map: vinylTex() })); vinyl.position.y = 0.006; spin.add(vinyl);
-      const pin = mesh(cyl(r * 0.03, r * 0.03, 0.02, 12), mat('#d9dde2', 0.2, { metalness: 0.8, envMap: envTex })); pin.position.y = 0.012; spin.add(pin);
+      g.add(mesh(cyl(r * 0.5, r * 0.55, 0.01, 40), mat('#2b2b2b', 0.5)));
+      spin.add(mesh(cyl(r, r, 0.018, 72), woodMat('#d6a970'))); spin.position.y = 0.01;
+      const ring = mesh(torus(r * 0.93, 0.006, 8, 72), woodMat('#8a5a30'), false); ring.rotation.x = Math.PI / 2; ring.position.y = 0.019; spin.add(ring);
+      for (let i = 0; i < 3; i++) { const dot = mesh(cyl(r * 0.09, r * 0.09, 0.003, 20), woodMat('#8a5a30'), false); dot.position.set(Math.cos(i * 2.0944) * r * SUSAN_RING, 0.019, Math.sin(i * 2.0944) * r * SUSAN_RING); spin.add(dot); }
+      return g;
     }
+    const wood = woodMat('#5a3a22'), metal = steelMat();
+    const plinth = mesh(rbox(r * 2.45, 0.014, r * 2.45, 0.02), wood); plinth.position.set(r * 0.12, 0, 0); g.add(plinth);
+    const platter = mesh(cyl(r * 1.02, r * 1.02, 0.01, 64), metal); platter.position.y = 0.014; g.add(platter);
+    const vinyl = mesh(cyl(r * 0.98, r * 0.98, 0.006, 72), mat('#ffffff', 0.32, { map: vinylTex(src.label || '#e2483c') })); vinyl.position.y = 0.024; spin.add(vinyl);
+    const pin = mesh(cyl(r * 0.025, r * 0.025, 0.02, 12), metal); pin.position.y = 0.024; spin.add(pin);
+    const arm = new THREE.Group(); arm.position.set(r * 1.18, 0.014, -r * 0.92); g.add(arm); // tonearm resting at the edge
+    arm.add(mesh(cyl(0.022, 0.026, 0.03, 20), metal));
+    const tube = mesh(cyl(0.005, 0.005, r * 1.15, 10), metal); tube.rotation.x = Math.PI / 2; tube.position.set(0, 0.034, 0.0); const tg = new THREE.Group(); tg.add(tube); tg.rotation.y = 0.28; arm.add(tg);
+    const head = mesh(rbox(0.022, 0.01, 0.034, 0.004), mat('#2b2b2b', 0.4)); head.position.set(0, 0.03, r * 1.15); tg.add(head);
+    const weight = mesh(cyl(0.016, 0.016, 0.026, 16), metal); weight.rotation.x = Math.PI / 2; weight.position.set(0, 0.034, -0.04); tg.add(weight);
     return g;
   },
-  gopherHole(o) { // a hole with a little ring of dirt around it
+  gopherHole(o) { // a dirt mound and hole, with a little gopher peeking out between uses
     const r = o.r, g = new THREE.Group(), dirt = mat('#7a5534', 0.95);
     const mound = mesh(torus(r * 1.15, r * 0.4, 12, 32), dirt); mound.rotation.x = Math.PI / 2; mound.scale.set(1, 1, 0.45); mound.position.y = 0.006; g.add(mound);
     const hole = mesh(cyl(r * 0.95, r * 0.95, 0.003, 28), new THREE.MeshBasicMaterial({ color: '#1a120b' }), false); hole.position.y = 0.002; g.add(hole);
     for (let i = 0; i < 6; i++) { const a = i * 1.1 + 0.3, pb = mesh(sph(r * 0.12, 8, 6), mat('#8b6a48', 0.9)); pb.position.set(Math.cos(a) * r * 1.7, 0.004, Math.sin(a) * r * 1.7); g.add(pb); }
+    const go = new THREE.Group(); go.name = 'gopherHead'; g.add(go); const fur = mat('#9c6b3f', 0.85), light = mat('#d9b48a', 0.8);
+    const head = mesh(sph(r * 0.62), fur); head.scale.set(1, 1.1, 0.95); go.add(head);
+    const muzzle = mesh(sph(r * 0.3), light); muzzle.position.set(0, -r * 0.08, r * 0.5); go.add(muzzle);
+    const nose = mesh(sph(r * 0.1), mat('#3a2418', 0.4)); nose.position.set(0, r * 0.06, r * 0.76); go.add(nose);
+    for (const s of [-1, 1]) {
+      const eye = mesh(sph(r * 0.09), mat('#151515', 0.2)); eye.position.set(s * r * 0.24, r * 0.24, r * 0.52); go.add(eye);
+      const ear = mesh(sph(r * 0.15), fur); ear.scale.set(1, 1, 0.5); ear.position.set(s * r * 0.48, r * 0.48, 0); go.add(ear);
+    }
+    const teeth = mesh(rbox(r * 0.16, r * 0.14, r * 0.04, 0.003), mat('#fffaf0', 0.3)); teeth.position.set(0, -r * 0.34, r * 0.7); go.add(teeth);
+    go.position.y = r * 0.25;
     return g;
   },
-  piston(o, th) { // a block that rises out of the felt; its frame stays flush with the table
-    const { w, d } = o, H = (o.src && o.src.height) || 0.15, g = new THREE.Group();
-    const frame = mesh(rbox(w + 0.03, 0.003, d + 0.03, 0.012), mat('#2b2f36', 0.5), false); g.add(frame);
-    const block = mesh(rbox(w, H, d, 0.018), mat(th.accent, 0.35)); block.name = 'block'; block.position.y = -H - 0.003; g.add(block);
-    const cap = mesh(rbox(w * 0.6, 0.006, d * 0.6, 0.01), mat('#fbf8ef', 0.3), false); cap.position.y = H; block.add(cap);
-    return g;
+  piston(o, th) { // themed: hydraulic press (factory), whack-a-mole mole (arcade), or a plain block; the moving part is 'block'
+    const style = th.pistonStyle || 'block', H = (o.src && o.src.height) || 0.15, g = new THREE.Group(), block = new THREE.Group(); block.name = 'block'; g.add(block);
+    if (o.r && !o.w) { // round: whack-a-mole
+      const r = o.r;
+      const rim = mesh(torus(r * 1.04, 0.012, 10, 36), mat(th.accent || '#ffd23f', 0.35)); rim.rotation.x = Math.PI / 2; rim.position.y = 0.004; g.add(rim);
+      const hole = mesh(cyl(r * 1.02, r * 1.02, 0.002, 32), new THREE.MeshBasicMaterial({ color: '#120a1c' }), false); hole.position.y = 0.0015; g.add(hole);
+      const fur = mat('#8a5a3a', 0.7), body = mesh(cached(`mole${r}|${H}`, () => { const q = new THREE.CapsuleGeometry(r * 0.88, H - r * 0.9, 8, 24); q.translate(0, H / 2, 0); return q; }), fur); block.add(body);
+      const face = new THREE.Group(); face.position.y = H - r * 0.55; block.add(face);
+      for (const s of [-1, 1]) {
+        const eyeW = mesh(sph(r * 0.24), mat('#ffffff', 0.25)); eyeW.position.set(s * r * 0.32, r * 0.18, r * 0.72); face.add(eyeW);
+        const eyeB = mesh(sph(r * 0.12), mat('#151515', 0.2)); eyeB.position.set(s * r * 0.3, r * 0.2, r * 0.92); face.add(eyeB);
+        const cheek = mesh(sph(r * 0.14), mat('#ff8fab', 0.6)); cheek.scale.z = 0.4; cheek.position.set(s * r * 0.55, -r * 0.16, r * 0.66); face.add(cheek);
+      }
+      const nose = mesh(sph(r * 0.18), mat('#ff5d8f', 0.35)); nose.position.set(0, -r * 0.05, r * 0.92); face.add(nose);
+      const teeth = mesh(rbox(r * 0.3, r * 0.2, r * 0.06, 0.004), mat('#fffaf0', 0.3)); teeth.position.set(0, -r * 0.42, r * 0.84); face.add(teeth);
+    } else if (style === 'press') { // hydraulic press head on a chrome rod, hazard-striped base
+      const { w, d } = o;
+      const plate = new THREE.Mesh(cached(`pressBase${w}|${d}`, () => new THREE.PlaneGeometry(w + 0.06, d + 0.06).rotateX(-Math.PI / 2)), new THREE.MeshStandardMaterial({ map: hazardTex(), roughness: 0.6 })); plate.position.y = 0.0012; plate.receiveShadow = true; g.add(plate);
+      const rod = mesh(cyl(Math.min(w, d) * 0.22, Math.min(w, d) * 0.22, 0.06, 24), mat('#e9eef2', 0.08, { metalness: 1, envMap: roomEnv, envMapIntensity: 1.6 })); block.add(rod);
+      const head = mesh(rbox(w, H - 0.06, d, 0.016), mat('#4a5058', 0.35, { metalness: 0.7, envMap: roomEnv })); head.position.y = 0.06; block.add(head);
+      const band = new THREE.Mesh(cached(`pressBand${w}|${d}`, () => new THREE.BoxGeometry(w + 0.004, 0.022, d + 0.004)), new THREE.MeshStandardMaterial({ map: hazardTex(), roughness: 0.5 })); band.position.y = H - 0.02; block.add(band);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const bolt = mesh(cyl(0.008, 0.008, 0.006, 8), steelMat(), false); bolt.position.set(sx * w * 0.34, H + 0.001, sz * d * 0.34); block.add(bolt); }
+    } else {
+      const { w, d } = o;
+      g.add(mesh(rbox(w + 0.03, 0.003, d + 0.03, 0.012), mat('#2b2f36', 0.5), false));
+      const b = mesh(rbox(w, H, d, 0.018), mat(th.accent, 0.35)); block.add(b);
+      const cap = mesh(rbox(w * 0.6, 0.006, d * 0.6, 0.01), mat('#fbf8ef', 0.3), false); cap.position.y = H; block.add(cap);
+    }
+    block.position.y = -H - 0.003; return g;
   },
-  slider(o) { // a drawer that slides back and forth
+  slider(o, th) { // themed: a padded prize-counter drawer with tickets (arcade) or a wooden drawer
     const { w, d } = o, H = (o.src && o.src.height) || 0.1, g = new THREE.Group();
+    if (th.sliderStyle === 'prize') {
+      g.add(mesh(rbox(w, H, d, Math.min(w, d, H) * 0.35), mat('#d7263d', 0.55)));
+      for (let i = 0; i < 6; i++) { const t = mesh(sph(0.007, 8, 6), mat('#8c1524', 0.5)); t.position.set((i % 3 - 1) * w * 0.3, H - 0.002, (Math.floor(i / 3) - 0.5) * d * 0.45); g.add(t); }
+      const tm = mat('#ff8a1f', 0.6);
+      for (let i = 0; i < 4; i++) { const tk = mesh(rbox(0.026, 0.05, 0.004, 0.002), tm); tk.position.set(-w * 0.3 + i * w * 0.18, H - 0.01, -d * 0.1 + (i % 2) * 0.01); tk.rotation.z = (i - 1.5) * 0.18; g.add(tk); }
+      const trim = mesh(rbox(w + 0.004, 0.012, d + 0.004, 0.006), mat('#ffd23f', 0.3, { emissive: '#ffb703', emissiveIntensity: 0.4 })); trim.position.y = H * 0.45; g.add(trim);
+      return g;
+    }
     g.add(mesh(rbox(w, H, d, 0.012), woodMat('#b98a55')));
     const face = mesh(rbox(w * 0.9, H * 0.8, 0.006, 0.006), woodMat('#9c7144')); face.position.set(0, H * 0.1, d / 2); g.add(face);
-    const knob = mesh(sph(Math.min(w, H) * 0.12), mat('#d9b44a', 0.3, { metalness: 0.6, envMap: envTex })); knob.position.set(0, H * 0.5, d / 2 + 0.008); g.add(knob);
+    const knob = mesh(sph(Math.min(w, H) * 0.12), goldMat()); knob.position.set(0, H * 0.5, d / 2 + 0.008); g.add(knob);
     return g;
   },
-  roulette(o) { // roulette saucer: a shallow spinning wheel sloping down to a hole in the middle
-    const r = o.r, g = new THREE.Group(), spin = new THREE.Group(); spin.name = 'spin'; g.add(spin);
-    const rim = mesh(torus(r, 0.02, 12, 64), woodMat('#5a2e14')); rim.rotation.x = Math.PI / 2; rim.scale.set(1, 1, 0.6); rim.position.y = 0.008; g.add(rim);
+  roulette(o) { // roulette wheel: a spinning bowl that slopes down to a gold-capped hole (a real bowl on shaped tables)
+    const r = o.r, src = o.src || {}, D = src.depth || 0.06, g = new THREE.Group(), spin = new THREE.Group(), gold = goldMat(); spin.name = 'spin'; g.add(spin);
+    const bowl = !!G.table, holeR = ROULETTE_HOLE;
+    const rim = mesh(torus(r + 0.012, 0.022, 12, 72), woodMat('#5a2e14')); rim.rotation.x = Math.PI / 2; rim.scale.set(1, 1, 0.6); rim.position.y = 0.008; g.add(rim);
+    if (bowl) {
+      const collar = mesh(cached(`rouCollar${r}`, () => { const s = new THREE.Shape(); s.absarc(0, 0, r + 0.04, 0, Math.PI * 2, false); const h = new THREE.Path(); h.absarc(0, 0, r, 0, Math.PI * 2, true); s.holes.push(h); return extrudeY(s, -0.004, 0.001, 0, 64); }), woodMat('#5a2e14')); g.add(collar);
+      const prof = []; for (let i = 0; i <= 28; i++) { const t = 1 - (1 - holeR / r) * i / 28; prof.push(new THREE.Vector2(t * r, bowlDepthAt(t, D, holeR / r))); }
+      const geo = cached(`rouBowl${r}|${D}`, () => new THREE.LatheGeometry(prof, 96));
+      const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: wheelTex(), roughness: 0.35, side: THREE.DoubleSide })); m.receiveShadow = true; spin.add(m);
+      const under = mesh(cyl(holeR, holeR, 0.4, 32, true), new THREE.MeshBasicMaterial({ color: '#0d0d0d', side: THREE.BackSide }), false); under.position.y = -D - 0.4; g.add(under);
+      const cap = mesh(torus(holeR + 0.014, 0.014, 12, 48), gold); cap.rotation.x = Math.PI / 2; cap.position.y = -D + 0.004; g.add(cap);
+      return g;
+    }
     const wheel = mesh(cyl(r * 0.98, r * 0.98, 0.004, 64), mat('#ffffff', 0.35, { map: saucerTex() }), false); wheel.position.y = 0.002; spin.add(wheel);
-    const gold = mat('#ffc93c', 0.3, { metalness: 0.55, envMap: envTex, envMapIntensity: 1.8 });
-    const cap = mesh(torus(ROULETTE_HOLE + 0.012, 0.012, 10, 40), gold); cap.rotation.x = Math.PI / 2; cap.position.y = 0.008; g.add(cap);
-    const hole = mesh(cyl(ROULETTE_HOLE, ROULETTE_HOLE, 0.003, 32), new THREE.MeshBasicMaterial({ color: '#0d0d0d' }), false); hole.position.y = 0.006; g.add(hole);
-    for (let i = 0; i < 4; i++) { const spoke = mesh(rbox(0.01, 0.01, r * 0.2, 0.003), gold); const h = new THREE.Group(); spoke.position.z = ROULETTE_HOLE + 0.05; h.add(spoke); h.rotation.y = i * Math.PI / 2; h.position.y = 0.004; spin.add(h); }
+    const cap = mesh(torus(holeR + 0.012, 0.012, 10, 40), gold); cap.rotation.x = Math.PI / 2; cap.position.y = 0.008; g.add(cap);
+    const hole = mesh(cyl(holeR, holeR, 0.003, 32), new THREE.MeshBasicMaterial({ color: '#0d0d0d' }), false); hole.position.y = 0.006; g.add(hole);
+    for (let i = 0; i < 4; i++) { const spoke = mesh(rbox(0.01, 0.01, r * 0.2, 0.003), gold); const h = new THREE.Group(); spoke.position.z = holeR + 0.05; h.add(spoke); h.rotation.y = i * Math.PI / 2; h.position.y = 0.004; spin.add(h); }
     return g;
   },
   movable(o, th) { // things that slide when hit: cardboard box, hockey puck, toy car, beach ball
@@ -1884,18 +2048,80 @@ const cardBackTex = () => propTex('cardBack', 64, 96, (c, W, H) => { c.fillStyle
 const cardFaceTex = (i) => propTex('card' + i, 64, 96, (c, W, H) => { c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H); const s = ['♥', '♠', '♦'][i], col = i === 1 ? '#151515' : '#d7262b'; c.fillStyle = col;
   c.font = '900 20px Georgia, serif'; c.textAlign = 'center'; c.fillText(['A', 'K', 'Q'][i], 12, 22); c.font = '40px Georgia, serif'; c.fillText(s, W / 2, H / 2 + 14); });
 const rouletteTex = () => propTex('roulette', 256, 256, (c, W) => { const n = 18; for (let i = 0; i < n; i++) { c.fillStyle = i === 0 ? '#18874a' : i % 2 ? '#c8102e' : '#151515'; c.beginPath(); c.moveTo(128, 128); c.arc(128, 128, 128, i / n * 6.283, (i + 1) / n * 6.283); c.fill(); }
-  c.fillStyle = '#7a4a2b'; c.beginPath(); c.arc(128, 128, 78, 0, 7); c.fill(); c.strokeStyle = '#ffc93c'; c.lineWidth = 4; c.beginPath(); c.arc(128, 128, 80, 0, 7); c.stroke(); void W; });
-const beltTex = () => propTex('belt', 64, 32, (c, W, H) => { c.fillStyle = '#2b2d31'; c.fillRect(0, 0, W, H); c.fillStyle = '#4a4e55'; c.fillRect(W * 0.55, 0, W * 0.2, H); c.fillStyle = '#6a6f77'; c.fillRect(W * 0.55, 0, 3, H); });
-const vinylTex = () => propTex('vinyl', 256, 256, (c, W) => { c.fillStyle = '#151515'; c.beginPath(); c.arc(128, 128, 128, 0, 7); c.fill(); c.strokeStyle = 'rgba(255,255,255,.07)'; c.lineWidth = 1;
-  for (let r = 48; r < 126; r += 3) { c.beginPath(); c.arc(128, 128, r, 0, 7); c.stroke(); }
-  c.fillStyle = '#e2483c'; c.beginPath(); c.arc(128, 128, 40, 0, 7); c.fill(); c.fillStyle = '#ffd166'; c.fillRect(96, 120, 64, 6); c.fillStyle = '#fbf8ef'; c.fillRect(110, 136, 36, 4);
-  const sh = c.createLinearGradient(0, 0, W, W); sh.addColorStop(0.3, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,.12)'); sh.addColorStop(0.7, 'rgba(255,255,255,0)'); c.fillStyle = sh; c.beginPath(); c.arc(128, 128, 126, 0, 7); c.fill(); });
+  c.fillStyle = '#7a4a2b'; c.beginPath(); c.arc(128, 128, 78, 0, 7); c.fill(); c.strokeStyle = '#d6ad3a'; c.lineWidth = 4; c.beginPath(); c.arc(128, 128, 80, 0, 7); c.stroke(); void W; });
 const saucerTex = () => propTex('saucer', 512, 512, (c, W) => { const C = W / 2, n = 18;
   for (let i = 0; i < n; i++) { c.fillStyle = i === 0 ? '#18874a' : i % 2 ? '#c8102e' : '#151515'; c.beginPath(); c.moveTo(C, C); c.arc(C, C, C, i / n * 6.283, (i + 1) / n * 6.283); c.fill(); }
   c.fillStyle = '#5a2e14'; c.beginPath(); c.arc(C, C, C * 0.74, 0, 7); c.fill();
   const g = c.createRadialGradient(C, C, C * 0.12, C, C, C * 0.74); g.addColorStop(0, '#2a1508'); g.addColorStop(1, '#8a5a30'); c.fillStyle = g; c.beginPath(); c.arc(C, C, C * 0.73, 0, 7); c.fill(); // slopes down to the middle
-  c.strokeStyle = '#ffc93c'; c.lineWidth = 5; for (const k of [0.74, 1]) { c.beginPath(); c.arc(C, C, C * k - 3, 0, 7); c.stroke(); }
+  c.strokeStyle = '#d6ad3a'; c.lineWidth = 5; for (const k of [0.74, 1]) { c.beginPath(); c.arc(C, C, C * k - 3, 0, 7); c.stroke(); }
   c.lineWidth = 2; for (let i = 0; i < n; i++) { const a = i / n * 6.283; c.beginPath(); c.moveTo(C + Math.cos(a) * C * 0.74, C + Math.sin(a) * C * 0.74); c.lineTo(C + Math.cos(a) * C, C + Math.sin(a) * C); c.stroke(); } });
+const BELT_TILE = 0.16;   // length of belt between chevrons
+const SUSAN_RING = 0.62;  // lazy Susan plates sit this far out (fraction of its radius), on its three dots
+const LAZY_SUSAN_SPEED = 0.7; // lazy Susan turn rate (radians/s for spin 1): its plates move at this speed
+// where a belt runs: looped belts get smoothly rounded corners (the physics uses the same path)
+const beltPoints = (b) => b.loop ? roundPoly(b.path, Math.min(0.2, b.width * 1.3)) : b.path.map(p => p.slice());
+// depth of the roulette bowl at fraction t of its radius (rim = 0), so the ball and the bowl agree
+const bowlDepthAt = (t, D, h) => -D * Math.pow(clamp((1 - t) / (1 - h), 0, 1), 0.8);
+const chevronTex = (style) => propTex('chev' + style, 128, 64, (c, W, H) => {
+  const belt = style === 'sushi' ? '#3a3f47' : '#232528', mark = style === 'factory' ? '#f2c230' : style === 'sushi' ? '#d9d2c2' : '#f5f2ea';
+  c.fillStyle = belt; c.fillRect(0, 0, W, H); c.fillStyle = 'rgba(255,255,255,.05)'; for (let x = 0; x < W; x += 8) c.fillRect(x, 0, 2, H); // rubber ribs
+  c.fillStyle = mark; c.beginPath(); c.moveTo(W * 0.28, H * 0.14); c.lineTo(W * 0.62, H * 0.5); c.lineTo(W * 0.28, H * 0.86); c.lineTo(W * 0.44, H * 0.86); c.lineTo(W * 0.78, H * 0.5); c.lineTo(W * 0.44, H * 0.14); c.closePath(); c.fill();
+});
+const vinylTex = (label = '#e2483c') => propTex('vinyl' + label, 256, 256, (c, W) => { c.fillStyle = '#151515'; c.beginPath(); c.arc(128, 128, 128, 0, 7); c.fill(); c.strokeStyle = 'rgba(255,255,255,.07)'; c.lineWidth = 1;
+  for (let r = 48; r < 126; r += 3) { c.beginPath(); c.arc(128, 128, r, 0, 7); c.stroke(); }
+  c.fillStyle = label; c.beginPath(); c.arc(128, 128, 40, 0, 7); c.fill(); c.fillStyle = '#ffd166'; c.fillRect(96, 120, 64, 6); c.fillStyle = '#fbf8ef'; c.fillRect(110, 136, 36, 4);
+  const sh = c.createLinearGradient(0, 0, W, W); sh.addColorStop(0.3, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,.12)'); sh.addColorStop(0.7, 'rgba(255,255,255,0)'); c.fillStyle = sh; c.beginPath(); c.arc(128, 128, 126, 0, 7); c.fill(); });
+const hazardTex = () => propTex('hazard', 128, 128, (c, W) => { c.fillStyle = '#f2c230'; c.fillRect(0, 0, W, W); c.fillStyle = '#1b1b1b'; for (let i = -W; i < W * 2; i += 32) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i + 16, 0); c.lineTo(i + 16 - W, W); c.lineTo(i - W, W); c.closePath(); c.fill(); } });
+// roulette bowl, laid out for a lathe: x = around the wheel, y = from the rim (top) down to the center hole (bottom)
+const wheelTex = () => propTex('wheelBowl', 1024, 256, (c, W, H) => { // the rim band sits at the bottom of the image (the lathe's first row)
+  const n = 24, band = H * 0.24, y0 = H - band;
+  const gr = c.createLinearGradient(0, 0, 0, y0); gr.addColorStop(0, '#2e1708'); gr.addColorStop(1, '#a06a38'); c.fillStyle = gr; c.fillRect(0, 0, W, y0);
+  for (let i = 0; i < n; i++) { c.fillStyle = i === 0 ? '#18874a' : i % 2 ? '#c8102e' : '#151515'; c.fillRect(i * W / n, y0, W / n + 1, band); }
+  c.fillStyle = '#fbf3e0'; c.font = '700 22px Nunito, Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (let i = 0; i < n; i++) c.fillText(String((i * 7) % 36 || 36), (i + 0.5) * W / n, y0 + band * 0.5);
+  c.fillStyle = '#d6ad3a'; for (let i = 0; i <= n; i++) c.fillRect(i * W / n - 2, y0, 4, band); c.fillRect(0, y0 - 3, W, 6); c.fillRect(0, H - 4, W, 4);
+  for (let i = 0; i < 4; i++) c.fillRect(i * W / 4 - 3, 0, 6, y0); // four gold spokes running down to the center
+});
+// a sushi plate: colored-rim plate with nigiri (salmon or tuna), maki rolls or tamago
+const SUSHI_KINDS = ['salmon', 'maki', 'tuna', 'tamago'];
+function sushiPlate(kind, r) {
+  const g = new THREE.Group(), rimCol = { salmon: '#2e8fd1', maki: '#e2483c', tuna: '#ffc93c', tamago: '#36b37e' }[kind] || '#2e8fd1';
+  g.add(mesh(cyl(r, r * 0.8, 0.012, 32), mat('#fbf8ef', 0.25)));
+  const rim = mesh(torus(r * 0.94, r * 0.06, 8, 32), mat(rimCol, 0.3)); rim.rotation.x = Math.PI / 2; rim.position.y = 0.012; g.add(rim);
+  const rice = mat('#fbf8ef', 0.75), nori = mat('#1f2a22', 0.6), s = r * 0.62;
+  if (kind === 'maki') {
+    for (const dx of [-0.52, 0.52]) {
+      const roll = mesh(cyl(s * 0.42, s * 0.42, s * 0.55, 24), nori); roll.position.set(dx * s, 0.012, 0); g.add(roll);
+      const top = mesh(cyl(s * 0.36, s * 0.36, 0.002, 24), rice, false); top.position.set(dx * s, 0.012 + s * 0.55, 0); g.add(top);
+      const fill = mesh(cyl(s * 0.14, s * 0.14, 0.003, 16), mat(dx < 0 ? '#ff8a5c' : '#7ccf6b', 0.5), false); fill.position.set(dx * s, 0.013 + s * 0.55, 0); g.add(fill);
+    }
+  } else {
+    for (const dz of [-0.36, 0.36]) {
+      const ball = mesh(rbox(s * 1.3, s * 0.42, s * 0.62, s * 0.2), rice); ball.position.set(0, 0.012, dz * s); g.add(ball);
+      const topCol = kind === 'tuna' ? '#d23b3b' : kind === 'tamago' ? '#ffd23f' : '#ff8a5c';
+      const topping = mesh(rbox(s * 1.45, s * 0.2, s * 0.7, s * 0.12), mat(topCol, 0.35, kind === 'salmon' ? { map: getStripeTex('salmon', ['#ff8a5c', '#ffd1b8', '#ff8a5c', '#ff8a5c'], 12) } : null)); topping.position.set(0, 0.012 + s * 0.4, dz * s); g.add(topping);
+      if (kind === 'tamago') { const band = mesh(rbox(s * 0.3, s * 0.66, s * 0.74, 0.004), nori); band.position.set(0, 0.012, dz * s); g.add(band); }
+    }
+  }
+  return g;
+}
+function updateKinematics(dt) { // sliding drawers and the plates riding a lazy Susan: moved by the clock, with a velocity so they shove balls
+  const t = G.fanT;
+  for (const o of G.fx.kins) {
+    let x, z;
+    if (o.slider) [x, z] = sliderAt(o, t);
+    else { const a = o.phi + o.host.spin * LAZY_SUSAN_SPEED * t; x = o.host.x + dcos(a) * o.ring; z = o.host.z + dsin(a) * o.ring; o.ang = a; }
+    o.vx = dt > 0 ? (x - o.x) / dt : 0; o.vz = dt > 0 ? (z - o.z) / dt : 0; o.x = x; o.z = z;
+  }
+}
+const cassetteTex = (col) => propTex('cass' + col, 128, 80, (c, W, H) => { c.fillStyle = '#2b2b2b'; c.fillRect(0, 0, W, H); c.fillStyle = col; c.fillRect(8, 8, W - 16, 30); c.fillStyle = '#fbf8ef'; c.fillRect(30, 44, W - 60, 22); c.fillStyle = '#2b2b2b'; for (const x of [44, 84]) { c.beginPath(); c.arc(x, 55, 7, 0, 7); c.fill(); } });
+const posterTex = (name, i) => propTex('poster' + name, 200, 280, (c, W, H) => { const cols = [['#ff6b57', '#ffd23f'], ['#2e8fd1', '#f28fad'], ['#151515', '#7cff6b'], ['#b07cf0', '#ffd23f']][i % 4];
+  c.fillStyle = cols[0]; c.fillRect(0, 0, W, H); c.fillStyle = cols[1]; c.beginPath(); c.arc(W / 2, H * 0.45, 60, 0, 7); c.fill(); c.fillStyle = cols[0]; c.beginPath(); c.arc(W / 2, H * 0.45, 22, 0, 7); c.fill();
+  c.fillStyle = '#fbf8ef'; c.font = '900 22px Nunito, Arial, sans-serif'; c.textAlign = 'center'; const words = name.split(' '); words.forEach((wd, k) => c.fillText(wd, W / 2, H * 0.76 + k * 24 - (words.length - 1) * 10)); c.font = '800 13px Nunito, Arial, sans-serif'; c.fillText('LIVE · ONE NIGHT ONLY', W / 2, H - 14); });
+const stencilTex = () => propTex('stencil', 128, 64, (c, W, H) => { c.fillStyle = 'rgba(30,30,30,.75)'; c.font = '900 26px Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('PARTS', W / 2, H * 0.4); c.font = '800 14px Arial, sans-serif'; c.fillText('THIS SIDE UP ↑', W / 2, H * 0.78); });
+const arcadeScreenTex = (name, col) => propTex('scr' + name, 192, 144, (c, W, H) => { c.fillStyle = '#0b0618'; c.fillRect(0, 0, W, H); c.fillStyle = col; c.font = '900 20px "Courier New", monospace'; c.textAlign = 'center'; c.fillText(name, W / 2, 30);
+  c.fillStyle = '#ffd23f'; for (let i = 0; i < 18; i++) c.fillRect((i * 53) % W, 50 + (i * 31) % 70, 3, 3); c.fillStyle = '#ff4fd8'; c.beginPath(); c.moveTo(W / 2, 100); c.lineTo(W / 2 - 14, 128); c.lineTo(W / 2 + 14, 128); c.fill(); c.fillStyle = col; c.font = '700 12px "Courier New", monospace'; c.fillText('INSERT COIN', W / 2, H - 6); });
+const norenTex = (i) => propTex('noren' + i, 64, 128, (c, W, H) => { c.fillStyle = '#1d3557'; c.fillRect(0, 0, W, H); c.strokeStyle = '#f4ead8'; c.lineWidth = 3; for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(W / 2, H * 0.55 + k * 10, 10 + k * 7, Math.PI, 0); c.stroke(); } if (i === 1) { c.fillStyle = '#d7263d'; c.beginPath(); c.arc(W / 2, H * 0.22, 10, 0, 7); c.fill(); } });
 const chipTexCache = {};
 function chipMat(col) { // poker chip: edge with white spots, faces with a dashed white ring
   if (chipTexCache[col]) return chipTexCache[col];
@@ -1980,6 +2206,166 @@ function getStripeTex(key, colors, n) { return stripeTexCache[key] || (stripeTex
 
 /* ============================= decor =============================== */
 const DECOR = {
+  // ---- Backyard garden ----
+  wateringCan() { const g = new THREE.Group(), m = mat('#3d9b6a', 0.35);
+    const body = mesh(cyl(0.16, 0.18, 0.3, 32), m); g.add(body);
+    const sp = mesh(cyl(0.025, 0.04, 0.42, 16), m); sp.position.set(0.16, 0.08, 0); sp.rotation.z = -0.9; g.add(sp);
+    const rose = mesh(cyl(0.06, 0.035, 0.05, 18), m); rose.position.set(0.47, 0.32, 0); rose.rotation.z = -0.9; g.add(rose);
+    const h = mesh(torus(0.13, 0.018, 10, 28, Math.PI), m); h.position.set(-0.03, 0.3, 0); g.add(h);
+    const top = mesh(cyl(0.12, 0.16, 0.03, 32), mat('#2f7d55', 0.35)); top.position.y = 0.3; g.add(top); return g; },
+  gnome() { const g = new THREE.Group();
+    const body = mesh(cone(0.2, 0.42, 24), mat('#2e6fd1', 0.45)); g.add(body);
+    const belt = mesh(cyl(0.15, 0.16, 0.04, 24), mat('#3a2418', 0.5)); belt.position.y = 0.12; g.add(belt);
+    const face = mesh(sph(0.11), mat('#f2c9a4', 0.5)); face.position.y = 0.46; g.add(face);
+    const nose = mesh(sph(0.04), mat('#e8957a', 0.5)); nose.position.set(0, 0.45, 0.1); g.add(nose);
+    const beard = mesh(cone(0.12, 0.24, 20), mat('#fbf8ef', 0.8)); beard.rotation.x = Math.PI; beard.position.set(0, 0.48, 0.05); g.add(beard);
+    const hat = mesh(cone(0.13, 0.36, 24), mat('#d7263d', 0.45)); hat.position.y = 0.5; hat.rotation.z = 0.15; g.add(hat);
+    for (const s of [-1, 1]) { const eye = mesh(sph(0.015), mat('#151515', 0.3)); eye.position.set(s * 0.04, 0.49, 0.095); g.add(eye); const boot = mesh(sph(0.07), mat('#3a2418', 0.5)); boot.scale.set(1, 0.6, 1.5); boot.position.set(s * 0.08, 0.02, 0.06); g.add(boot); }
+    return g; },
+  fence() { const g = new THREE.Group(), w = mat('#f6f1e6', 0.45);
+    for (let i = -5; i <= 5; i++) { const p = mesh(rbox(0.11, 0.7, 0.04, 0.012), w); p.position.x = i * 0.18; g.add(p); const tip = mesh(cone(0.075, 0.1, 4), w); tip.rotation.y = Math.PI / 4; tip.position.set(i * 0.18, 0.7, 0); g.add(tip); }
+    for (const y of [0.18, 0.5]) { const r = mesh(rbox(2.0, 0.06, 0.03, 0.01), w); r.position.set(0, y, -0.035); g.add(r); } return g; },
+  wheelbarrow() { const g = new THREE.Group(), red = mat('#d7263d', 0.35), dark = mat('#2b2b2b', 0.6);
+    const tray = mesh(cached('wbTray', () => { const q = new THREE.CylinderGeometry(0.34, 0.24, 0.24, 4, 1, true); q.rotateY(Math.PI / 4); q.scale(1.2, 1, 0.9); q.translate(0, 0.12, 0); return q; }), new THREE.MeshStandardMaterial({ color: '#d7263d', roughness: 0.35, side: THREE.DoubleSide })); tray.position.y = 0.3; g.add(tray);
+    const soil = mesh(rbox(0.5, 0.02, 0.4, 0.05), mat('#4a3020', 1)); soil.position.y = 0.5; g.add(soil);
+    const wheel = mesh(torus(0.13, 0.045, 12, 28), dark); wheel.position.set(0.48, 0.17, 0); g.add(wheel);
+    for (const s of [-1, 1]) { const hd = mesh(cyl(0.018, 0.018, 1.1, 10), mat('#8a5a30', 0.5)); hd.rotation.z = Math.PI / 2 - 0.12; hd.position.set(-0.1, 0.38, s * 0.2); g.add(hd);
+      const leg = mesh(cyl(0.016, 0.016, 0.3, 8), red); leg.position.set(-0.3, 0, s * 0.18); g.add(leg); }
+    void red; return g; },
+  // ---- Record store ----
+  recordCrate() { const g = new THREE.Group(), w = woodMat('#a87a4a');
+    for (const [x, z, wd, dp] of [[0, 0.2, 0.62, 0.04], [0, -0.2, 0.62, 0.04], [0.29, 0, 0.04, 0.44], [-0.29, 0, 0.04, 0.44]]) { const s = mesh(rbox(wd, 0.3, dp, 0.008), w); s.position.set(x, 0, z); g.add(s); }
+    const cols = ['#e2483c', '#2e8fd1', '#ffd23f', '#36b37e', '#b07cf0', '#ff8a3d', '#151515'];
+    for (let i = 0; i < 9; i++) { const sl = mesh(rbox(0.008, 0.29, 0.3, 0.003), mat(cols[i % cols.length], 0.5)); sl.position.set(-0.24 + i * 0.058, 0.04, 0); sl.rotation.z = (i % 3 - 1) * 0.08; g.add(sl); }
+    return g; },
+  listeningBooth() { const g = new THREE.Group(), w = woodMat('#6b4a2b');
+    g.add(mesh(rbox(0.9, 0.06, 0.7, 0.02), w));
+    for (const [x, z, wd, dp] of [[0, -0.33, 0.9, 0.04], [-0.43, 0, 0.04, 0.7], [0.43, 0, 0.04, 0.7]]) { const p = mesh(rbox(wd, 1.5, dp, 0.01), w); p.position.set(x, 0, z); g.add(p); }
+    const roof = mesh(rbox(0.96, 0.06, 0.76, 0.02), w); roof.position.y = 1.5; g.add(roof);
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.5), new THREE.MeshPhysicalMaterial({ color: '#cfe8ff', roughness: 0.05, transparent: true, opacity: 0.35 })); glass.position.set(0.45, 0.95, 0); glass.rotation.y = Math.PI / 2; g.add(glass);
+    const stool = DECOR.stool({ color: '#d7263d' }); stool.scale.setScalar(0.8); g.add(stool);
+    const hp = new THREE.Group(); hp.position.set(-0.3, 1.05, -0.28); g.add(hp);
+    const band = mesh(torus(0.09, 0.012, 8, 24, Math.PI), mat('#151515', 0.4)); hp.add(band);
+    for (const s of [-1, 1]) { const cup = mesh(cyl(0.045, 0.045, 0.03, 18), mat('#e2483c', 0.4)); cup.rotation.z = Math.PI / 2; cup.position.set(s * 0.09, -0.015, 0); hp.add(cup); }
+    const sign = mesh(rbox(0.5, 0.12, 0.02, 0.01), mat('#ffd23f', 0.4, { emissive: '#ffb703', emissiveIntensity: 0.3 })); sign.position.set(0, 1.56, 0.36); g.add(sign);
+    return g; },
+  cassetteStack() { const g = new THREE.Group(), cols = ['#e2483c', '#2e8fd1', '#ffd23f', '#36b37e', '#f28fad', '#151515'];
+    for (let i = 0; i < 7; i++) { const c = mesh(rbox(0.11, 0.018, 0.07, 0.004), mat('#ffffff', 0.4, { map: cassetteTex(cols[i % cols.length]) })); c.position.y = i * 0.019; c.rotation.y = (i % 3 - 1) * 0.15; g.add(c); }
+    return g; },
+  posterWall() { const g = new THREE.Group(); const wall = mesh(rbox(2.4, 1.6, 0.08, 0.02), mat('#3a2a3a', 0.85)); g.add(wall);
+    ['THE FUZZ PEDALS', 'VELVET OTTERS', 'MOON TAXI CLUB', 'SODA POP RIOT'].forEach((name, i) => {
+      const frame = mesh(rbox(0.46, 0.62, 0.03, 0.01), mat('#151515', 0.4)); frame.position.set(-0.84 + i * 0.56, 0.7, 0.05); g.add(frame);
+      const art = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.56), new THREE.MeshStandardMaterial({ map: posterTex(name, i), roughness: 0.6 })); art.position.set(-0.84 + i * 0.56, 0.7 + 0.31, 0.081); g.add(art);
+    });
+    return g; },
+  // ---- Factory ----
+  gear(o) { const g = new THREE.Group(), r = o.r || 0.4, sh = new THREE.Shape(), n = 12;
+    for (let i = 0; i < n * 2; i++) { const a0 = i / (n * 2) * 6.283, a1 = (i + 1) / (n * 2) * 6.283, rr = i % 2 ? r : r * 1.18; i ? sh.lineTo(Math.cos(a0) * rr, Math.sin(a0) * rr) : sh.moveTo(Math.cos(a0) * rr, Math.sin(a0) * rr); sh.lineTo(Math.cos(a1) * rr, Math.sin(a1) * rr); }
+    const hole = new THREE.Path(); hole.absarc(0, 0, r * 0.3, 0, 6.283, true); sh.holes.push(hole);
+    const m = mesh(cached('gear' + r, () => { const q = new THREE.ExtrudeGeometry(sh, { depth: 0.08, bevelEnabled: true, bevelSize: 0.01, bevelThickness: 0.01 }); q.center(); return q; }), mat(o.color || '#7d868f', 0.35, { metalness: 0.7, envMap: roomEnv }));
+    m.position.y = r * 1.18; g.add(m); if (o.flat) { m.rotation.x = Math.PI / 2; m.position.y = 0.05; } return g; },
+  crateStack() { const g = new THREE.Group();
+    [[0, 0, 0, 0.6], [0.62, 0, 0.05, 0.55], [0.3, 0.6, 0, 0.55]].forEach(([x, y, z, s]) => { const c = mesh(rbox(s, s, s, 0.02), woodMat('#b98a55')); c.position.set(x, y, z); g.add(c);
+      const label = new THREE.Mesh(new THREE.PlaneGeometry(s * 0.7, s * 0.4), new THREE.MeshStandardMaterial({ map: stencilTex(), transparent: true })); label.position.set(x, y + s * 0.5, z + s / 2 + 0.002); g.add(label); });
+    return g; },
+  forklift() { const g = new THREE.Group(), y = mat('#f2b705', 0.35), dark = mat('#2b2b2b', 0.6);
+    const body = mesh(rbox(0.6, 0.35, 0.9, 0.06), y); body.position.y = 0.12; g.add(body);
+    const cage = mesh(rbox(0.56, 0.04, 0.5, 0.02), dark); cage.position.set(0, 1.0, -0.05); g.add(cage);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const post = mesh(cyl(0.02, 0.02, 0.55, 8), dark); post.position.set(sx * 0.26, 0.47, -0.05 + sz * 0.22); g.add(post); const wh = mesh(cyl(0.14, 0.14, 0.1, 18), dark); wh.rotation.z = Math.PI / 2; wh.position.set(sx * 0.32, 0.14, sz * 0.3); g.add(wh); }
+    const seat = mesh(rbox(0.3, 0.1, 0.25, 0.04), dark); seat.position.set(0, 0.47, 0.05); g.add(seat);
+    for (const s of [-1, 1]) { const mast = mesh(rbox(0.05, 1.3, 0.05, 0.01), dark); mast.position.set(s * 0.2, 0, -0.5); g.add(mast); const fork = mesh(rbox(0.07, 0.03, 0.55, 0.01), dark); fork.position.set(s * 0.15, 0.05, -0.8); g.add(fork); }
+    const crate = DECOR.crate(); crate.scale.setScalar(0.8); crate.position.set(0, 0.08, -0.82); g.add(crate);
+    return g; },
+  pipes() { const g = new THREE.Group(), m = mat('#9aa3ad', 0.3, { metalness: 0.7, envMap: roomEnv }), red = mat('#c8392f', 0.4);
+    for (const [y, z, rr, c] of [[2.2, 0, 0.09, m], [2.0, 0.3, 0.06, red], [2.35, -0.25, 0.05, m]]) { const p = mesh(cyl(rr, rr, 6, 20), c); p.rotation.z = Math.PI / 2; p.position.set(-3, y, z); g.add(p); }
+    for (const x of [-2.6, 2.6]) { const st = mesh(rbox(0.1, 2.4, 0.1, 0.02), mat('#4a5058', 0.5)); st.position.set(x, 0, 0); g.add(st); const ring = mesh(torus(0.11, 0.02, 8, 20), m); ring.rotation.y = Math.PI / 2; ring.position.set(x, 2.2, 0); g.add(ring); }
+    return g; },
+  warningLight() { const g = new THREE.Group();
+    const post = mesh(cyl(0.04, 0.05, 1.2, 12), mat('#4a5058', 0.5)); g.add(post);
+    const base = mesh(cyl(0.11, 0.11, 0.05, 20), mat('#2b2b2b', 0.5)); base.position.y = 1.2; g.add(base);
+    const dome = new THREE.Mesh(sph(0.1, 20, 14), new THREE.MeshStandardMaterial({ color: '#ff8a1f', emissive: '#ff6a00', emissiveIntensity: 1.4, transparent: true, opacity: 0.85 })); dome.position.y = 1.3; g.add(dome);
+    const refl = mesh(cached('beaconRefl', () => new THREE.CylinderGeometry(0.06, 0.06, 0.12, 16, 1, true, 0, Math.PI)), new THREE.MeshStandardMaterial({ color: '#ffffff', metalness: 1, roughness: 0.1, side: THREE.DoubleSide }), false); refl.position.y = 1.3; g.add(refl);
+    const light = new THREE.PointLight('#ff7a1a', 0, 3.5, 2); light.position.y = 1.35; g.add(light);
+    g.userData.tick = (dt, t) => { refl.rotation.y = t * 5; light.intensity = 1.2 + Math.sin(t * 10) * 0.8; };
+    return g; },
+  // ---- Arcade ----
+  arcadeCabinet(o) { const g = new THREE.Group(), col = o.color || '#7b2cff', body = mat(col, 0.35);
+    g.add(mesh(rbox(0.62, 1.05, 0.62, 0.04), body));
+    const top = mesh(rbox(0.62, 0.55, 0.42, 0.04), body); top.position.set(0, 1.05, -0.1); g.add(top);
+    const screen = mesh(rbox(0.48, 0.38, 0.02, 0.02), new THREE.MeshStandardMaterial({ map: arcadeScreenTex(o.name || 'STAR BLASTER', o.screen || '#36e2ff'), emissive: '#ffffff', emissiveMap: arcadeScreenTex(o.name || 'STAR BLASTER', o.screen || '#36e2ff'), emissiveIntensity: 1.1 }));
+    screen.position.set(0, 1.12, 0.12); screen.rotation.x = -0.2; g.add(screen);
+    const marquee = mesh(rbox(0.6, 0.14, 0.04, 0.02), new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: o.screen || '#36e2ff', emissiveIntensity: 1.6 })); marquee.position.set(0, 1.55, 0.1); g.add(marquee);
+    const panel = mesh(rbox(0.62, 0.06, 0.26, 0.02), mat('#151515', 0.4)); panel.position.set(0, 0.98, 0.3); panel.rotation.x = 0.25; g.add(panel);
+    const stick = mesh(cyl(0.008, 0.008, 0.08, 8), mat('#151515', 0.4)); stick.position.set(-0.14, 1.03, 0.32); g.add(stick); const knob = mesh(sph(0.025), mat('#e2483c', 0.3)); knob.position.set(-0.14, 1.11, 0.32); g.add(knob);
+    for (let i = 0; i < 3; i++) { const b = mesh(cyl(0.02, 0.02, 0.012, 14), mat(['#ffd23f', '#36e2ff', '#ff4fd8'][i], 0.3, { emissive: ['#ffd23f', '#36e2ff', '#ff4fd8'][i], emissiveIntensity: 0.6 })); b.position.set(0.04 + i * 0.07, 1.04, 0.3); g.add(b); }
+    return g; },
+  clawMachine() { const g = new THREE.Group(), frame = mat('#ff4fd8', 0.35);
+    g.add(mesh(rbox(0.75, 0.7, 0.75, 0.04), frame));
+    const glass = mesh(rbox(0.7, 0.8, 0.7, 0.03), new THREE.MeshPhysicalMaterial({ color: '#e8f6ff', roughness: 0.05, transparent: true, opacity: 0.25 })); glass.position.y = 0.7; g.add(glass);
+    const top = mesh(rbox(0.75, 0.18, 0.75, 0.04), frame); top.position.y = 1.5; g.add(top);
+    const cols = ['#ffd23f', '#36e2ff', '#7cff6b', '#ff8a3d', '#b07cf0', '#ff5d8f'];
+    for (let i = 0; i < 14; i++) { const p = mesh(sph(0.08), mat(cols[i % 6], 0.7)); p.position.set(((i * 37) % 5 - 2) * 0.12, 0.76 + (i % 3) * 0.07, ((i * 53) % 5 - 2) * 0.12); g.add(p); const e = mesh(sph(0.012), mat('#151515', 0.3)); e.position.set(p.position.x, p.position.y + 0.02, p.position.z + 0.075); g.add(e); }
+    const claw = new THREE.Group(); claw.position.y = 1.32; g.add(claw); claw.add(mesh(cyl(0.005, 0.005, 0.2, 6), steelMat()));
+    for (let i = 0; i < 3; i++) { const f = mesh(rbox(0.012, 0.09, 0.012, 0.004), steelMat()); f.position.set(Math.cos(i * 2.09) * 0.03, -0.07, Math.sin(i * 2.09) * 0.03); f.rotation.set(Math.sin(i * 2.09) * 0.5, 0, -Math.cos(i * 2.09) * 0.5); claw.add(f); }
+    return g; },
+  prizeCounter() { const g = new THREE.Group();
+    g.add(mesh(rbox(1.2, 0.85, 0.5, 0.04), mat('#151515', 0.35)));
+    const strip = mesh(rbox(1.22, 0.04, 0.52, 0.02), mat('#ffffff', 0.3, { emissive: '#36e2ff', emissiveIntensity: 1.4 })); strip.position.y = 0.6; g.add(strip);
+    const glass = mesh(rbox(1.16, 0.35, 0.46, 0.02), new THREE.MeshPhysicalMaterial({ color: '#e8f6ff', roughness: 0.05, transparent: true, opacity: 0.25 })); glass.position.y = 0.85; g.add(glass);
+    const cols = ['#ffd23f', '#ff4fd8', '#7cff6b', '#36e2ff', '#ff8a3d'];
+    for (let i = 0; i < 8; i++) { const p = mesh(i % 2 ? sph(0.06) : rbox(0.09, 0.09, 0.09, 0.02), mat(cols[i % 5], 0.4)); p.position.set(-0.48 + i * 0.135, 0.9, (i % 2) * 0.1 - 0.05); g.add(p); }
+    return g; },
+  ticketRolls() { const g = new THREE.Group(), m = mat('#ff8a1f', 0.6);
+    for (const [x, y, z] of [[0, 0.09, 0], [0.2, 0.09, 0.05], [0.1, 0.27, 0.02]]) { const r = mesh(cyl(0.09, 0.09, 0.07, 24), m); r.rotation.x = Math.PI / 2; r.position.set(x, y, z); g.add(r); const core = mesh(cyl(0.025, 0.025, 0.072, 12), mat('#f4ead8', 0.5)); core.rotation.x = Math.PI / 2; core.position.set(x, y, z); g.add(core); }
+    const tail = mesh(rbox(0.06, 0.004, 0.5, 0.002), m); tail.position.set(0.2, 0.002, 0.33); g.add(tail); return g; },
+  skeeBall() { const g = new THREE.Group(), w = woodMat('#c08a52');
+    const lane = mesh(rbox(0.6, 0.08, 2.0, 0.03), w); lane.rotation.x = -0.1; lane.position.y = 0.25; g.add(lane);
+    for (const s of [-1, 1]) { const side = mesh(rbox(0.05, 0.3, 2.0, 0.02), mat('#7b2cff', 0.35)); side.rotation.x = -0.1; side.position.set(s * 0.32, 0.25, 0); g.add(side); }
+    const back = mesh(rbox(0.7, 0.9, 0.3, 0.04), mat('#7b2cff', 0.35)); back.position.set(0, 0.35, -1.1); g.add(back);
+    for (const [y, r] of [[0.85, 0.12], [0.62, 0.09], [0.45, 0.06]]) { const ring = mesh(torus(r, 0.015, 8, 28), mat('#ffffff', 0.3, { emissive: '#ff4fd8', emissiveIntensity: 1.2 })); ring.position.set(0, y, -0.94); g.add(ring); }
+    for (let i = 0; i < 3; i++) { const b = mesh(sph(0.05), mat('#8a5a30', 0.6)); b.position.set((i - 1) * 0.12, 0.38, 0.85); g.add(b); }
+    return g; },
+  // ---- Sushi bar ----
+  shoji() { const g = new THREE.Group(), w = woodMat('#c9a06a');
+    const paper = mesh(rbox(1.0, 1.7, 0.01, 0.002), mat('#fbf3e0', 0.9, { emissive: '#ffe2b0', emissiveIntensity: 0.18 })); g.add(paper);
+    for (let i = 0; i <= 4; i++) { const v = mesh(rbox(0.03, 1.7, 0.03, 0.006), w); v.position.x = -0.5 + i * 0.25; g.add(v); }
+    for (let j = 0; j <= 6; j++) { const h = mesh(rbox(1.0, 0.03, 0.03, 0.006), w); h.position.y = j * 0.283; g.add(h); }
+    return g; },
+  noren() { const g = new THREE.Group(), w = woodMat('#5a3a22');
+    for (const s of [-1, 1]) { const p = mesh(rbox(0.1, 2.0, 0.1, 0.02), w); p.position.x = s * 0.6; g.add(p); }
+    const lintel = mesh(rbox(1.4, 0.12, 0.12, 0.02), w); lintel.position.y = 2.0; g.add(lintel);
+    const dark = mesh(rbox(1.1, 1.9, 0.02, 0.01), mat('#1d1611', 0.9)); dark.position.z = -0.06; g.add(dark);
+    for (let i = 0; i < 3; i++) { const c = mesh(rbox(0.34, 0.7, 0.008, 0.004), mat('#ffffff', 0.85, { map: norenTex(i) })); c.position.set(-0.37 + i * 0.37, 1.3, 0.07); c.rotation.x = 0.03; g.add(c); }
+    return g; },
+  paperLantern(o) { const g = new THREE.Group(), col = o.color || '#d7263d';
+    const post = mesh(cyl(0.02, 0.02, 1.4, 8), woodMat('#3a2418')); g.add(post);
+    const body = new THREE.Mesh(sph(0.2, 24, 18), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.9, roughness: 0.8 })); body.scale.set(1, 1.25, 1); body.position.y = 1.55; g.add(body);
+    for (let k = 0; k < 6; k++) { const rib = mesh(torus(0.2 * Math.sin((k + 1) / 7 * Math.PI), 0.004, 4, 32), mat('#2b1a10', 0.6), false); rib.rotation.x = Math.PI / 2; rib.position.y = 1.55 - 0.25 * Math.cos((k + 1) / 7 * Math.PI); g.add(rib); }
+    for (const y of [1.3, 1.8]) { const cap = mesh(cyl(0.08, 0.08, 0.04, 16), mat('#151515', 0.4)); cap.position.y = y; g.add(cap); }
+    return g; },
+  bamboo() { const g = new THREE.Group(), stalk = mat('#7fae4a', 0.45), node = mat('#5f8a33', 0.5), leaf = mat('#4e9a3a', 0.5);
+    for (let i = 0; i < 5; i++) { const x = (i % 3 - 1) * 0.12, z = (i - 2) * 0.07, h = 1.4 + (i % 2) * 0.5;
+      const s = mesh(cyl(0.035, 0.04, h, 12), stalk); s.position.set(x, 0, z); g.add(s);
+      for (let y = 0.3; y < h; y += 0.35) { const n = mesh(torus(0.04, 0.008, 6, 16), node); n.rotation.x = Math.PI / 2; n.position.set(x, y, z); g.add(n); }
+      for (let k = 0; k < 4; k++) { const l = mesh(sph(0.08, 10, 6), leaf); l.scale.set(1.8, 0.12, 0.4); l.position.set(x + Math.cos(k * 1.6) * 0.1, h - 0.1 - k * 0.12, z + Math.sin(k * 1.6) * 0.1); l.rotation.y = -k * 1.6; g.add(l); } }
+    const pot = mesh(cyl(0.3, 0.26, 0.3, 24), mat('#3a3a3a', 0.6)); g.add(pot); return g; },
+  bonsai() { const g = new THREE.Group();
+    g.add(mesh(rbox(0.42, 0.12, 0.28, 0.03), mat('#2e4a6b', 0.4)));
+    const trunk = mesh(cached('bonsaiTrunk', () => new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0.1, 0), new THREE.Vector3(0.06, 0.22, 0.02), new THREE.Vector3(-0.05, 0.34, 0), new THREE.Vector3(0.08, 0.45, -0.02)]), 20, 0.025, 8)), mat('#5a3a22', 0.8)); g.add(trunk);
+    for (const [x, y, z, s] of [[0.08, 0.48, 0, 0.14], [-0.1, 0.38, 0.03, 0.11], [0.14, 0.32, -0.04, 0.09]]) { const f = mesh(sph(s, 16, 10), mat('#3f7d4a', 0.7)); f.scale.y = 0.55; f.position.set(x, y, z); g.add(f); }
+    return g; },
+  sakeSet() { const g = new THREE.Group(), cer = mat('#f4ead8', 0.25), tray = woodMat('#5a3a22'), V = (x, y) => new THREE.Vector2(x, y);
+    g.add(mesh(rbox(0.22, 0.01, 0.14, 0.01), tray));
+    const bottle = mesh(cached('tokkuri', () => new THREE.LatheGeometry([V(0, 0), V(0.028, 0), V(0.034, 0.03), V(0.02, 0.07), V(0.01, 0.09), V(0.014, 0.1), V(0, 0.1)], 24)), cer); bottle.position.set(-0.05, 0.01, 0); g.add(bottle);
+    for (const [x, z] of [[0.04, -0.03], [0.07, 0.03]]) { const cup = mesh(cyl(0.017, 0.012, 0.022, 16), cer); cup.position.set(x, 0.01, z); g.add(cup); }
+    return g; },
+  teapot() { const g = new THREE.Group(), iron = mat('#2b2f36', 0.45, { metalness: 0.3 });
+    const body = mesh(sph(0.06, 20, 14), iron); body.scale.y = 0.8; body.position.y = 0.05; g.add(body);
+    const lid = mesh(cyl(0.025, 0.035, 0.015, 16), iron); lid.position.y = 0.095; g.add(lid);
+    const sp = mesh(cyl(0.008, 0.014, 0.05, 10), iron); sp.position.set(0.06, 0.05, 0); sp.rotation.z = -1.0; g.add(sp);
+    const h = mesh(torus(0.04, 0.005, 6, 20, Math.PI), iron); h.position.y = 0.1; g.add(h);
+    for (const [x, z] of [[-0.09, 0.03], [-0.07, -0.05]]) { const c = mesh(cyl(0.02, 0.016, 0.025, 14), mat('#d9c7a6', 0.4)); c.position.set(x, 0, z); g.add(c); }
+    return g; },
   // any table prop, scaled up to sit on the floor (or on the rail): ['big', x, z, 'floor', rot, { kind, r | w, d, h }]
   big(o, th) { return OBST[o.kind]({ r: o.r, w: o.w, d: o.d, src: { height: o.h, color: o.color } }, th); },
   armchair(o) {
@@ -1999,7 +2385,7 @@ const DECOR = {
     const b = mesh(rbox(0.045, 0.045, 0.045, 0.008), m); b.position.set(0.06, 0, 0.03); b.rotation.y = -0.3; g.add(b); return g;
   },
   slotMachine() {
-    const g = new THREE.Group(), gold = mat('#ffc93c', 0.3, { metalness: 0.55, envMap: envTex, envMapIntensity: 1.8 });
+    const g = new THREE.Group(), gold = goldMat();
     g.add(mesh(rbox(0.6, 0.8, 0.5, 0.05), mat('#9e2632', 0.4)));
     const top = mesh(rbox(0.6, 0.55, 0.38, 0.05), mat('#9e2632', 0.4)); top.position.set(0, 0.8, -0.06); g.add(top);
     const trim = mesh(rbox(0.62, 0.04, 0.52, 0.02), gold); trim.position.y = 0.78; g.add(trim);
@@ -2236,6 +2622,11 @@ function setThemeColors(th) {
   scene.background = new THREE.Color(bg);
   scene.fog.color.set(bg);
   hemi.groundColor.set(bg);
+  const Lt = th.light || {};
+  hemi.intensity = Lt.hemi ?? 0.95; hemi.color.set(Lt.hemiSky || '#ffffff');
+  sun.intensity = Lt.sun ?? 2.5; sun.color.set(Lt.sunColor || '#fff4e2');
+  scene.environmentIntensity = Lt.env ?? 0.55; renderer.toneMappingExposure = Lt.exposure ?? 1.0;
+  document.documentElement.classList.toggle('dark', !!th.dark); // light text on dark rooms
 }
 function oPhys(o) {
   // degrees, clockwise when seen from above; exact sin/cos for right angles keeps physics identical everywhere
@@ -2257,16 +2648,20 @@ function loadTable(idx, restore, practice = false, list = G.levels) {
   if (floorMesh) { scene.remove(floorMesh); floorMesh.material.map.dispose(); floorMesh.material.dispose(); }
   floorMesh = new THREE.Mesh(cached('floor', () => { const p = new THREE.PlaneGeometry(60, 60); p.rotateX(-Math.PI / 2); return p; }), new THREE.MeshStandardMaterial({ map: floorTexture(th.floor), roughness: 0.95 }));
   floorMesh.position.y = FLOOR_Y; floorMesh.receiveShadow = true; scene.add(floorMesh);
+  if (th.floor.glow) { floorMesh.material.emissive.set('#ffffff'); floorMesh.material.emissiveMap = floorMesh.material.map; floorMesh.material.emissiveIntensity = th.floor.glow; }
   setupTable(L);
   G.root.add(G.table ? buildShapedTable(th) : buildTable(th));
   if (th.glow) { const gl = new THREE.PointLight(th.glow, 3.5, 0, 2); gl.position.set(0, 2.2, 0); levelGroup.add(gl); }
+  (th.neonLights || []).forEach((c, i) => { const nl = new THREE.PointLight(c, 3, 7, 2); nl.position.set(i ? 1.7 : -1.7, 1.3, i ? 0.8 : -0.8); levelGroup.add(nl); });
+  if (th.neonTrim) G.root.add(neonTrim(th.neonTrim));
+  G.ticks = [];
   // decor
   for (const [type, x, z, on = 'floor', rot = 0, opts = {}] of th.decor) {
     const b = DECOR[type]; if (!b) continue;
     if (on === 'rail' && G.table && (!pointInPoly(x, z, G.table.railOuter) || pointInPoly(x, z, G.table.cushOuter))) continue; // no rail there on this shape
     const d = b(opts, th); d.position.set(x, on === 'rail' ? RAIL_TOP : FLOOR_Y, z); d.rotation.y = -rot * DEG;
     if (on === 'floor') { d.position.y += 0.001; }
-    (on === 'rail' ? G.root : levelGroup).add(d);
+    (on === 'rail' ? G.root : levelGroup).add(d); if (d.userData.tick) G.ticks.push(d.userData.tick);
   }
   // obstacles
   G.obstacles = L.obstacles.map((o, oi) => {
@@ -2276,7 +2671,7 @@ function loadTable(idx, restore, practice = false, list = G.levels) {
     let m = builder(shapeArgs, th);
     // circle builders used with a box shape (or vice versa) fall back to the generic piece so physics always matches
     const boxKinds = ['toolbox', 'pizzaBox', 'book', 'napkinHolder', 'block', 'ramp', 'bumperRail', 'toyWall', 'bookStack', 'dice', 'boardGame', 'cooler', 'logStack', 'laptop', 'succulent', 'speaker', 'bowlingShoe', 'cardDeck'];
-    if (o.kind !== 'movable' && (o.shape === 'box') !== boxKinds.includes(o.kind) && OBST[o.kind]) m = o.shape === 'circle' ? OBST.disc(shapeArgs, th) : OBST.block(shapeArgs, th);
+    if (!['movable', 'piston', 'slider'].includes(o.kind) && (o.shape === 'box') !== boxKinds.includes(o.kind) && OBST[o.kind]) m = o.shape === 'circle' ? OBST.disc(shapeArgs, th) : OBST.block(shapeArgs, th);
     m.position.set(o.pos[0], 0, o.pos[1]); m.rotation.y = -(p.deg != null ? p.deg : o.rotation || 0) * DEG; // round ones too (fans face where they blow)
     G.root.add(m); p.mesh = m; p.baseQ = m.quaternion.clone(); p.wig = null;
     if (o.kind === 'beachBall' && o.shape === 'circle') { // light ball: rolls when hit, never pocketed
@@ -2284,7 +2679,7 @@ function loadTable(idx, restore, practice = false, list = G.levels) {
     }
     return p;
   });
-  G.fx = setupFx(L);
+  G.fx = setupFx(L); G.bowls = !!G.table && G.fx.saucers.length > 0;
   G.zones = L.slowZones.map(z => {
     const m = zoneMesh(z, th); m.position.x = z.pos[0]; m.position.z = z.pos[1]; m.position.y = Math.max(m.position.y, 0.001); m.rotation.y = -z.rotation * DEG; G.root.add(m);
     const zp = oPhys(z); zp.kind = z.kind; zp.mult = z.kind === 'water' ? 0 : SLOW_MULT; return zp; // water: no friction at all
@@ -2463,7 +2858,8 @@ function wiggle(o, nx, nz, v) { if (o.dynamic || o.kind === 'umbrella' || v < 0.
 function setupFx(L) {
   G.fric = L.surface === 'ice' ? ICE_FRICTION : 1;
   const fx = { on: !!L.table || !!L.slope || L.surface === 'ice' || L.slowZones.some(z => z.kind === 'water') || L.obstacles.some(o => NEW_KINDS.includes(o.kind)), slope: null, fans: [], pads: [], ramps: [], movs: [],
-    belts: [], spins: [], gophers: [], pistons: [], sliders: [], saucers: [] };
+    belts: [], spins: [], gophers: [], pistons: [], sliders: [], saucers: [], kins: [] };
+  const extra = [];
   if (L.slope) { const a = L.slope.direction * DEG, k = SLOPE_G * L.slope.amount; fx.slope = { ax: dcos(a) * k, az: dsin(a) * k, dx: dcos(a), dz: dsin(a), amount: L.slope.amount }; }
   G.obstacles.forEach((p, i) => {
     const o = L.obstacles[i]; p.kind = o.kind; p.h = o.height || OBST_H[o.kind] || 0.15;
@@ -2472,15 +2868,21 @@ function setupFx(L) {
     else if (o.kind === 'bumperRail') Object.assign(p, { rail: true, kick: o.kick, flash: 0 });
     else if (o.kind === 'trampoline') { Object.assign(p, { pad: true, flat: true, bounce: o.bounce, squash: 0 }); fx.pads.push(p); }
     else if (o.kind === 'conveyor') {
-      const pts = o.path.map(q => q.slice()); if (o.loop) pts.push(pts[0].slice());
+      const pts = beltPoints(o); if (o.loop) pts.push(pts[0].slice());
       const segs = []; for (let k = 0; k + 1 < pts.length; k++) { const a = pts[k], e = pts[k + 1], dx = e[0] - a[0], dz = e[1] - a[1], len = Math.hypot(dx, dz); if (len > 1e-6) segs.push({ ax: a[0], az: a[1], ux: dx / len, uz: dz / len, len }); }
-      Object.assign(p, { flat: true, belt: true, segs, path: o.path, width: o.width, speed: o.speed }); fx.belts.push(p);
+      Object.assign(p, { flat: true, belt: true, segs, path: o.path, width: o.width, speed: o.speed, platesN: o.plates }); fx.belts.push(p);
     }
-    else if (o.kind === 'turntable') { Object.assign(p, { flat: true, turntable: true, spin: o.spin }); fx.spins.push(p); }
+    else if (o.kind === 'turntable') {
+      Object.assign(p, { flat: true, turntable: true, spin: o.spin, model: o.model }); fx.spins.push(p);
+      for (let k = 0; k < (o.model === 'lazySusan' ? o.plates : 0); k++) { // solid sushi plates riding on it (they turn with it)
+        const q = { kind: 'susanPlate', shape: 'circle', r: o.plateRadius, x: p.x, z: p.z, c: 1, s: 0, h: 0.07, kin: true, plate: true, host: p, phi: k * 6.283185307179586 / o.plates, ring: o.radius * SUSAN_RING, vx: 0, vz: 0, wig: null };
+        q.mesh = sushiPlate(SUSHI_KINDS[k % SUSHI_KINDS.length], o.plateRadius); G.root.add(q.mesh); q.baseQ = q.mesh.quaternion.clone(); extra.push(q); fx.kins.push(q);
+      }
+    }
     else if (o.kind === 'gopherHole') { Object.assign(p, { flat: true, gopher: true, gid: o.id, pairId: o.pairId, exitDir: o.exitDirection * DEG, exitSpeed: o.exitSpeed }); fx.gophers.push(p); }
     else if (o.kind === 'piston') { Object.assign(p, { piston: true, H: o.height, period: o.period, phase: o.phase }); p.hNow = p.h = pistonTarget(p, 0); fx.pistons.push(p); }
-    else if (o.kind === 'slider') { Object.assign(p, { slider: true, from: o.from, to: o.to, period: o.period, phase: o.phase, h: o.height, vx: 0, vz: 0 }); const [x, z] = sliderAt(p, 0); p.x = x; p.z = z; fx.sliders.push(p); }
-    else if (o.kind === 'roulette') { Object.assign(p, { flat: true, saucer: true, spin: o.spin, depth: o.depth, centerIsPocket: o.centerIsPocket, hole: { id: 'roulette', x: p.x, z: p.z, r: ROULETTE_HOLE, vr: ROULETTE_HOLE } }); fx.saucers.push(p); }
+    else if (o.kind === 'slider') { Object.assign(p, { slider: true, kin: true, from: o.from, to: o.to, period: o.period, phase: o.phase, h: o.height, vx: 0, vz: 0 }); const [x, z] = sliderAt(p, 0); p.x = x; p.z = z; fx.sliders.push(p); fx.kins.push(p); }
+    else if (o.kind === 'roulette') { Object.assign(p, { flat: true, saucer: true, spin: o.spin, depth: o.depth, centerIsPocket: o.centerIsPocket, hole: { id: 'roulette', x: p.x, z: p.z, r: ROULETTE_HOLE, vr: ROULETTE_HOLE, dip: G.table ? o.depth : 0 } }); fx.saucers.push(p); }
     else if (o.kind === 'ramp') { const A = o.angle * DEG, sn = dsin(A), cs = dcos(A); Object.assign(p, { ramp: true, sin: sn, cos: cs, tan: sn / cs, h: 2 * p.hw * sn / cs }); fx.ramps.push(p); }
     else if (o.kind === 'lamp') p.on = true;
     else if (o.kind === 'movable') {
@@ -2490,6 +2892,7 @@ function setupFx(L) {
       fx.movs.push(p);
     }
   });
+  G.obstacles.push(...extra); G.fx = fx; updateKinematics(0);
   for (const o of fx.gophers) o.pair = fx.gophers.find(q => q.gid === o.pairId && q !== o) || null;
   fx.surf = fx.belts.length + fx.spins.length + fx.saucers.length > 0;
   return fx;
@@ -2692,7 +3095,7 @@ function contacts3D(b) {
         if (!air && b.lastPad !== o && (b.vx || b.vz)) trampoline(b, o, 0);
       } else if (o.gopher) { // gopher hole: down it goes, and out of its partner a moment later
         if (b.gskip === o) { if (d2 > (o.r * 1.6) ** 2) b.gskip = null; continue; }
-        if (!air && (b.vx || b.vz) && o.pair && d2 < GOPHER_R * GOPHER_R) { b.gopher = { t: 0, to: o.pair }; b.vx = b.vz = 0; Sound.thump(1.2); }
+        if (!air && (b.vx || b.vz) && o.pair && d2 < GOPHER_R * GOPHER_R) { b.gopher = { t: 0, to: o.pair, from: o }; b.vx = b.vz = 0; Sound.thump(1.2); }
       }
       continue;
     }
@@ -2709,7 +3112,7 @@ function contacts3D(b) {
     }
     if (b.y >= o.h) continue;                                    // flying over it
     if (air && b.py >= o.h) { topHit(b, o, c); continue; }       // came down on top of it
-    if (o.slider) { // a moving drawer: bounce off it relative to its own motion (so it shoves balls along)
+    if (o.kin) { // a moving drawer or plate: bounce off it relative to its own motion (so it shoves balls along)
       b.x += c.nx * c.pen; b.z += c.nz * c.pen; const rvn = (b.vx - o.vx) * c.nx + (b.vz - o.vz) * c.nz;
       if (rvn < 0) { b.vx -= (1 + E_OBS) * rvn * c.nx; b.vz -= (1 + E_OBS) * rvn * c.nz; Sound.thump(-rvn); }
       touch(b, c); continue;
@@ -2735,7 +3138,7 @@ function physStep3D() {
   const fx = G.fx;
   G.step++; G.fanT += DT; G.shotT += DT;
   if (fx.pistons.length) updatePistons(DT);
-  if (fx.sliders.length) updateSliders(DT);
+  if (fx.kins.length) updateKinematics(DT);
   for (const b of G.active) if (b.gopher) { b.gopher.t += DT; if (b.gopher.t >= GOPHER_DELAY) emergeGopher(b); }
   const A = fx.gophers.length ? G.active.filter(b => !b.gopher) : G.active; // balls underground sit this step out
   for (const f of fx.fans) { const a = fanAngle(f); f.ux = dcos(a); f.uz = dsin(a); }
@@ -2794,12 +3197,16 @@ function pistonTarget(o, t) { // up for the first half of each cycle, down for t
   return k * k * (3 - 2 * k) * o.H;
 }
 const overBox = (x, z, o, m) => { const dx = x - o.x, dz = z - o.z, lx = dx * o.c + dz * o.s, lz = -dx * o.s + dz * o.c; return Math.abs(lx) < o.hw + m && Math.abs(lz) < o.hd + m; };
+function bowlDip(x, z) { // how far down the roulette bowl a ball sits (looks only)
+  for (const o of G.fx.saucers) { const d = Math.hypot(x - o.x, z - o.z); if (d < o.r) return bowlDepthAt(d / o.r, o.depth, ROULETTE_HOLE / o.r); }
+  return 0;
+}
 function updatePistons(dt) {
   for (const o of G.fx.pistons) {
     const tgt = pistonTarget(o, G.fanT);
     if (tgt > o.hNow) { // rising: a ball sitting on it keeps it down until the ball rolls off
       let blocked = false;
-      if (o.hNow < 0.02) for (const b of G.active) if (!b.gopher && !b.sunk && b.y < 0.05 && overBox(b.x, b.z, o, R * 0.9)) { blocked = true; break; }
+      if (o.hNow < 0.02) for (const b of G.active) if (!b.gopher && !b.sunk && b.y < 0.05 && (o.shape === 'circle' ? Math.hypot(b.x - o.x, b.z - o.z) < o.r + R * 0.9 : overBox(b.x, b.z, o, R * 0.9))) { blocked = true; break; }
       if (!blocked) o.hNow = Math.min(tgt, o.hNow + o.H / PISTON_RISE * 1.5 * dt);
     } else o.hNow = tgt;
     o.h = o.hNow;
@@ -2811,8 +3218,8 @@ function updateSliders(dt) {
 }
 // a drawer reaching a ball that's sitting still shoves it: run the physics for a moment (it isn't a shot)
 function checkPassive() {
-  if (G.moving || G.complete || !G.fx.sliders.length) return;
-  for (const o of G.fx.sliders) for (const b of G.active) if (!b.sunk && obstacleContact(b.x, b.z, o, R)) {
+  if (G.moving || G.complete || !G.fx.kins.length) return;
+  for (const o of G.fx.kins) for (const b of G.active) if (!b.sunk && obstacleContact(b.x, b.z, o, R)) {
     G.moving = true; G.passive = true; G.acc = 0; G.shotT = 0; G.hadScratch = false; for (const q of G.balls) q.kicks = 0; return;
   }
 }
@@ -3638,14 +4045,28 @@ function buildMovingVisuals() {
   }
   for (const o of fx.pistons) o.block = o.mesh.getObjectByName('block');
   for (const o of fx.spins.concat(fx.saucers)) o.spinner = o.mesh.getObjectByName('spin');
+  for (const o of fx.gophers) { o.head = o.mesh.getObjectByName('gopherHead'); o.peek = 1; }
+  for (const o of fx.belts) if (o.platesN > 0) {
+    o.totalLen = o.segs.reduce((a, sg) => a + sg.len, 0); o.deco = [];
+    for (let k = 0; k < o.platesN; k++) { const m = sushiPlate(SUSHI_KINDS[k % SUSHI_KINDS.length], o.width * 0.38); m.traverse(c => { c.castShadow = false; }); G.root.add(m); o.deco.push({ mesh: m, s0: k / o.platesN * o.totalLen }); }
+  }
 }
 function movingFrame(dt) {
   const fx = G.fx, t = G.fanT;
-  if (!G.moving) { updatePistons(dt); updateSliders(dt); checkPassive(); } // the physics updates them during shots
-  for (const o of fx.belts) for (const tex of o.mesh.userData.belts || []) tex.offset.x = -(t * o.speed * CONVEYOR_SPEED) / 0.07;
-  for (const o of fx.spins) if (o.spinner) o.spinner.rotation.y = -o.spin * TURNTABLE_VIS * t;
+  if (!G.moving) { updatePistons(dt); updateKinematics(dt); checkPassive(); } // the physics updates them during shots
+  for (const o of fx.belts) for (const tex of o.mesh.userData.belts || []) tex.offset.x = -(t * o.speed * CONVEYOR_SPEED) / BELT_TILE;
+  for (const o of fx.spins) if (o.spinner) o.spinner.rotation.y = -o.spin * (o.model === 'lazySusan' ? LAZY_SUSAN_SPEED : TURNTABLE_VIS) * t;
+  for (const q of fx.kins) if (q.plate) { q.mesh.position.set(q.x, 0.028, q.z); q.mesh.rotation.y = -(q.ang || 0); if (q.dbg) q.dbg.position.set(q.x, q.dbg.position.y, q.z); }
+  for (const o of fx.gophers) if (o.head) { // the gopher ducks when a ball comes near or goes through
+    const near = G.active.some(b => !b.gopher && (b.vx || b.vz) && (b.x - o.x) ** 2 + (b.z - o.z) ** 2 < 0.09) || G.balls.some(b => b.gopher && (b.gopher.to === o || b.gopher.from === o));
+    o.peek = clamp((o.peek ?? 1) + (near ? -dt * 6 : dt * 1.5), 0, 1); o.head.position.y = lerp(-o.r * 0.9, o.r * 0.25, o.peek);
+  }
+  for (const o of fx.belts) if (o.deco) { // sushi plates riding the belt (decoration only)
+    for (const d of o.deco) { let s = ((d.s0 + t * o.speed * CONVEYOR_SPEED) % o.totalLen + o.totalLen) % o.totalLen;
+      for (const sg of o.segs) { if (s <= sg.len) { d.mesh.position.set(sg.ax + sg.ux * s, 0.008, sg.az + sg.uz * s); d.mesh.rotation.y = -Math.atan2(sg.uz, sg.ux); break; } s -= sg.len; } }
+  }
   for (const o of fx.saucers) if (o.spinner) o.spinner.rotation.y = -o.spin * ROULETTE_VIS * t;
-  for (const o of fx.pistons) if (o.block) o.block.position.y = o.hNow - o.H - 0.003;
+  for (const o of fx.pistons) if (o.block) o.block.position.y = o.hNow - o.H - 0.003; // same number the physics uses
   for (const o of fx.sliders) { o.mesh.position.set(o.x, 0, o.z); if (o.dbg) o.dbg.position.set(o.x, o.dbg.position.y, o.z); }
   for (const o of fx.pistons) if (o.dbg) { o.dbg.scale.y = Math.max(0.05, o.hNow / o.H); o.dbg.position.y = Math.max(0.006, o.hNow / 2); }
   for (const b of G.balls) if (!b.sunk) b.mesh.visible = !b.gopher;
@@ -3702,11 +4123,11 @@ function frame(now) {
       if (b.sunk) continue;
       const dx = b.x - b.px, dz = b.z - b.pz, d = Math.sqrt(dx * dx + dz * dz);
       if (d > 1e-6) { axis.set(dz / d, 0, -dx / d); qd.setFromAxisAngle(axis, d / R); b.mesh.quaternion.premultiply(qd); }
-      b.px = b.x; b.pz = b.z; b.mesh.position.set(b.x, R + b.y, b.z);
+      b.px = b.x; b.pz = b.z; b.mesh.position.set(b.x, R + b.y + (G.bowls ? bowlDip(b.x, b.z) : 0), b.z);
     }
     for (const d of G.drops) {
       d.t += dt; const m = d.b.mesh, a = Math.min(1, d.t / 0.14), k = Math.max(0, (d.t - 0.08) / 0.32);
-      m.position.set(lerp(d.sx, d.p.x, a), R - k * k * 0.4, lerp(d.sz, d.p.z, a)); m.scale.setScalar(1 - Math.min(1, k) * 0.15);
+      m.position.set(lerp(d.sx, d.p.x, a), R - (d.p.dip || 0) - k * k * 0.4, lerp(d.sz, d.p.z, a)); m.scale.setScalar(1 - Math.min(1, k) * 0.15);
       if (d.t > 0.42) { m.visible = false; d.done = true; }
     }
     G.drops = G.drops.filter(d => !d.done);
@@ -3728,6 +4149,7 @@ function frame(now) {
     updateAimVisuals(dt);
     updateCamera(dt);
     updateCoach(dt);
+    for (const f of G.ticks || []) f(dt, now / 1000);
     updateFade(dt);
     updateFx(dt);
     renderer.render(scene, camera);
@@ -3922,7 +4344,7 @@ syncToggles();
 
 /* ============================== home page ============================= */
 let homeOpen = false;
-const ROOM_ICON = { basement: '🎯', diner: '🍔', garage: '🔧', patio: '🌿', boardwalk: '🏖️', cabin: '🏔️', dorm: '🍕', rooftop: '🌇', bowling: '🎳', casino: '🎰', playroom: '🧸', records: '💿', sushi: '🍣' };
+const ROOM_ICON = { basement: '🎯', diner: '🍔', garage: '🔧', patio: '🌿', boardwalk: '🏖️', cabin: '🏔️', dorm: '🍕', rooftop: '🌇', bowling: '🎳', casino: '🎰', playroom: '🧸', records: '💿', sushi: '🍣', garden: '🌷', factory: '🏭', arcade: '🕹️' };
 function markRoom(theme) { stats.rooms = stats.rooms || {}; if (!stats.rooms[theme]) { stats.rooms[theme] = 1; saveStats(); } }
 const dailyIdx = () => Math.min(day.results.filter(v => v != null).length, G.levels.length - 1);
 function renderHome() {

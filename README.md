@@ -50,9 +50,9 @@ Only tables that use one of these run the 3D physics; the original five tables k
 | Props | `lamp` (circle, clicks on/off when hit), `umbrella` (circle, pole through the table), `teddy`, `cocktail` (circles), `dice` (box) |
 | Room props | circles: `rootBeer`, `ketchup`, `milkshake`, `tire`, `paintCan`, `flowerPot`, `lemonade`, `sandBucket`, `lantern`, `ramen`, `bowlingBall`, `roulette`, `rubberDuck`, `stackRings`; boxes: `boardGame`, `cooler`, `logStack`, `laptop`, `succulent`, `speaker`, `bowlingShoe`, `cardDeck` |
 | Conveyor belt | `{"kind":"conveyor","path":[[x,z],[x,z]],"width":0.15,"speed":1,"loop":false}` (carries rolling balls along; a ball rides belts at most ~3 s per shot) |
-| Turntable | `{"kind":"turntable","model":"record"/"lazySusan","pos":[x,z],"radius":0.2,"spin":1}` (bends rolling balls; the sign of spin picks the way) |
+| Turntable | `{"kind":"turntable","model":"record"/"lazySusan","pos":[x,z],"radius":0.2,"spin":1,"label":"#e2483c","plates":0}` (bends rolling balls; the sign of spin picks the way) |
 | Gopher holes | `{"kind":"gopherHole","id":"a1","pairId":"a2","pos":[x,z],"exitDirection":90,"exitSpeed":0.3}` (drop in one, pop out of its pair heading exitDirection; never a pocket) |
-| Piston | `{"kind":"piston","pos":[x,z],"size":[w,d],"height":0.15,"period":2.5,"phase":0}` (up for half of each cycle; phase is a fraction of a cycle; waits while a ball sits on it) |
+| Piston | `{"kind":"piston","pos":[x,z],"size":[w,d] (or "shape":"circle","radius"),"height":0.15,"period":2.5,"phase":0}` (up for half of each cycle; phase is a fraction of a cycle; waits while a ball sits on it) |
 | Sliding drawer | `{"kind":"slider","from":[x,z],"to":[x,z],"size":[w,d],"period":3,"phase":0}` (shoves balls in its way, even resting ones; that push isn't a shot) |
 | Roulette saucer | `{"kind":"roulette","pos":[x,z],"radius":0.35,"spin":1,"depth":0.06,"centerIsPocket":true}` (slopes toward a center hole; otherwise the ball returns to its spot for +1) |
 | Shaped table | `"shape":{"outline":[[x,z],...],"islands":[[[x,z],...]],"cornerRadius":0.08},"pockets":[[x,z],...]` (outline = cushion line; pockets snap to the nearest rail; "pockets" alone keeps the normal rectangle) |
@@ -60,7 +60,7 @@ Only tables that use one of these run the 3D physics; the original five tables k
 
 Every obstacle can also take `"height"`. Airborne balls fly over anything lower than they are.
 
-Tuning (in `index.html`, right after `FLOOR_Y`): `GRAVITY`, `E_LAND` / `LAND_SETTLE` (landing bounce), `FAN_ACC` / `FAN_SWEEP_RATE`, `BUMPER_KICK`, `RAIL_KICK`, `POP_VY`, `SLOPE_G` (and `SLOPE_VIS` for how far the table visibly leans), `RAMP_ANGLE_DEFAULT`, `TRAMP_BASE` / `TRAMP_PER_SPEED` / `TRAMP_MAX`, `MOVABLE_MU`, `ICE_FRICTION`, `OBST_H` (default heights), `CONVEYOR_SPEED` / `CONVEYOR_GRIP` / `CONVEYOR_MAX_RIDE`, `TURNTABLE_CURVE` (and `TURNTABLE_VIS`), `GOPHER_EXIT` / `GOPHER_DELAY`, `PISTON_RISE` (period and phase are per piston/slider in the level), `ROULETTE_PULL` / `ROULETTE_CURVE` / `ROULETTE_DROP_SPEED` (spin and depth are per saucer).
+Tuning (in `index.html`, right after `FLOOR_Y`): `GRAVITY`, `E_LAND` / `LAND_SETTLE` (landing bounce), `FAN_ACC` / `FAN_SWEEP_RATE`, `BUMPER_KICK`, `RAIL_KICK`, `POP_VY`, `SLOPE_G` (and `SLOPE_VIS` for how far the table visibly leans), `RAMP_ANGLE_DEFAULT`, `TRAMP_BASE` / `TRAMP_PER_SPEED` / `TRAMP_MAX`, `MOVABLE_MU`, `ICE_FRICTION`, `OBST_H` (default heights), `CONVEYOR_SPEED` / `CONVEYOR_GRIP` / `CONVEYOR_MAX_RIDE`, `TURNTABLE_CURVE` (and `TURNTABLE_VIS`), `GOPHER_EXIT` / `GOPHER_DELAY`, `PISTON_RISE` (period and phase are per piston/slider in the level), `ROULETTE_PULL` / `ROULETTE_CURVE` / `ROULETTE_DROP_SPEED` (spin, radius and depth are per saucer), `GOLD_COLOR` / `GOLD_ROUGHNESS`, `LAZY_SUSAN_SPEED` / `SUSAN_RING` (size is the turntable's radius; "plates": 3 puts solid sushi plates on it), `BELT_TILE` (chevron spacing).
 
 Moving pieces all run on one clock that starts at 0 when a table loads and never pauses, so the pattern is the same for everyone and timing is part of the skill. Belts, turntables, the saucer and fans only push balls that are already rolling.
 
