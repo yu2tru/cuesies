@@ -49,6 +49,7 @@
   }
   .icon-btn:active { transform: scale(.92); }
   .icon-btn svg { width: 23px; height: 23px; stroke: var(--ink); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .icon-btn[hidden], .rbtn[hidden] { display: none !important; }
   .icon-btn.off svg { opacity: .35; }
   .icon-btn.off::after {
     content: ''; position: absolute; width: 26px; height: 2.4px; background: var(--ink); border-radius: 2px;
@@ -198,11 +199,8 @@
   button.wordmark { font-family: inherit; color: var(--ink); background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
   #gameWord { pointer-events: auto; }
   .home-body { flex: none; padding: 0 14px; position: relative; isolation: isolate; }
-  .home-body::before { /* the floor color behind the cards spans the whole page width, fading in at the top */
-    content: ''; position: absolute; z-index: -1; top: -30px; bottom: -80px; left: 50%; width: 100vw; transform: translateX(-50%);
-    background: linear-gradient(to bottom, transparent, var(--bg) 46px); pointer-events: none; }
   .home-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-  .home-date { font-weight: 800; font-size: 15px; color: rgba(21,21,21,.72); letter-spacing: -.02em; }
+  .home-date { font-weight: 800; font-size: 15px; color: rgba(21,21,21,.78); letter-spacing: -.02em; background: var(--card); border-radius: 999px; padding: 9px 14px; box-shadow: 0 2px 0 rgba(31,28,21,.05); }
   .home-icons { display: flex; gap: 8px; }
   .rbtn { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--card); display: grid; place-items: center; box-shadow: 0 2px 0 rgba(31,28,21,.05); cursor: pointer; position: relative; }
   .rbtn svg { width: 21px; height: 21px; stroke: var(--ink); fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
@@ -246,6 +244,14 @@
   }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   #fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 8; }
+  /* first-table hint: an arrow (and a hand) showing how to aim, then how to pull back */
+  #coach { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+  #coachSvg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  #coachSvg path { fill: none; stroke: #fffdf8; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+  .coach-hand { position: absolute; left: 0; top: 0; font-size: 40px; line-height: 1; transform-origin: 50% 10%; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); will-change: transform; }
+  .coach-cap { position: absolute; left: 0; top: 0; white-space: nowrap; background: var(--card); color: var(--ink); font-weight: 900; font-size: 15px; letter-spacing: -0.02em;
+    padding: 8px 14px; border-radius: 999px; box-shadow: 0 2px 0 rgba(0,0,0,.08), 0 6px 18px rgba(0,0,0,.12); will-change: transform; }
+  .coach-cap small { color: var(--muted); font-weight: 800; font-size: 12px; margin-left: 4px; }
   #stamp {
     position: fixed; left: 50%; top: 36%; z-index: 9; pointer-events: none; display: none;
     font-weight: 900; font-size: 44px; letter-spacing: -0.04em; color: #e2483c; white-space: nowrap;
@@ -265,6 +271,7 @@
 <canvas id="scene" aria-label="Pool table"></canvas>
 <canvas id="fx"></canvas>
 <div id="stamp">ONE AND DONE!</div>
+<div id="coach" hidden><svg id="coachSvg" aria-hidden="true"></svg><div class="coach-hand" id="coachHand">👆</div><div class="coach-cap" id="coachCap"></div></div>
 
 <div id="ui">
   <div class="col">
@@ -277,6 +284,7 @@
         <button class="icon-btn" id="btn-stats" aria-label="Stats">
           <svg viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-9"/></svg>
         </button>
+        <button class="icon-btn" id="btn-music" aria-label="Music" hidden><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
         <button class="icon-btn" id="btn-sound" aria-label="Sound">
           <svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
         </button>
@@ -305,6 +313,7 @@
     <div class="home-body">
       <div class="home-row"><div class="home-date" id="homeDate"></div>
         <div class="home-icons">
+          <button class="rbtn" id="homeMusic" aria-label="Toggle music" hidden><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
           <button class="rbtn" id="homeSound" aria-label="Toggle sound"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg></button>
           <button class="rbtn" id="homeHelp" aria-label="How to play"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4"/><circle cx="12" cy="17.6" r=".6" fill="currentColor"/></svg></button>
         </div>
@@ -351,6 +360,12 @@ const SUPABASE_ANON_KEY = '';   // the public "anon" key
 const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
 const LAUNCH_DATE = '2026-10-16'; // the day puzzle "No. 1" went live (local date)
 const GAME_URL = location.origin + location.pathname;
+// Background music: put audio files (mp3 / m4a) in the music/ folder and list them here.
+// They play shuffled with a soft crossfade, and the ♪ button appears once there's at least one.
+const MUSIC_TRACKS = [
+  // 'music/track1.mp3',
+];
+const MUSIC_VOLUME = 0.35;
 
 /* ============================== utils ============================== */
 const $ = (id) => document.getElementById(id);
@@ -381,8 +396,8 @@ function uuid() {
 }
 
 /* ============================ settings ============================= */
-const settings = Object.assign({ sound: true, seenHelp: false }, store.get('settings', {}));
-settings.music = false; // background music is off (no music button)
+const settings = Object.assign({ sound: true, seenHelp: false, tunes: true }, store.get('settings', {}));
+settings.music = settings.tunes && MUSIC_TRACKS.length > 0; // the ♪ button (shown once MUSIC_TRACKS has files)
 const saveSettings = () => store.set('settings', settings);
 let playerId = store.get('pid', null);
 if (!playerId) { playerId = uuid(); store.set('pid', playerId); }
@@ -423,7 +438,9 @@ const MAX_SHOT_TIME = 15;       // safety net: a shot never runs longer than thi
 // heights of obstacles (above the felt), so airborne balls can fly over the low ones
 const OBST_H = { coffeeMug: 0.2, cocoaMug: 0.2, sodaCan: 0.22, snowGlobe: 0.3, sandcastle: 0.4, cone: 0.33, bowlingPin: 0.38, plant: 0.5,
   toolbox: 0.21, pizzaBox: 0.07, book: 0.07, napkinHolder: 0.19, block: 0.12, disc: 0.1, fan: 0.32, bumper: 0.1, bumperRail: 0.07,
-  chipStack: 0.11, toyWall: 0.12, bookStack: 0.13, trampoline: 0.012, lamp: 0.45, umbrella: 3, teddy: 0.4, dice: 0.09, cocktail: 0.2 };
+  chipStack: 0.11, toyWall: 0.12, bookStack: 0.13, trampoline: 0.012, lamp: 0.45, umbrella: 3, teddy: 0.4, dice: 0.09, cocktail: 0.2,
+  rootBeer: 0.2, boardGame: 0.06, ketchup: 0.19, milkshake: 0.26, tire: 0.08, paintCan: 0.14, flowerPot: 0.25, lemonade: 0.22, sandBucket: 0.18, cooler: 0.2, lantern: 0.16,
+  logStack: 0.12, laptop: 0.12, ramen: 0.12, succulent: 0.16, speaker: 0.12, bowlingShoe: 0.07, bowlingBall: 0.2, cardDeck: 0.04, roulette: 0.06, rubberDuck: 0.14, stackRings: 0.25 };
 const NEW_KINDS = ['fan', 'movable', 'bumper', 'bumperRail', 'ramp', 'trampoline'];
 // deterministic sine/cosine (plain arithmetic, identical on every device) for anything that feeds the new physics
 function dsin(x) {
@@ -476,28 +493,28 @@ for (const s of SEGS) { s.push(s[2] - s[0], s[3] - s[1]); s.push(s[4] * s[4] + s
 // floor patterns: planks, deck, checker, concrete, sand, carpet, tiles, lanes
 const THEMES = {
   basement: { place: 'Basement game room', floor: { pattern: 'planks', base: '#c79a6a', alt: '#b98b5c', seam: '#8f6640' }, felt: '#2f8d5a', rail: '#7a4a2b', accent: '#d9503f', zone: 'rug',
-    decor: [['rug', 0, 0, 'floor', 0, { w: 3.6, d: 5.8, a: '#9c3b2f', b: '#e3c48c' }], ['dartboard', -1.55, -3.1], ['plant', 1.95, -2.95], ['cues', 2.0, 0.3, 'floor', 6], ['beanbag', -2.15, 0.9, 'floor', 0, { color: '#e2a33b' }], ['sodaCan', 1.2, -1.15, 'rail', 0, { color: '#d83a34' }], ['chalk', -1.19, 2.2, 'rail', 20]] },
+    decor: [['rug', 0, 0, 'floor', 0, { w: 3.6, d: 5.8, a: '#9c3b2f', b: '#e3c48c' }], ['dartboard', -1.55, -3.1], ['plant', 1.95, -2.95], ['cues', 2.0, 0.3, 'floor', 6], ['beanbag', -2.15, 0.9, 'floor', 0, { color: '#e2a33b' }], ['sodaCan', 1.2, -1.15, 'rail', 0, { color: '#d83a34' }], ['chalk', -1.19, 2.2, 'rail', 20], ['armchair', -2.25, -1.4, 'floor', 70, { color: '#7a3b2e' }], ['big', 2.05, -1.3, 'floor', 10, { kind: 'boardGame', w: 0.5, d: 0.36, h: 0.07 }], ['big', -1.2, -0.75, 'rail', 0, { kind: 'rootBeer', r: 0.035, h: 0.17 }]] },
   diner: { place: 'Diner', floor: { pattern: 'checker', base: '#f4eee2', alt: '#8fd0c0' }, felt: '#c8413c', rail: '#f3ead7', accent: '#2e8fd1', zone: 'spill',
-    decor: [['stool', 1.95, -1.3, 'floor', 0, { color: '#d9473f' }], ['stool', 1.95, 0.7, 'floor', 0, { color: '#d9473f' }], ['stool', -1.95, -0.4, 'floor', 0, { color: '#d9473f' }], ['jukebox', 0, -3.25], ['bottle', 1.2, 2.17, 'rail', 0, { color: '#d8322b' }], ['bottle', 1.2, 1.98, 'rail', 0, { color: '#f2c12e' }], ['glass', -1.2, -2.18, 'rail', 0, { color: '#f4b2c6' }]] },
+    decor: [['stool', 1.95, -1.3, 'floor', 0, { color: '#d9473f' }], ['stool', 1.95, 0.7, 'floor', 0, { color: '#d9473f' }], ['stool', -1.95, -0.4, 'floor', 0, { color: '#d9473f' }], ['jukebox', 0, -3.25], ['bottle', 1.2, 2.17, 'rail', 0, { color: '#d8322b' }], ['bottle', 1.2, 1.98, 'rail', 0, { color: '#f2c12e' }], ['glass', -1.2, -2.18, 'rail', 0, { color: '#f4b2c6' }], ['big', -1.2, 0.75, 'rail', 0, { kind: 'ketchup', r: 0.035, h: 0.16 }], ['big', 1.2, -0.75, 'rail', 0, { kind: 'milkshake', r: 0.045, h: 0.2 }], ['big', -2.0, -1.5, 'floor', 0, { kind: 'milkshake', r: 0.16, h: 0.7 }]] },
   garage: { place: 'Garage', floor: { pattern: 'concrete', base: '#b9b8b2', alt: '#a9a8a2' }, felt: '#2c6fba', rail: '#5b3a25', accent: '#e04a2f', zone: 'spill',
-    decor: [['tires', -1.8, -2.95], ['cone', 1.95, -2.75], ['gasCan', 2.05, 0.6, 'floor', -20], ['toolboxDecor', -2.05, 0.8, 'floor', 80], ['sodaCan', 1.2, 2.18, 'rail', 0, { color: '#2a6fd6' }], ['wrench', -1.19, -1.1, 'rail', 80]] },
+    decor: [['tires', -1.8, -2.95], ['cone', 1.95, -2.75], ['gasCan', 2.05, 0.6, 'floor', -20], ['toolboxDecor', -2.05, 0.8, 'floor', 80], ['sodaCan', 1.2, 2.18, 'rail', 0, { color: '#2a6fd6' }], ['wrench', -1.19, -1.1, 'rail', 80], ['big', 2.05, -1.3, 'floor', 0, { kind: 'paintCan', r: 0.14, h: 0.3, color: '#36b37e' }], ['big', -2.1, -1.4, 'floor', 0, { kind: 'tire', r: 0.32 }], ['crate', 2.1, 1.7, 'floor', 20]] },
   patio: { place: 'Backyard patio', floor: { pattern: 'deck', base: '#bb895c', alt: '#a8774c', seam: '#6e4a2c' }, felt: '#3c9a5f', rail: '#f1e8d6', accent: '#f08a3c', zone: 'rug',
-    decor: [['planter', -1.95, -2.85], ['planter', 1.95, -2.85], ['grill', 2.1, 0.3], ['umbrella', -2.15, 0.2, 'floor', 0, { a: '#f08a3c', b: '#fff6e6' }], ['glass', 1.2, 2.18, 'rail', 0, { color: '#f7e27a' }]] },
+    decor: [['planter', -1.95, -2.85], ['planter', 1.95, -2.85], ['grill', 2.1, 0.3], ['umbrella', -2.15, 0.2, 'floor', 0, { a: '#f08a3c', b: '#fff6e6' }], ['glass', 1.2, 2.18, 'rail', 0, { color: '#f7e27a' }], ['big', 2.05, -1.4, 'floor', 0, { kind: 'flowerPot', r: 0.2 }], ['big', -1.2, -1.0, 'rail', 0, { kind: 'lemonade', r: 0.05, h: 0.15 }], ['armchair', -2.2, -1.7, 'floor', 60, { color: '#f1e8d6' }]] },
   boardwalk: { place: 'Beach boardwalk', floor: { pattern: 'sand', base: '#ecd8a6', alt: '#dcc590' }, felt: '#1e9cb8', rail: '#f7f0e2', accent: '#ff6b57', zone: 'towel',
-    decor: [['umbrella', 1.95, -2.6, 'floor', 0, { a: '#ff6b57', b: '#fff6e6' }], ['beachBall', -1.8, -2.85], ['towelDecor', -2.05, 0.4, 'floor', 8], ['bucket', 1.95, 0.9], ['starfish', 2.05, -0.8, 'floor', 20], ['glass', 1.2, 2.18, 'rail', 0, { color: '#ff9f43' }]] },
+    decor: [['umbrella', 1.95, -2.6, 'floor', 0, { a: '#ff6b57', b: '#fff6e6' }], ['beachBall', -1.8, -2.85], ['towelDecor', -2.05, 0.4, 'floor', 8], ['bucket', 1.95, 0.9], ['starfish', 2.05, -0.8, 'floor', 20], ['glass', 1.2, 2.18, 'rail', 0, { color: '#ff9f43' }], ['big', -2.1, -1.4, 'floor', 15, { kind: 'cooler', w: 0.5, d: 0.34, h: 0.36 }], ['big', -1.2, -1.2, 'rail', 0, { kind: 'lemonade', r: 0.05, h: 0.15 }], ['big', 2.1, 1.8, 'floor', 0, { kind: 'sandBucket', r: 0.15 }]] },
   cabin: { place: 'Ski cabin', floor: { pattern: 'planks', base: '#c18c5f', alt: '#b07d52', seam: '#7a5132', wide: true }, felt: '#b5373d', rail: '#6a3c20', accent: '#2f7d4f', zone: 'rug',
-    decor: [['rug', 0, 0, 'floor', 0, { w: 3.6, d: 5.8, a: '#2f5d43', b: '#e8dcc4' }], ['firewood', -1.9, -2.8], ['pine', 1.95, -2.95], ['skis', 2.05, 0.2, 'floor', 4], ['lantern', 1.2, -2.18, 'rail'], ['mugDecor', -1.2, 2.18, 'rail', 0, { color: '#c9423a' }]] },
+    decor: [['rug', 0, 0, 'floor', 0, { w: 3.6, d: 5.8, a: '#2f5d43', b: '#e8dcc4' }], ['firewood', -1.9, -2.8], ['pine', 1.95, -2.95], ['skis', 2.05, 0.2, 'floor', 4], ['lantern', 1.2, -2.18, 'rail'], ['mugDecor', -1.2, 2.18, 'rail', 0, { color: '#c9423a' }], ['armchair', -2.2, -1.0, 'floor', 75, { color: '#9e2b2b' }], ['big', 2.05, -1.4, 'floor', 0, { kind: 'logStack', w: 0.55, d: 0.3 }]] },
   dorm: { place: 'College dorm', floor: { pattern: 'carpet', base: '#a6b0ca', alt: '#98a2bd' }, felt: '#6c4fc2', rail: '#f3ead7', accent: '#ff5d8f', zone: 'spill',
-    decor: [['beanbag', -2.0, -2.5, 'floor', 0, { color: '#ff8a3d' }], ['lavaLamp', 1.95, -2.7], ['pizzaDecor', 2.05, 0.6, 'floor', 12], ['fridge', -2.1, 0.8], ['sodaCan', 1.2, 2.18, 'rail', 0, { color: '#36b37e' }], ['sodaCan', -1.2, -2.16, 'rail', 0, { color: '#d83a34' }]] },
+    decor: [['beanbag', -2.0, -2.5, 'floor', 0, { color: '#ff8a3d' }], ['lavaLamp', 1.95, -2.7], ['pizzaDecor', 2.05, 0.6, 'floor', 12], ['fridge', -2.1, 0.8], ['sodaCan', 1.2, 2.18, 'rail', 0, { color: '#36b37e' }], ['sodaCan', -1.2, -2.16, 'rail', 0, { color: '#d83a34' }], ['big', 2.0, -1.3, 'floor', 30, { kind: 'laptop', w: 0.42, d: 0.3 }], ['big', -1.2, -0.8, 'rail', 0, { kind: 'ramen', r: 0.04, h: 0.08 }], ['crate', -2.15, -1.5, 'floor', -10]] },
   rooftop: { place: 'Rooftop bar', floor: { pattern: 'tiles', base: '#cbc5b9', alt: '#bdb6a9', seam: '#e8e3d8' }, felt: '#2b8b63', rail: '#3d2a1f', accent: '#ffb347', zone: 'rug',
-    decor: [['planter', -1.95, -2.9], ['lightPost', 2.0, -2.8], ['lightPost', -2.1, 1.2], ['stool', 2.0, 0.6, 'floor', 0, { color: '#3d2a1f' }], ['glass', 1.2, 2.18, 'rail', 0, { color: '#ff7a59' }]] },
+    decor: [['planter', -1.95, -2.9], ['lightPost', 2.0, -2.8], ['lightPost', -2.1, 1.2], ['stool', 2.0, 0.6, 'floor', 0, { color: '#3d2a1f' }], ['glass', 1.2, 2.18, 'rail', 0, { color: '#ff7a59' }], ['big', 2.05, -1.4, 'floor', 0, { kind: 'succulent', w: 0.5, d: 0.26, h: 0.3 }], ['big', -2.1, -1.0, 'floor', 80, { kind: 'speaker', w: 0.4, d: 0.24, h: 0.22 }]] },
   bowling: { place: 'Bowling alley lounge', floor: { pattern: 'lanes', base: '#e3c08d', alt: '#d8b27c', seam: '#b98f58' }, felt: '#d24f6e', rail: '#f3ead7', accent: '#3a7bd5', zone: 'spill',
-    decor: [['pins', -1.85, -2.9], ['bowlingBall', 1.9, -2.6, 'floor', 0, { color: '#3a7bd5' }], ['ballReturn', 2.1, 0.4], ['sodaCan', 1.2, 2.18, 'rail', 0, { color: '#f2c12e' }]] },
+    decor: [['pins', -1.85, -2.9], ['bowlingBall', 1.9, -2.6, 'floor', 0, { color: '#3a7bd5' }], ['ballReturn', 2.1, 0.4], ['sodaCan', 1.2, 2.18, 'rail', 0, { color: '#f2c12e' }], ['big', -2.05, -1.2, 'floor', 30, { kind: 'bowlingShoe', w: 0.32, d: 0.13 }], ['big', -1.85, -0.9, 'floor', 10, { kind: 'bowlingShoe', w: 0.32, d: 0.13 }], ['big', 2.0, -1.5, 'floor', 0, { kind: 'bowlingBall', r: 0.2, color: '#e2483c' }]] },
   casino: { place: 'Casino lounge', floor: { pattern: 'casino', base: '#e2c38f', alt: '#9e2632', seam: '#1d2b4f' }, felt: '#1f7a4c', rail: '#ffc93c', railMetal: true, body: '#3a1c12', accent: '#e8b923', zone: 'rug', glow: '#ffcf87',
     decor: [['slotMachine', -1.85, -2.95, 'floor', 8], ['slotMachine', -1.05, -3.15, 'floor', -4], ['stool', 2.0, -1.2, 'floor', 0, { color: '#9e2632' }], ['stool', 2.0, 0.8, 'floor', 0, { color: '#9e2632' }],
-      ['chipStacks', 1.2, 2.17, 'rail', 15], ['dice', -1.2, -2.18, 'rail', 25], ['chipStacks', -1.21, 1.2, 'rail', -30], ['plant', 1.95, -2.95]] },
+      ['chipStacks', 1.2, 2.17, 'rail', 15], ['dice', -1.2, -2.18, 'rail', 25], ['chipStacks', -1.21, 1.2, 'rail', -30], ['plant', 1.95, -2.95], ['big', 2.05, -0.2, 'floor', 0, { kind: 'roulette', r: 0.28 }], ['big', 1.2, -0.9, 'rail', 15, { kind: 'cardDeck', w: 0.1, d: 0.12 }]] },
   playroom: { place: "Kids' playroom", floor: { pattern: 'foam', base: '#f6ead3', alt: '#8fd0c0', seam: '#ffd166', more: ['#f28fad', '#9bb7f0'] }, felt: '#4f7fe0', rail: '#ffd166', body: '#f28fad', accent: '#ff6b57', zone: 'rug',
-    decor: [['toyBlocks', -1.9, -2.85, 'floor', 12], ['teddy', 1.95, -2.75, 'floor', -20], ['duck', 1.2, 2.17, 'rail', -30], ['toyBlocks', 2.05, 0.7, 'floor', 40], ['beanbag', -2.1, 0.6, 'floor', 0, { color: '#8fd0c0' }]] },
+    decor: [['toyBlocks', -1.9, -2.85, 'floor', 12], ['teddy', 1.95, -2.75, 'floor', -20], ['duck', 1.2, 2.17, 'rail', -30], ['toyBlocks', 2.05, 0.7, 'floor', 40], ['beanbag', -2.1, 0.6, 'floor', 0, { color: '#8fd0c0' }], ['big', -2.05, -1.4, 'floor', 0, { kind: 'stackRings', r: 0.2 }], ['big', 2.05, -1.3, 'floor', -30, { kind: 'rubberDuck', r: 0.2 }]] },
 };
 
 /* =========================== demo levels =========================== */
@@ -554,22 +571,23 @@ const NEW_LEVELS = [
   { title: 'Crosswind', theme: 'garage', goal: { type: 'count', count: 2 }, cueStart: [0, 1.3],
     balls: [{ number: 4, pos: [0.55, -1.55] }, { number: 6, pos: [0.72, -0.25] }, { number: 11, pos: [-0.35, -1.15] }],
     obstacles: [{ kind: 'fan', shape: 'circle', pos: [-0.84, -0.75], radius: 0.1, rotation: 0, strength: 1, range: 1.5, spread: 30 },
-      { kind: 'sodaCan', shape: 'circle', pos: [0.2, -0.45], radius: 0.06 }],
+      { kind: 'sodaCan', shape: 'circle', pos: [0.2, -0.45], radius: 0.06 }, { kind: 'tire', shape: 'circle', pos: [0.62, 0.55], radius: 0.1 }, { kind: 'paintCan', shape: 'circle', pos: [-0.62, 0.2], radius: 0.06 }],
     slowZones: [{ kind: 'spill', shape: 'circle', pos: [-0.3, 0.75], radius: 0.22 }], camera: { tilt: 58, rotation: -6, zoom: 1 } },
   { title: 'Moving Day', theme: 'dorm', goal: { type: 'specific', balls: [8] }, cueStart: [-0.2, 1.3],
     balls: [{ number: 8, pos: [0.5, -1.4] }, { number: 3, pos: [-0.5, -1.0] }, { number: 12, pos: [-0.55, 0.35] }],
     obstacles: [{ kind: 'movable', model: 'box', shape: 'box', pos: [0.8, -1.8], size: [0.26, 0.26], rotation: 45, height: 0.16, mass: 3 },
       { kind: 'movable', model: 'box', shape: 'box', pos: [0.15, -0.35], size: [0.24, 0.24], rotation: 15, height: 0.16, mass: 2 },
-      { kind: 'pizzaBox', shape: 'box', pos: [-0.6, -1.6], size: [0.3, 0.3], rotation: -10 }],
+      { kind: 'pizzaBox', shape: 'box', pos: [-0.6, -1.6], size: [0.3, 0.3], rotation: -10 }, { kind: 'laptop', shape: 'box', pos: [0.55, 0.55], size: [0.26, 0.18], rotation: -15 }, { kind: 'ramen', shape: 'circle', pos: [-0.15, 0.8], radius: 0.05 }],
     slowZones: [], camera: { tilt: 58, rotation: 8, zoom: 1 } },
   { title: 'Diamond Lights', theme: 'casino', goal: { type: 'count', count: 3 }, cueStart: [0, 1.3],
     balls: [{ number: 1, pos: [-0.62, -1.5] }, { number: 9, pos: [0.62, -1.5] }, { number: 2, pos: [0, -1.35] }, { number: 10, pos: [-0.74, 0.5] }, { number: 3, pos: [0.76, 0.66] }],
     obstacles: [{ kind: 'bumper', shape: 'circle', pos: [0, -0.8], radius: 0.14, kick: 1.5 }, { kind: 'bumper', shape: 'circle', pos: [-0.48, -0.3], radius: 0.14, kick: 1.5 },
-      { kind: 'bumper', shape: 'circle', pos: [0.48, -0.3], radius: 0.14, kick: 1.5 }, { kind: 'bumper', shape: 'circle', pos: [0, 0.2], radius: 0.14, kick: 1.5 }],
+      { kind: 'bumper', shape: 'circle', pos: [0.48, -0.3], radius: 0.14, kick: 1.5 }, { kind: 'bumper', shape: 'circle', pos: [0, 0.2], radius: 0.14, kick: 1.5 },
+      { kind: 'cardDeck', shape: 'box', pos: [-0.62, 1.0], size: [0.1, 0.14], rotation: 20 }, { kind: 'roulette', shape: 'circle', pos: [0.62, 1.05], radius: 0.1 }],
     slowZones: [], camera: { tilt: 60, rotation: 0, zoom: 1 } },
   { title: 'Gentle Grade', theme: 'patio', goal: { type: 'stripes', balls: [9, 14] }, cueStart: [0.2, 1.35], slope: { direction: 180, amount: 0.2 },
     balls: [{ number: 9, pos: [0.35, -1.25] }, { number: 14, pos: [-0.45, 0.15] }, { number: 2, pos: [-0.15, -1.0] }, { number: 6, pos: [0.55, -0.25] }],
-    obstacles: [{ kind: 'umbrella', shape: 'circle', pos: [0, 0], radius: 0.05 }, { kind: 'plant', shape: 'circle', pos: [-0.62, 0.95], radius: 0.13 }],
+    obstacles: [{ kind: 'umbrella', shape: 'circle', pos: [0, 0], radius: 0.05 }, { kind: 'plant', shape: 'circle', pos: [-0.62, 0.95], radius: 0.13 }, { kind: 'flowerPot', shape: 'circle', pos: [0.62, -0.95], radius: 0.09 }, { kind: 'lemonade', shape: 'circle', pos: [-0.65, -0.55], radius: 0.07 }],
     slowZones: [{ kind: 'water', shape: 'circle', pos: [0.3, 0.55], radius: 0.24 }], camera: { tilt: 58, rotation: 6, zoom: 1 } },
   { title: 'Book Jump', theme: 'basement', goal: { type: 'colors', balls: [3] }, cueStart: [0.2, 1.35],
     balls: [{ number: 3, pos: [-0.45, -1.45] }, { number: 7, pos: [0.55, -1.25] }, { number: 13, pos: [-0.62, 0.45] }],
@@ -580,13 +598,13 @@ const NEW_LEVELS = [
         { kind: 'lamp', shape: 'circle', pos: [0.72, 0.62], radius: 0.09 },
         { kind: 'book', shape: 'box', pos: [-0.68, 1.05], size: [0.2, 0.27], rotation: 18 },
         { kind: 'book', shape: 'box', pos: [0.2, -1.62], size: [0.27, 0.2], rotation: -12 },
-        { kind: 'book', shape: 'box', pos: [-0.75, -0.95], size: [0.2, 0.27], rotation: 30 }]),
+        { kind: 'book', shape: 'box', pos: [-0.75, -0.95], size: [0.2, 0.27], rotation: 30 }, { kind: 'rootBeer', shape: 'circle', pos: [0.6, 1.0], radius: 0.045 }, { kind: 'boardGame', shape: 'box', pos: [-0.3, 0.88], size: [0.3, 0.22], rotation: 8 }]),
     slowZones: [], camera: { tilt: 56, rotation: -8, zoom: 1 } },
   { title: 'Sea Breeze', theme: 'boardwalk', goal: { type: 'count', count: 2 }, cueStart: [0, 1.35],
     balls: [{ number: 7, pos: [-0.55, -1.35] }, { number: 13, pos: [0.45, -1.55] }, { number: 4, pos: [-0.35, 0.25] }, { number: 15, pos: [0.65, 0.5] }],
     obstacles: [{ kind: 'fan', shape: 'circle', pos: [0.86, -0.55], radius: 0.1, rotation: 180, strength: 1.1, range: 1.6, spread: 28, sweep: 35 },
       { kind: 'movable', model: 'beachBall', shape: 'circle', pos: [0.05, -0.75], radius: 0.11, height: 0.22, mass: 0.35, bouncy: true },
-      { kind: 'sandcastle', shape: 'circle', pos: [-0.5, -0.65], radius: 0.1 }],
+      { kind: 'sandcastle', shape: 'circle', pos: [-0.5, -0.65], radius: 0.1 }, { kind: 'sandBucket', shape: 'circle', pos: [-0.7, 0.85], radius: 0.08 }, { kind: 'cooler', shape: 'box', pos: [0.7, -0.15], size: [0.16, 0.24], rotation: 0 }],
     slowZones: [{ kind: 'towel', shape: 'box', pos: [0.45, 1.0], size: [0.4, 0.5], rotation: 10 }], camera: { tilt: 56, rotation: 10, zoom: 1 } },
   { title: 'Rail Runner', theme: 'casino', felt: '#a3182b', goal: { type: 'order', balls: [1, 2] }, cueStart: [0.25, 1.35],
     balls: [{ number: 1, pos: [-0.35, -1.15] }, { number: 2, pos: [0.45, -0.55] }, { number: 11, pos: [0.15, -1.6] }, { number: 15, pos: [-0.6, 0.55] }],
@@ -600,25 +618,25 @@ const NEW_LEVELS = [
   { title: 'Black Ice', theme: 'cabin', surface: 'ice', goal: { type: 'colors', balls: [2, 6] }, cueStart: [-0.4, 1.35], slope: { direction: 0, amount: 0.55 },
     balls: [{ number: 2, pos: [-0.45, -1.0] }, { number: 6, pos: [-0.25, 0.35] }, { number: 7, pos: [0.15, -1.55] }],
     obstacles: [{ kind: 'movable', model: 'puck', shape: 'circle', pos: [-0.1, -0.4], radius: 0.08, height: 0.04, mass: 0.6, friction: 0.25 },
-      { kind: 'cocoaMug', shape: 'circle', pos: [-0.62, -0.3], radius: 0.1 }],
+      { kind: 'cocoaMug', shape: 'circle', pos: [-0.62, -0.3], radius: 0.1 }, { kind: 'lantern', shape: 'circle', pos: [0.65, 0.95], radius: 0.06 }, { kind: 'logStack', shape: 'box', pos: [-0.7, 1.0], size: [0.28, 0.14], rotation: 10 }],
     slowZones: [], camera: { tilt: 58, rotation: 8, zoom: 1 } },
   { title: 'Updraft', theme: 'rooftop', goal: { type: 'specific', balls: [1, 5], text: 'Sink only the solids.' }, cueStart: [0, 1.3],
     balls: [{ number: 1, pos: [0.6, -1.5] }, { number: 5, pos: [-0.62, -0.45] }, { number: 12, pos: [0.25, -0.75] }],
     obstacles: [{ kind: 'ramp', shape: 'box', pos: [0, 0.6], size: [0.32, 0.24], rotation: 270, angle: 20 },
-      { kind: 'fan', shape: 'circle', pos: [-0.86, -1.0], radius: 0.1, rotation: 0, strength: 1, range: 1.5, spread: 30 }],
+      { kind: 'fan', shape: 'circle', pos: [-0.86, -1.0], radius: 0.1, rotation: 0, strength: 1, range: 1.5, spread: 30 }, { kind: 'succulent', shape: 'box', pos: [0.65, 1.0], size: [0.2, 0.2], rotation: 0 }, { kind: 'speaker', shape: 'box', pos: [-0.62, 0.9], size: [0.1, 0.18], rotation: 12 }],
     slowZones: [], camera: { tilt: 58, rotation: 0, zoom: 1 } },
   { title: 'Bouncy Castle', theme: 'playroom', goal: { type: 'count', count: 2 }, cueStart: [0, 1.3],
     balls: [{ number: 9, pos: [-0.42, -1.2] }, { number: 4, pos: [0.42, -1.3] }, { number: 13, pos: [0, -1.7] }],
     obstacles: [{ kind: 'toyWall', shape: 'box', pos: [0, -0.45], size: [1.6, 0.1], rotation: 0, height: 0.12 },
       { kind: 'trampoline', shape: 'circle', pos: [-0.3, 0.05], radius: 0.1, bounce: 1.3 }, { kind: 'trampoline', shape: 'circle', pos: [0.3, 0.05], radius: 0.1, bounce: 1.3 },
-      { kind: 'teddy', shape: 'circle', pos: [-0.68, 0.8], radius: 0.13 }],
+      { kind: 'teddy', shape: 'circle', pos: [-0.68, 0.8], radius: 0.13 }, { kind: 'stackRings', shape: 'circle', pos: [0.7, 0.3], radius: 0.08 }, { kind: 'rubberDuck', shape: 'circle', pos: [0.62, 1.05], radius: 0.07 }],
     slowZones: [], camera: { tilt: 58, rotation: 0, zoom: 1 } },
   { title: 'Chip Hop', theme: 'casino', goal: { type: 'specific', balls: [8] }, cueStart: [0, 1.3],
     balls: [{ number: 8, pos: [0.12, -1.55] }, { number: 3, pos: [-0.55, -1.3] }, { number: 10, pos: [0.62, 0.45] }],
     // a little forest of chip stacks, all different heights
     obstacles: [[-0.82, -0.55, 6], [-0.55, -0.72, 11], [-0.28, -0.5, 4], [-0.05, -0.82, 13], [0.22, -0.55, 7], [0.48, -0.78, 10], [0.78, -0.6, 5],
       [-0.75, -0.98, 9], [-0.38, -1.0, 5], [0.18, -1.05, 8], [0.62, -1.05, 12]].map(([x, z, n]) => ({ kind: 'chipStack', shape: 'circle', pos: [x, z], radius: 0.085, height: Math.round(n * 12) / 1000 }))
-      .concat([{ kind: 'bumper', shape: 'circle', pos: [-0.2, -0.15], radius: 0.09, kick: 1, pop: 1.2 }, { kind: 'bumper', shape: 'circle', pos: [0.22, -0.1], radius: 0.09, kick: 1, pop: 1.2 }]),
+      .concat([{ kind: 'bumper', shape: 'circle', pos: [-0.2, -0.15], radius: 0.09, kick: 1, pop: 1.2 }, { kind: 'bumper', shape: 'circle', pos: [0.22, -0.1], radius: 0.09, kick: 1, pop: 1.2 }, { kind: 'cardDeck', shape: 'box', pos: [0.6, 1.0], size: [0.1, 0.14], rotation: -25 }, { kind: 'roulette', shape: 'circle', pos: [-0.65, 0.8], radius: 0.1 }]),
     slowZones: [], camera: { tilt: 60, rotation: 4, zoom: 1 } },
   { title: 'High Roller', theme: 'casino', felt: '#a3182b', goal: { type: 'last', last: 8 }, cueStart: [0, 1.3], slope: { direction: 90, amount: 0.18 },
     balls: [{ number: 8, pos: [0, -0.95] }, { number: 1, pos: [-0.6, -1.5] }, { number: 14, pos: [0.62, -1.4] }],
@@ -626,7 +644,7 @@ const NEW_LEVELS = [
       { kind: 'bumper', shape: 'circle', pos: [0, 0.25], radius: 0.1, kick: 1.4 },
       { kind: 'chipStack', shape: 'circle', pos: [-0.72, 0.55], radius: 0.07, height: 0.1 }, { kind: 'chipStack', shape: 'circle', pos: [0.74, 0.95], radius: 0.065, height: 0.06 },
       { kind: 'dice', shape: 'box', pos: [0.62, 0.5], size: [0.09, 0.09], rotation: 20 }, { kind: 'dice', shape: 'box', pos: [-0.6, -0.8], size: [0.09, 0.09], rotation: -15 },
-      { kind: 'cocktail', shape: 'circle', pos: [0.75, -0.05], radius: 0.05 }],
+      { kind: 'cocktail', shape: 'circle', pos: [0.75, -0.05], radius: 0.05 }, { kind: 'roulette', shape: 'circle', pos: [-0.3, 1.0], radius: 0.1 }],
     slowZones: [], camera: { tilt: 60, rotation: -4, zoom: 1 } },
 ];
 
@@ -717,7 +735,7 @@ const Sound = (() => {
         unmuter.loop = true; unmuter.setAttribute('playsinline', ''); unmuter.setAttribute('x-webkit-airplay', 'deny'); unmuter.preload = 'auto';
         // if something else (another app's music, a call, a video) pauses our track, our audio was taken away:
         // rebuild everything on the next touch
-        unmuter.addEventListener('pause', () => { if (!ourPause && settings.sound) rebuildPending = true; });
+        unmuter.addEventListener('pause', () => { if (!ourPause && (settings.sound || settings.music)) rebuildPending = true; });
         unmuter.style.display = 'none'; document.body.appendChild(unmuter);
       }
       if (on) { const p = unmuter.play(); if (p && p.catch) p.catch(() => {}); } else { ourPause = true; unmuter.pause(); ourPause = false; }
@@ -726,14 +744,14 @@ const Sound = (() => {
     } catch (e) {}
   }
   // Coming back from another app: iOS leaves audio "interrupted"/"suspended" — wake everything up again
-  function wake() { if (!ac) return; if (settings.sound) mediaSession(true); if (ac.state !== 'running') { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } }
+  function wake() { if (!ac) return; if (settings.sound || settings.music) mediaSession(true); if (ac.state !== 'running') { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } }
   // After more than a moment in another app, iOS can leave the audio engine silently dead (it may even claim
   // to be "running"). So after a longer absence, throw it away and build a fresh one on the next tap.
   let hiddenAt = 0, rebuildPending = false;
   function rebuild() {
     rebuildPending = false; stopMusic();
     try { if (ac) { ac.onstatechange = null; ac.close(); } } catch (e) {}
-    ac = null; sfx = null; mus = null; lastClack = 0; lastThump = 0; // new engine = new clock
+    ac = null; sfx = null; mus = null; lastClack = 0; lastThump = 0; bufs.clear(); musNow = null; // new engine = new clock
     if (unmuter) { try { ourPause = true; unmuter.pause(); ourPause = false; URL.revokeObjectURL(unmuter.src); unmuter.remove(); } catch (e) {} unmuter = null; }
     // flip the page's audio session off and on so iOS hands the audio back to us
     try { if (navigator.audioSession) { navigator.audioSession.type = 'auto'; navigator.audioSession.type = 'playback'; } } catch (e) {}
@@ -745,7 +763,7 @@ const Sound = (() => {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { hiddenAt = performance.now(); return; }
     wake();
-    setTimeout(() => { if (ac && !document.hidden && (ac.state !== 'running' || (unmuter && unmuter.paused && settings.sound))) rebuildPending = true; }, 600);
+    setTimeout(() => { if (ac && !document.hidden && (ac.state !== 'running' || (unmuter && unmuter.paused && (settings.sound || settings.music)))) rebuildPending = true; }, 600);
   });
   addEventListener('pageshow', (e) => { wake(); if (e.persisted) setTimeout(() => { if (ac && ac.state !== 'running') rebuildPending = true; }, 600); });
   addEventListener('focus', wake);
@@ -753,16 +771,16 @@ const Sound = (() => {
   for (const ev of ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'click', 'keydown']) addEventListener(ev, () => {
     if (!ac) return;
     if (rebuildPending) rebuild();
-    else if (ac.state !== 'running' || (unmuter && unmuter.paused && settings.sound)) wake();
+    else if (ac.state !== 'running' || (unmuter && unmuter.paused && (settings.sound || settings.music))) wake();
   }, { capture: true, passive: true });
   function init() {
-    if (settings.sound) mediaSession(true);
+    if (settings.sound || settings.music) mediaSession(true);
     if (ac) { if (ac.state !== 'running') { const p = ac.resume(); if (p && p.catch) p.catch(() => {}); } return; }
     try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
     let wasRunning = false; // the engine dropping out after it had been playing = an interruption
     ac.onstatechange = () => { if (ac.state === 'running') wasRunning = true; else if (wasRunning) rebuildPending = true; };
     sfx = ac.createGain(); sfx.gain.value = settings.sound ? 0.9 : 0; sfx.connect(ac.destination);
-    mus = ac.createGain(); mus.gain.value = settings.music ? 0.5 : 0; mus.connect(ac.destination);
+    mus = ac.createGain(); mus.gain.value = settings.music ? MUSIC_VOLUME : 0; mus.connect(ac.destination);
     noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
     const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     if (settings.music) startMusic();
@@ -797,30 +815,51 @@ const Sound = (() => {
     chime(big) { if (!ok()) return; const t = ac.currentTime; const notes = big ? [72, 76, 79, 84, 88, 91] : [72, 76, 79, 84];
       notes.forEach((m, i) => { const f = 440 * 2 ** ((m - 69) / 12); tone(f, t + i * 0.085, 0.7, 0.16, 'sine'); tone(f * 2, t + i * 0.085, 0.3, 0.04, 'triangle'); }); },
     tap() { if (!ok()) return; tone(900, ac.currentTime, 0.04, 0.08, 'sine', 600); },
-    setSound(on) { mediaSession(on); if (sfx) sfx.gain.setTargetAtTime(on ? 0.9 : 0, ac.currentTime, 0.02); },
-    setMusic(on) { if (!ac) return; mus.gain.setTargetAtTime(on ? 0.5 : 0, ac.currentTime, 0.2); if (on) startMusic(); else stopMusic(); },
+    setSound(on) { mediaSession(on || settings.music); if (sfx) sfx.gain.setTargetAtTime(on ? 0.9 : 0, ac.currentTime, 0.02); },
+    setMusic(on) { mediaSession(on || settings.sound); if (!ac) return; mus.gain.setTargetAtTime(on ? MUSIC_VOLUME : 0, ac.currentTime, 0.2); if (on) startMusic(); else stopMusic(); },
   };
-  // Soft looping tune: lazy jazzy chords + plucked arpeggio, scheduled ahead of time.
-  const CHORDS = [[53, 57, 60, 64], [52, 55, 59, 62], [50, 53, 57, 60], [48, 52, 55, 59]];
-  const PLUCK = [0, 2, 1, 3, -1, 2, 1, -1, 0, 3, 2, 1, -1, 1, 3, -1];
-  const BEAT = 60 / 88 / 2; // eighth notes at 88 bpm
-  const mf = (m) => 440 * 2 ** ((m - 69) / 12);
-  function schedule() {
-    while (nextT < ac.currentTime + 0.25) {
-      const bar = Math.floor(step / 8) % 4, e = step % 8, ch = CHORDS[bar];
-      if (e === 0) {
-        ch.forEach(m => tone(mf(m), nextT, BEAT * 8.2, 0.035, 'triangle', 0, mus, 0.25));
-        tone(mf(ch[0] - 12), nextT, BEAT * 3.5, 0.09, 'sine', 0, mus, 0.02);
-      }
-      if (e === 4) tone(mf(ch[0] - 12 + 7), nextT, BEAT * 3, 0.06, 'sine', 0, mus, 0.02);
-      const p = PLUCK[(step + bar * 3) % 16];
-      if (p >= 0) tone(mf(ch[p] + 12), nextT, 0.45, 0.045, 'sine', 0, mus, 0.005);
-      if (e % 2 === 1) burst(nextT, 0.03, 0.02, 'highpass', 7000, 1, mus);
-      nextT += BEAT; step++;
-    }
+  // Music: the tracks in MUSIC_TRACKS, shuffled, each fading in and crossfading into the next.
+  // Only the playing track and the next one are kept decoded in memory.
+  let musOrder = [], musIdx = 0, musToken = 0, musTimer = null, musNow = null;
+  const bufs = new Map();
+  function loadBuf(url) {
+    if (bufs.has(url)) return bufs.get(url);
+    const p = fetch(url).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then(a => new Promise((res, rej) => ac.decodeAudioData(a, res, rej)));
+    bufs.set(url, p); p.catch(() => bufs.delete(url)); return p;
   }
-  function startMusic() { if (timer || !ac) return; nextT = ac.currentTime + 0.1; timer = setInterval(schedule, 60); }
-  function stopMusic() { clearInterval(timer); timer = null; }
+  const trackAt = (i) => MUSIC_TRACKS[musOrder[i % musOrder.length]];
+  async function playTrack(tok) {
+    const url = trackAt(musIdx); let buf;
+    try { buf = await loadBuf(url); } catch (e) { if (tok !== musToken) return; musIdx++; musTimer = setTimeout(() => playTrack(tok), 1500); return; }
+    if (tok !== musToken || !ac) return;
+    const src = ac.createBufferSource(), g = ac.createGain(), t = ac.currentTime + 0.05, X = Math.min(3, buf.duration / 4);
+    src.buffer = buf; src.connect(g); g.connect(mus);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + X);
+    g.gain.setValueAtTime(1, t + buf.duration - X); g.gain.linearRampToValueAtTime(0.0001, t + buf.duration);
+    src.start(t); musNow = { src, g };
+    musIdx++; if (musIdx % musOrder.length === 0) shuffleOrder(trackAt(musIdx - 1));
+    const next = trackAt(musIdx);
+    for (const k of [...bufs.keys()]) if (k !== url && k !== next) bufs.delete(k);
+    loadBuf(next).catch(() => {});
+    musTimer = setTimeout(() => { if (tok === musToken) playTrack(tok); }, Math.max(1000, (buf.duration - X) * 1000));
+  }
+  function shuffleOrder(avoidFirst) { // new random order; don't repeat the track that just played
+    musOrder = MUSIC_TRACKS.map((_, i) => i);
+    for (let i = musOrder.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [musOrder[i], musOrder[j]] = [musOrder[j], musOrder[i]]; }
+    if (musOrder.length > 1 && MUSIC_TRACKS[musOrder[0]] === avoidFirst) musOrder.push(musOrder.shift());
+    musIdx = 0;
+  }
+  function startMusic() {
+    if (!ac || musTimer !== null || !MUSIC_TRACKS.length) return;
+    if (!musOrder.length) shuffleOrder();
+    musTimer = 0; playTrack(++musToken);
+  }
+  function stopMusic() {
+    musToken++; clearTimeout(musTimer); musTimer = null;
+    if (musNow && ac) { const { src, g } = musNow; try { g.gain.cancelScheduledValues(ac.currentTime); g.gain.setTargetAtTime(0.0001, ac.currentTime, 0.25); src.stop(ac.currentTime + 1.5); } catch (e) {} }
+    musNow = null;
+  }
   return api;
 })();
 const haptic = (ms) => { try { if (settings.sound && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
@@ -854,6 +893,18 @@ const envTex = (() => {
   const t = new THREE.CanvasTexture(c); t.mapping = THREE.EquirectangularReflectionMapping; t.colorSpace = THREE.SRGBColorSpace;
   const pm = new THREE.PMREMGenerator(renderer); const out = pm.fromEquirectangular(t).texture; pm.dispose(); t.dispose(); return out;
 })();
+// A soft, bright "photo studio" room that every object reflects a little: gives things a smooth, glossy, toy-like look
+const roomEnv = (() => {
+  const rs = new THREE.Scene(), add = (geo, color, k, pos, rot) => { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })); m.material.color.multiplyScalar(k); m.position.set(...pos); if (rot) m.rotation.set(...rot); rs.add(m); };
+  add(new THREE.BoxGeometry(14, 8, 14), '#8c8780', 1, [0, 3, 0]);                       // walls
+  add(new THREE.PlaneGeometry(14, 14), '#b79c7c', 1, [0, -0.99, 0], [-Math.PI / 2, 0, 0]); // warm floor
+  add(new THREE.PlaneGeometry(6, 4), '#ffffff', 6, [0, 6.9, 0], [Math.PI / 2, 0, 0]);      // big ceiling softbox
+  add(new THREE.PlaneGeometry(3, 2.4), '#fff4e2', 4, [-6.9, 3, 1], [0, Math.PI / 2, 0]);   // window light
+  add(new THREE.PlaneGeometry(2.4, 2), '#e4ecff', 2.5, [6.9, 2.5, -2], [0, -Math.PI / 2, 0]);
+  const pm = new THREE.PMREMGenerator(renderer), t = pm.fromScene(rs, 0.04).texture; pm.dispose(); return t;
+})();
+scene.environment = roomEnv; scene.environmentIntensity = 0.55;
+hemi.intensity = 0.95;
 const fill = new THREE.DirectionalLight('#dfe9ff', 0.45);
 fill.position.set(3, 4, -3); scene.add(fill);
 
@@ -863,7 +914,7 @@ function cached(key, make) { let g = geoCache.get(key); if (!g) { g = make(); ge
 function mat(color, rough = 0.62, extra = null) {
   const key = color + '|' + rough + (extra ? JSON.stringify(Object.keys(extra).map(k => [k, extra[k] && extra[k].isTexture ? extra[k].uuid : extra[k]])) : '');
   let m = matCache.get(key);
-  if (!m) { m = new THREE.MeshStandardMaterial(Object.assign({ color, roughness: rough, metalness: 0 }, extra || {})); matCache.set(key, m); }
+  if (!m) { m = new THREE.MeshStandardMaterial(Object.assign({ color, roughness: rough >= 0.88 ? rough : rough * 0.8, metalness: 0 }, extra || {})); matCache.set(key, m); } // a touch glossier, but fabrics stay soft
   return m;
 }
 function mesh(geo, material, shadow = true) { const m = new THREE.Mesh(geo, material); m.castShadow = shadow; m.receiveShadow = true; return m; }
@@ -883,10 +934,10 @@ function extrudeY(shape, y0, y1, bevel = 0, curveSegments = 10) {
 function rbox(w, h, d, r = 0.02) {
   return cached(`rb${w}|${h}|${d}|${r}`, () => { const b = Math.min(r, h / 2.2, w / 3, d / 3); return extrudeY(rrShape(w - 2 * b, d - 2 * b, Math.max(r - b, 0.002)), 0, h, b, 8); });
 }
-function cyl(rt, rb, h, seg = 24, open = false) { return cached(`cy${rt}|${rb}|${h}|${seg}|${open}`, () => { const g = new THREE.CylinderGeometry(rt, rb, h, seg, 1, open); g.translate(0, h / 2, 0); return g; }); }
-function sph(r, w = 20, h = 14) { return cached(`sp${r}|${w}|${h}`, () => new THREE.SphereGeometry(r, w, h)); }
+function cyl(rt, rb, h, seg = 36, open = false) { return cached(`cy${rt}|${rb}|${h}|${seg}|${open}`, () => { const g = new THREE.CylinderGeometry(rt, rb, h, seg, 1, open); g.translate(0, h / 2, 0); return g; }); }
+function sph(r, w = 32, h = 22) { return cached(`sp${r}|${w}|${h}`, () => new THREE.SphereGeometry(r, w, h)); }
 function cone(r, h, seg = 20) { return cached(`co${r}|${h}|${seg}`, () => { const g = new THREE.ConeGeometry(r, h, seg); g.translate(0, h / 2, 0); return g; }); }
-function torus(r, t, rs = 10, ts = 24, arc = Math.PI * 2) { return cached(`to${r}|${t}|${arc}`, () => new THREE.TorusGeometry(r, t, rs, ts, arc)); }
+function torus(r, t, rs = 14, ts = 40, arc = Math.PI * 2) { return cached(`to${r}|${t}|${rs}|${ts}|${arc}`, () => new THREE.TorusGeometry(r, t, Math.max(rs, 12), Math.max(ts, 32), arc)); }
 function canvasTex(w, h, draw, repeat) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -1025,11 +1076,40 @@ function railHolePath(m) {
   }
   return new THREE.Path(pts);
 }
+// varnished wood: soft grain and a clear-coat shine (light, painted rails get the shine without grain)
+const woodCache = {}; let woodTexC = null, vignetteTexC = null;
+function woodTex() {
+  if (woodTexC) return woodTexC;
+  const rnd = mulberry(21);
+  woodTexC = canvasTex(256, 512, (c, W, H) => {
+    c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H);
+    for (let i = 0; i < 90; i++) { // long wavy grain lines running along the rails
+      const x = rnd() * W, a = 0.05 + rnd() * 0.1, w = 0.6 + rnd() * 2.2, ph = rnd() * 6.3, amp = 2 + rnd() * 6;
+      c.strokeStyle = `rgba(70,40,20,${a})`; c.lineWidth = w; c.beginPath();
+      for (let y = 0; y <= H; y += 8) { const xx = x + Math.sin(y / 70 + ph) * amp; y ? c.lineTo(xx, y) : c.moveTo(xx, y); } c.stroke();
+    }
+    for (let i = 0; i < 6; i++) { const g = c.createRadialGradient(0, 0, 1, 0, 0, 30); g.addColorStop(0, 'rgba(255,255,255,.12)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.save(); c.translate(rnd() * W, rnd() * H); c.scale(1, 4); c.fillStyle = g; c.fillRect(-30, -30, 60, 60); c.restore(); }
+  });
+  woodTexC.wrapS = woodTexC.wrapT = THREE.RepeatWrapping; woodTexC.repeat.set(0.9, 0.9);
+  return woodTexC;
+}
+function woodMat(color) {
+  if (woodCache[color]) return woodCache[color];
+  const hsl = {}; new THREE.Color(color).getHSL(hsl); const painted = hsl.l > 0.72;
+  return woodCache[color] = new THREE.MeshPhysicalMaterial({ color, map: painted ? null : woodTex(), roughness: painted ? 0.38 : 0.42, clearcoat: 0.65, clearcoatRoughness: 0.25 });
+}
+function vignetteTex() {
+  return vignetteTexC || (vignetteTexC = canvasTex(128, 256, (c, W, H) => {
+    const edge = (x0, y0, x1, y1) => { const g = c.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, 'rgba(0,0,0,.26)'); g.addColorStop(1, 'rgba(0,0,0,0)'); return g; };
+    c.fillStyle = edge(0, 0, W * 0.12, 0); c.fillRect(0, 0, W, H); c.fillStyle = edge(W, 0, W * 0.88, 0); c.fillRect(0, 0, W, H);
+    c.fillStyle = edge(0, 0, 0, H * 0.06); c.fillRect(0, 0, W, H); c.fillStyle = edge(0, H, 0, H * 0.94); c.fillRect(0, 0, W, H);
+  }));
+}
 function buildTable(th) {
   const g = new THREE.Group();
-  const railMat = th.railMetal ? mat(th.rail, 0.3, { metalness: 0.55, envMap: envTex, envMapIntensity: 1.8 }) : mat(th.rail, 0.55);
+  const railMat = th.railMetal ? mat(th.rail, 0.3, { metalness: 0.55, envMap: envTex, envMapIntensity: 1.8 }) : woodMat(th.rail);
   const feltMat = th.ice ? new THREE.MeshPhysicalMaterial({ map: iceTexture(), roughness: 0.14, clearcoat: 1, clearcoatRoughness: 0.06, envMap: envTex, envMapIntensity: 0.8 })
-    : mat('#ffffff', 0.92, { map: feltTexture(th.felt) });
+    : mat('#ffffff', 0.92, { map: feltTexture(th.felt), envMapIntensity: 0.35 }); // felt stays rich and matte
   // felt bed with pocket holes
   const bed = rrShape(2.4, 4.4, 0.1);
   for (const p of POCKETS) { const h = new THREE.Path(); h.absarc(p.x, p.z, p.vr, 0, Math.PI * 2, true); bed.holes.push(h); }
@@ -1045,8 +1125,19 @@ function buildTable(th) {
     g.add(mesh(extrudeY(s, 0, CUSH_H, 0.006, 4), cushMat));
   }
   // rail frame
-  const frame = rrShape(2.64, 4.64, 0.15); frame.holes.push(railHolePath(0.014));
-  g.add(mesh(extrudeY(frame, -0.34, RAIL_TOP, 0.014, 12), railMat));
+  const RB = 0.026; // generous rounded edge on the rails (the shape shrinks by the same amount so the outline stays put)
+  const frame = rrShape(2.64 - 2 * RB, 4.64 - 2 * RB, 0.15 - RB); frame.holes.push(railHolePath(0.014 + RB));
+  g.add(mesh(extrudeY(frame, -0.34, RAIL_TOP, RB, 12), railMat));
+  // pocket rims: a rounded lip around the back of each pocket (open toward the table so balls drop in freely)
+  const rimMat = th.railMetal ? railMat : new THREE.MeshPhysicalMaterial({ color: '#2a2019', roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.3 });
+  for (const p of POCKETS) {
+    const corner = Math.abs(p.z) > 1, arc = corner ? 3.9 : 3.3, away = Math.atan2(p.z, p.x * (corner ? 1 : 1)), R0 = p.vr + 0.014 + 0.006;
+    const rim = mesh(cached(`rim${R0}|${arc}`, () => { const q = new THREE.TorusGeometry(R0, 0.013, 12, 40, arc); q.rotateX(-Math.PI / 2); return q; }), rimMat);
+    rim.position.set(p.x, RAIL_TOP - 0.004, p.z); rim.rotation.y = -away - arc / 2; g.add(rim);
+  }
+  // felt shading: slightly darker toward the cushions, like a real table under a lamp
+  const vig = new THREE.Mesh(cached('feltVig', () => { const q = new THREE.PlaneGeometry(2.12, 4.12); q.rotateX(-Math.PI / 2); return q; }), new THREE.MeshBasicMaterial({ map: vignetteTex(), transparent: true, depthWrite: false }));
+  vig.position.y = 0.0007; vig.renderOrder = 1; g.add(vig);
   // pockets
   const pocketMat = new THREE.MeshBasicMaterial({ color: '#121212', side: THREE.BackSide });
   for (const p of POCKETS) {
@@ -1060,12 +1151,12 @@ function buildTable(th) {
   for (const x of [-0.5, 0, 0.5]) dots.push([x, 2.19], [x, -2.19]);
   for (const [x, z] of dots) { const d = mesh(cyl(0.016, 0.016, 0.006, 12), dMat, false); d.position.set(x, RAIL_TOP - 0.001, z); g.add(d); }
   // body + legs
-  const bodyMat = mat(shade(th.body || th.rail, -0.08), 0.6);
+  const bodyMat = woodMat(shade(th.body || th.rail, -0.08));
   const apron = mesh(rbox(2.48, 0.3, 4.48, 0.08), bodyMat); apron.position.y = -0.62; g.add(apron);
   const legH = -0.6 - FLOOR_Y;
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     const leg = mesh(rbox(0.3, legH, 0.3, 0.06), bodyMat); leg.position.set(sx * 0.98, FLOOR_Y, sz * 1.92); g.add(leg);
-    const foot = mesh(rbox(0.38, 0.08, 0.38, 0.04), mat(shade(th.body || th.rail, -0.16), 0.6)); foot.position.set(sx * 0.98, FLOOR_Y, sz * 1.92); g.add(foot);
+    const foot = mesh(rbox(0.38, 0.08, 0.38, 0.04), woodMat(shade(th.body || th.rail, -0.16))); foot.position.set(sx * 0.98, FLOOR_Y, sz * 1.92); g.add(foot);
   }
   return g;
 }
@@ -1239,6 +1330,162 @@ const OBST = {
     const pick = mesh(cyl(0.0015, 0.0015, 0.09, 4), mat('#d7262b', 0.4), false); pick.position.set(0, 0.12, 0); pick.rotation.z = 0.5; g.add(pick);
     return g;
   },
+  // ---- props for each room (two per place) ----
+  rootBeer(o) { // basement: brown glass bottle with a paper label
+    const r = o.r, h = (o.src && o.src.height) || OBST_H.rootBeer, g = new THREE.Group(), V = (x, y) => new THREE.Vector2(x, y);
+    const glass = new THREE.MeshPhysicalMaterial({ color: '#5a2e10', roughness: 0.08, clearcoat: 1, transparent: true, opacity: 0.9 });
+    g.add(mesh(cached(`rbB${r}|${h}`, () => new THREE.LatheGeometry([V(0, 0), V(r * 0.95, 0), V(r, h * 0.04), V(r, h * 0.55), V(r * 0.5, h * 0.78), V(r * 0.36, h * 0.84), V(r * 0.36, h * 0.97), V(0, h * 0.97)], 32)), glass));
+    const label = mesh(cyl(r * 1.012, r * 1.012, h * 0.24, 32, true), mat('#ffffff', 0.5, { map: labelTex('ROOT BEER', '#f3e2bd', '#7a2e12') })); label.position.y = h * 0.18; g.add(label);
+    const cap = mesh(cyl(r * 0.42, r * 0.42, h * 0.04, 20), mat('#d9b44a', 0.3, { metalness: 0.6 })); cap.position.y = h * 0.95; g.add(cap);
+    return g;
+  },
+  boardGame(o) { // basement: a board game box
+    const { w, d } = o, h = (o.src && o.src.height) || OBST_H.boardGame, g = new THREE.Group();
+    g.add(mesh(rbox(w, h, d, 0.01), mat('#c8392f', 0.5)));
+    const top = new THREE.Mesh(cached(`bgTop${w}|${d}`, () => { const q = new THREE.PlaneGeometry(w * 0.94, d * 0.94); q.rotateX(-Math.PI / 2); return q; }), new THREE.MeshStandardMaterial({ map: gameLidTex(), roughness: 0.45 }));
+    top.position.y = h + 0.0006; top.receiveShadow = true; g.add(top); return g;
+  },
+  ketchup(o) { // diner: squeeze bottle
+    const r = o.r, h = (o.src && o.src.height) || OBST_H.ketchup, g = new THREE.Group(), V = (x, y) => new THREE.Vector2(x, y);
+    g.add(mesh(cached(`ktB${r}|${h}`, () => new THREE.LatheGeometry([V(0, 0), V(r * 0.9, 0), V(r, h * 0.08), V(r, h * 0.66), V(r * 0.8, h * 0.76), V(0, h * 0.78)], 32)), mat('#d22c22', 0.25)));
+    const cap = mesh(cyl(r * 0.78, r * 0.82, h * 0.1, 28), mat('#fbf8ef', 0.3)); cap.position.y = h * 0.74; g.add(cap);
+    const tip = mesh(cone(r * 0.32, h * 0.18, 18), mat('#fbf8ef', 0.3)); tip.position.y = h * 0.83; g.add(tip);
+    const lab = mesh(cyl(r * 1.01, r * 1.01, h * 0.22, 32, true), mat('#ffffff', 0.4, { map: labelTex('KETCHUP', '#fbf8ef', '#d22c22') })); lab.position.y = h * 0.28; g.add(lab);
+    return g;
+  },
+  milkshake(o) { // diner: tall glass, pink shake, whipped cream and a cherry
+    const r = o.r, h = (o.src && o.src.height) || OBST_H.milkshake, g = new THREE.Group();
+    const glass = new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: 0.04, transparent: true, opacity: 0.3, clearcoat: 1, side: THREE.DoubleSide });
+    g.add(mesh(cyl(r * 0.55, r * 0.6, h * 0.08, 24), glass));
+    const stem = mesh(cyl(r * 0.16, r * 0.16, h * 0.14, 12), glass); stem.position.y = h * 0.08; g.add(stem);
+    const cup = mesh(cyl(r, r * 0.6, h * 0.6, 32, true), glass); cup.position.y = h * 0.2; g.add(cup);
+    const shake = mesh(cyl(r * 0.94, r * 0.58, h * 0.55, 32), mat('#f7a8c4', 0.5)); shake.position.y = h * 0.21; g.add(shake);
+    const cream = mesh(sph(r * 0.8), mat('#fffaf2', 0.6)); cream.scale.set(1, 0.6, 1); cream.position.y = h * 0.8; g.add(cream);
+    const cherry = mesh(sph(r * 0.22), mat('#c8102e', 0.2)); cherry.position.y = h * 0.95; g.add(cherry);
+    const straw = mesh(cyl(r * 0.07, r * 0.07, h * 0.6, 10), mat('#ffffff', 0.4, { map: getStripeTex('straw', ['#e2483c', '#ffffff'], 10) })); straw.position.set(r * 0.4, h * 0.45, 0); straw.rotation.z = -0.25; g.add(straw);
+    return g;
+  },
+  tire(o) { // garage: an old tire lying flat
+    const r = o.r, g = new THREE.Group(), rub = mat('#262626', 0.75);
+    const t = mesh(torus(r * 0.68, r * 0.3, 16, 40), rub); t.rotation.x = Math.PI / 2; t.position.y = r * 0.3; g.add(t);
+    const hub = mesh(cyl(r * 0.42, r * 0.42, r * 0.36, 28), mat('#b9bec4', 0.3, { metalness: 0.6, envMap: envTex })); hub.position.y = r * 0.12; g.add(hub);
+    for (let i = 0; i < 5; i++) { const n = mesh(cyl(r * 0.05, r * 0.05, r * 0.04, 10), mat('#7d838a', 0.3)); const a = i / 5 * Math.PI * 2; n.position.set(Math.cos(a) * r * 0.22, r * 0.48, Math.sin(a) * r * 0.22); g.add(n); }
+    return g;
+  },
+  paintCan(o) { // garage: a paint can with a drip
+    const r = o.r, h = (o.src && o.src.height) || OBST_H.paintCan, g = new THREE.Group(), col = (o.src && o.src.color) || '#3d8bd9';
+    g.add(mesh(cyl(r, r, h * 0.94, 36), mat('#ffffff', 0.35, { map: labelTex('PAINT', '#f3f1ec', col) })));
+    const lid = mesh(cyl(r * 0.98, r * 0.98, h * 0.06, 36), mat('#c9ced3', 0.3, { metalness: 0.6, envMap: envTex })); lid.position.y = h * 0.94; g.add(lid);
+    const blob = mesh(cyl(r * 0.6, r * 0.6, 0.004, 24), mat(col, 0.2), false); blob.position.y = h + 0.001; g.add(blob);
+    const drip = mesh(cached(`drip${r}|${h}`, () => { const q = new THREE.CapsuleGeometry(r * 0.12, h * 0.35, 6, 12); return q; }), mat(col, 0.2)); drip.position.set(r * 0.98, h * 0.72, 0); g.add(drip);
+    const handle = mesh(torus(r * 0.9, r * 0.03, 8, 30, Math.PI), mat('#9aa0a6', 0.3)); handle.position.y = h; g.add(handle);
+    return g;
+  },
+  flowerPot(o) { // patio: terracotta pot with flowers
+    const r = o.r, g = new THREE.Group(), h = r * 1.6;
+    g.add(mesh(cyl(r, r * 0.75, h * 0.7, 32), mat('#c8693e', 0.6)));
+    const lip = mesh(cyl(r * 1.06, r * 1.06, h * 0.12, 32), mat('#b85d34', 0.6)); lip.position.y = h * 0.62; g.add(lip);
+    const soil = mesh(cyl(r * 0.92, r * 0.92, 0.006, 24), mat('#4a3020', 1), false); soil.position.y = h * 0.72; g.add(soil);
+    const cols = ['#ff6b8b', '#ffd166', '#ff8a3d', '#b07cf0', '#ffffff'], leaf = mat('#3f9b55', 0.5);
+    for (let i = 0; i < 7; i++) { const a = i * 2.4, rr = r * (0.2 + (i % 3) * 0.22), y = h * (0.95 + (i % 3) * 0.12);
+      const st = mesh(cyl(r * 0.03, r * 0.03, y - h * 0.7, 6), leaf, false); st.position.set(Math.cos(a) * rr, h * 0.7, Math.sin(a) * rr); g.add(st);
+      const fl = mesh(sph(r * 0.17), mat(cols[i % cols.length], 0.45)); fl.scale.set(1, 0.6, 1); fl.position.set(Math.cos(a) * rr, y, Math.sin(a) * rr); g.add(fl);
+      const lf = mesh(sph(r * 0.16), leaf); lf.scale.set(1.5, 0.4, 0.7); lf.position.set(Math.cos(a + 1) * rr * 0.7, h * 0.8, Math.sin(a + 1) * rr * 0.7); lf.rotation.y = -a; g.add(lf); }
+    return g;
+  },
+  lemonade(o) { // patio: glass pitcher of lemonade
+    const r = o.r, h = (o.src && o.src.height) || OBST_H.lemonade, g = new THREE.Group();
+    const glass = new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: 0.04, transparent: true, opacity: 0.32, clearcoat: 1, side: THREE.DoubleSide });
+    g.add(mesh(cyl(r * 0.85, r, h, 32, true), glass)); g.add(mesh(cyl(r, r, 0.006, 32), glass));
+    const juice = mesh(cyl(r * 0.85, r * 0.97, h * 0.72, 32), new THREE.MeshPhysicalMaterial({ color: '#f8e27a', roughness: 0.1, transparent: true, opacity: 0.8 })); juice.position.y = 0.004; g.add(juice);
+    for (let i = 0; i < 3; i++) { const s = mesh(cyl(r * 0.3, r * 0.3, 0.008, 18), mat('#fff3a1', 0.4, { map: lemonTex() })); s.rotation.set(1.2 + i * 0.3, i, 0.4); s.position.set(Math.cos(i * 2.1) * r * 0.35, h * (0.3 + i * 0.15), Math.sin(i * 2.1) * r * 0.35); g.add(s); }
+    const handle = mesh(torus(h * 0.28, r * 0.08, 8, 24, Math.PI), glass); handle.rotation.z = -Math.PI / 2; handle.position.set(r * 0.92, h * 0.55, 0); g.add(handle);
+    return g;
+  },
+  sandBucket(o) { const g = DECOR.bucket(); g.scale.setScalar(o.r / 0.13); return g; }, // boardwalk
+  cooler(o) { // boardwalk: blue cooler with a white lid
+    const { w, d } = o, h = (o.src && o.src.height) || OBST_H.cooler, g = new THREE.Group();
+    g.add(mesh(rbox(w, h * 0.78, d, 0.025), mat('#2e8fd1', 0.35)));
+    const lid = mesh(rbox(w * 1.02, h * 0.2, d * 1.02, 0.02), mat('#fbf8ef', 0.3)); lid.position.y = h * 0.78; g.add(lid);
+    const hd = mesh(rbox(w * 0.5, h * 0.06, d * 0.14, 0.01), mat('#fbf8ef', 0.3)); hd.position.y = h; g.add(hd);
+    return g;
+  },
+  lantern(o) { const g = DECOR.lantern(); g.scale.setScalar(o.r / 0.055); return g; }, // cabin
+  logStack(o) { // cabin: three logs
+    const { w, d } = o, g = new THREE.Group(), long = w >= d, L = long ? w : d, D = long ? d : w, lr = D / 4.2, bark = mat('#6b4428', 0.85), cut = mat('#d9b07a', 0.7), row = new THREE.Group();
+    for (const [x, y] of [[-lr * 1.05, lr], [lr * 1.05, lr], [0, lr * 2.75]]) {
+      const l = mesh(cyl(lr, lr, L * 0.96, 18), bark); l.rotation.z = Math.PI / 2; l.position.set(L * 0.48, y, x); row.add(l);
+      for (const e of [-1, 1]) { const c = mesh(cyl(lr * 0.9, lr * 0.9, 0.004, 18), cut, false); c.rotation.z = Math.PI / 2; c.position.set(e * L * 0.481 + (e < 0 ? 0.002 : 0), y, x); row.add(c); }
+    }
+    if (!long) row.rotation.y = Math.PI / 2; g.add(row); return g;
+  },
+  laptop(o) { // dorm: open laptop
+    const { w, d } = o, g = new THREE.Group(), al = mat('#c9ced3', 0.25, { metalness: 0.5, envMap: envTex });
+    g.add(mesh(rbox(w, 0.014, d, 0.01), al));
+    const keys = mesh(rbox(w * 0.86, 0.002, d * 0.5, 0.004), mat('#2b2f36', 0.6), false); keys.position.set(0, 0.014, d * 0.08); g.add(keys);
+    const hinge = new THREE.Group(); hinge.position.set(0, 0.014, -d / 2); hinge.rotation.x = -1.82; g.add(hinge);
+    const lid = mesh(rbox(w, 0.01, d, 0.01), al); lid.position.z = d / 2; hinge.add(lid);
+    const scr = new THREE.Mesh(cached(`lapS${w}|${d}`, () => { const q = new THREE.PlaneGeometry(w * 0.9, d * 0.86); q.rotateX(Math.PI / 2); return q; }), new THREE.MeshStandardMaterial({ map: screenTex(), emissive: '#ffffff', emissiveMap: screenTex(), emissiveIntensity: 0.6, roughness: 0.2 }));
+    scr.position.set(0, -0.0008, d / 2); hinge.add(scr);
+    return g;
+  },
+  ramen(o) { // dorm: instant noodle cup
+    const r = o.r, h = (o.src && o.src.height) || OBST_H.ramen, g = new THREE.Group();
+    g.add(mesh(cyl(r, r * 0.78, h, 32), mat('#ffffff', 0.4, { map: labelTex('NOODLES', '#fbf8ef', '#e2483c') })));
+    const lid = mesh(cyl(r * 1.02, r * 1.02, 0.004, 32), mat('#e9e2d4', 0.3, { metalness: 0.3 })); lid.position.y = h; g.add(lid);
+    const flap = mesh(rbox(r * 0.6, 0.003, r * 0.4, 0.01), mat('#e9e2d4', 0.3), false); flap.position.set(0, h + 0.012, r * 0.9); flap.rotation.x = 0.6; g.add(flap);
+    for (const s of [-1, 1]) { const st = mesh(cyl(0.004, 0.005, r * 3, 8), mat('#d9b07a', 0.6)); st.rotation.z = Math.PI / 2 - 0.15; st.position.set(0, h + 0.012, s * 0.008); g.add(st); }
+    return g;
+  },
+  succulent(o) { // rooftop: concrete planter with succulents
+    const { w, d } = o, h = (o.src && o.src.height) || OBST_H.succulent, g = new THREE.Group();
+    g.add(mesh(rbox(w, h * 0.6, d, 0.02), mat('#b8b3aa', 0.8)));
+    const soil = mesh(rbox(w * 0.88, 0.004, d * 0.84, 0.01), mat('#5a4030', 1), false); soil.position.y = h * 0.6; g.add(soil);
+    const cols = ['#7fb38a', '#9cc6a0', '#6a9e7d', '#c7a3c9'];
+    for (let i = 0; i < 5; i++) { const sx = -w * 0.3 + (i % 3) * w * 0.3, sz = i < 3 ? -d * 0.18 : d * 0.18, rosette = new THREE.Group();
+      for (let k = 0; k < 7; k++) { const lf = mesh(cone(0.016, 0.06, 10), mat(cols[(i + k) % 4], 0.45)); lf.rotation.set(0.9, k * 0.9, 0); lf.position.set(Math.sin(k * 0.9) * 0.014, 0.01, Math.cos(k * 0.9) * 0.014); rosette.add(lf); }
+      rosette.position.set(sx + (i === 4 ? w * 0.15 : 0), h * 0.6, sz); g.add(rosette); }
+    return g;
+  },
+  speaker(o) { // rooftop: little speaker
+    const { w, d } = o, h = (o.src && o.src.height) || OBST_H.speaker, g = new THREE.Group(), long = w >= d, L = long ? w : d, D = long ? d : w, bx = new THREE.Group();
+    bx.add(mesh(rbox(L, h, D, Math.min(D, h) * 0.45), mat('#2b2f36', 0.75)));
+    for (const x of [-L * 0.25, L * 0.25]) { const c = mesh(cyl(h * 0.32, h * 0.32, 0.004, 24), mat('#4a4f57', 0.5), false); c.rotation.x = Math.PI / 2; c.position.set(x, h * 0.5, D / 2 + 0.001); bx.add(c); }
+    const led = mesh(rbox(L * 0.3, 0.004, 0.01, 0.002), mat('#7ff0c2', 0.3, { emissive: '#3df5a8', emissiveIntensity: 1 }), false); led.position.set(0, h + 0.001, D * 0.3); bx.add(led);
+    if (!long) bx.rotation.y = Math.PI / 2; g.add(bx); return g;
+  },
+  bowlingShoe(o) { // bowling: two-tone shoe
+    const { w, d } = o, g = new THREE.Group(), long = w >= d, L = long ? w : d, D = long ? d : w, s = new THREE.Group();
+    s.add(mesh(rbox(L, 0.018, D, D * 0.45), mat('#f4ead8', 0.6)));
+    const toe = mesh(sph(D * 0.5), mat('#c8392f', 0.4)); toe.scale.set(1.2, 0.7, 1); toe.position.set(L * 0.22, 0.02, 0); s.add(toe);
+    const heel = mesh(rbox(L * 0.55, D * 0.7, D * 0.92, D * 0.35), mat('#1d4fb8', 0.4)); heel.position.set(-L * 0.18, 0.015, 0); s.add(heel);
+    const lace = mesh(rbox(L * 0.25, 0.004, D * 0.5, 0.004), mat('#ffffff', 0.5), false); lace.position.set(L * 0.05, D * 0.5, 0); s.add(lace);
+    if (!long) s.rotation.y = Math.PI / 2; g.add(s); return g;
+  },
+  bowlingBall(o) { const g = DECOR.bowlingBall({ color: (o.src && o.src.color) || '#7d3fc4' }); g.scale.setScalar(o.r / 0.2); return g; }, // bowling
+  cardDeck(o) { // casino: a deck with a few cards fanned out
+    const { w, d } = o, g = new THREE.Group(); g.add(mesh(rbox(w * 0.6, 0.03, d * 0.75, 0.004), mat('#ffffff', 0.4, { map: cardBackTex() })));
+    for (let i = 0; i < 3; i++) { const c = new THREE.Mesh(cached(`card${w}|${d}`, () => { const q = new THREE.PlaneGeometry(w * 0.6, d * 0.75); q.rotateX(-Math.PI / 2); return q; }), new THREE.MeshStandardMaterial({ map: cardFaceTex(i), roughness: 0.4 }));
+      c.position.set(w * 0.12 * (i + 1) - w * 0.02, 0.031 + i * 0.0015, d * 0.04 * i); c.rotation.y = -0.25 * (i + 1); c.receiveShadow = true; g.add(c); }
+    return g;
+  },
+  roulette(o) { // casino: little roulette wheel
+    const r = o.r, g = new THREE.Group(), wood = woodMat('#5a2e14');
+    g.add(mesh(cyl(r, r * 0.92, 0.035, 48), wood));
+    const wheel = mesh(cyl(r * 0.84, r * 0.84, 0.008, 48), mat('#ffffff', 0.35, { map: rouletteTex() })); wheel.position.y = 0.035; g.add(wheel);
+    const hub = mesh(cone(r * 0.2, 0.04, 20), mat('#ffc93c', 0.3, { metalness: 0.55, envMap: envTex, envMapIntensity: 1.8 })); hub.position.y = 0.043; g.add(hub);
+    const ball = mesh(sph(r * 0.05), mat('#ffffff', 0.2)); ball.position.set(r * 0.62, 0.05, 0); g.add(ball);
+    return g;
+  },
+  rubberDuck(o) { const g = DECOR.duck(); g.scale.setScalar(o.r / 0.05); return g; }, // playroom
+  stackRings(o) { // playroom: ring-stacking toy
+    const r = o.r, g = new THREE.Group(), cols = ['#e2483c', '#ff8a3d', '#ffd166', '#36b37e', '#4f7fe0'];
+    g.add(mesh(cyl(r, r, r * 0.25, 32), mat('#f4ead8', 0.4)));
+    const pole = mesh(cyl(r * 0.14, r * 0.16, r * 2.2, 16), mat('#f4ead8', 0.4)); g.add(pole);
+    cols.forEach((c, i) => { const rr = r * (0.82 - i * 0.12); const t = mesh(torus(rr * 0.62, rr * 0.36, 14, 32), mat(c, 0.3)); t.rotation.x = Math.PI / 2; t.position.y = r * 0.25 + rr * 0.36 + i * r * 0.36; g.add(t); });
+    const top = mesh(sph(r * 0.2), mat('#e2483c', 0.3)); top.position.y = r * 2.25; g.add(top);
+    return g;
+  },
   movable(o, th) { // things that slide when hit: cardboard box, hockey puck, toy car, beach ball
     const src = o.src || {}, model = src.model || 'box', H = src.height || 0.16, g = new THREE.Group();
     if (model === 'beachBall') return OBST.beachBall(o);
@@ -1320,6 +1567,22 @@ const pizzaLogoTex = () => pizzaLogoC || (pizzaLogoC = canvasTex(256, 256, (c, W
   c.fillStyle = '#c4302b'; c.font = '800 17px Nunito, Arial, sans-serif'; c.fillText('HOT & FRESH', W / 2, 22); c.fillText('HOT & FRESH', W / 2, W - 18);
 }));
 const diceTex = () => diceTexC || (diceTexC = canvasTex(64, 64, (c, W) => { c.fillStyle = '#c8102e'; c.fillRect(0, 0, W, W); c.fillStyle = '#fff'; for (const [x, y] of [[16, 16], [48, 48], [32, 32], [16, 48], [48, 16]]) { c.beginPath(); c.arc(x, y, 6, 0, 7); c.fill(); } }));
+// printed labels and small textures for the room props
+const propTexCache = {};
+const propTex = (key, w, h, draw) => propTexCache[key] || (propTexCache[key] = canvasTex(w, h, draw));
+const labelTex = (text, bg, fg) => propTex('lab' + text + bg + fg, 256, 64, (c, W, H) => { c.fillStyle = bg; c.fillRect(0, 0, W, H); c.fillStyle = fg; c.fillRect(0, 0, W, 7); c.fillRect(0, H - 7, W, 7);
+  c.font = '900 26px Nunito, Arial, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, W / 4, H / 2 + 1); c.fillText(text, W * 3 / 4, H / 2 + 1); });
+const gameLidTex = () => propTex('gameLid', 256, 192, (c, W, H) => { c.fillStyle = '#fbf3e0'; c.fillRect(0, 0, W, H); const cols = ['#e2483c', '#2e8fd1', '#36b37e', '#ffd166'];
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 4; j++) { c.fillStyle = cols[(i + j) % 4]; c.fillRect(16 + i * 28, 96 + j * 20, 24, 16); }
+  c.fillStyle = '#c8392f'; c.font = '900 34px Nunito, Arial, sans-serif'; c.textAlign = 'center'; c.fillText('GAME NIGHT', W / 2, 54); c.fillStyle = '#7a2e12'; c.font = '800 14px Nunito, Arial, sans-serif'; c.fillText('ages 8 and up', W / 2, 78); });
+const lemonTex = () => propTex('lemon', 64, 64, (c, W) => { c.fillStyle = '#f2d02e'; c.beginPath(); c.arc(32, 32, 31, 0, 7); c.fill(); c.fillStyle = '#fff6b8'; c.beginPath(); c.arc(32, 32, 26, 0, 7); c.fill(); c.strokeStyle = '#f2d02e'; c.lineWidth = 3; for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283; c.beginPath(); c.moveTo(32, 32); c.lineTo(32 + Math.cos(a) * 26, 32 + Math.sin(a) * 26); c.stroke(); } void W; });
+const screenTex = () => propTex('screen', 256, 160, (c, W, H) => { c.fillStyle = '#1e2433'; c.fillRect(0, 0, W, H); const cols = ['#7fd1ff', '#ffd166', '#ff8fb1', '#9cf0b4', '#c9b6ff'];
+  for (let i = 0; i < 11; i++) { c.fillStyle = cols[i % 5]; c.fillRect(14 + (i % 3) * 14, 14 + i * 12, 40 + ((i * 53) % 120), 6); } });
+const cardBackTex = () => propTex('cardBack', 64, 96, (c, W, H) => { c.fillStyle = '#c8102e'; c.fillRect(0, 0, W, H); c.strokeStyle = '#fff'; c.lineWidth = 3; c.strokeRect(5, 5, W - 10, H - 10); for (let i = -H; i < W; i += 8) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i + H, H); c.stroke(); } });
+const cardFaceTex = (i) => propTex('card' + i, 64, 96, (c, W, H) => { c.fillStyle = '#ffffff'; c.fillRect(0, 0, W, H); const s = ['♥', '♠', '♦'][i], col = i === 1 ? '#151515' : '#d7262b'; c.fillStyle = col;
+  c.font = '900 20px Georgia, serif'; c.textAlign = 'center'; c.fillText(['A', 'K', 'Q'][i], 12, 22); c.font = '40px Georgia, serif'; c.fillText(s, W / 2, H / 2 + 14); });
+const rouletteTex = () => propTex('roulette', 256, 256, (c, W) => { const n = 18; for (let i = 0; i < n; i++) { c.fillStyle = i === 0 ? '#18874a' : i % 2 ? '#c8102e' : '#151515'; c.beginPath(); c.moveTo(128, 128); c.arc(128, 128, 128, i / n * 6.283, (i + 1) / n * 6.283); c.fill(); }
+  c.fillStyle = '#7a4a2b'; c.beginPath(); c.arc(128, 128, 78, 0, 7); c.fill(); c.strokeStyle = '#ffc93c'; c.lineWidth = 4; c.beginPath(); c.arc(128, 128, 80, 0, 7); c.stroke(); void W; });
 const chipTexCache = {};
 function chipMat(col) { // poker chip: edge with white spots, faces with a dashed white ring
   if (chipTexCache[col]) return chipTexCache[col];
@@ -1404,6 +1667,18 @@ function getStripeTex(key, colors, n) { return stripeTexCache[key] || (stripeTex
 
 /* ============================= decor =============================== */
 const DECOR = {
+  // any table prop, scaled up to sit on the floor (or on the rail): ['big', x, z, 'floor', rot, { kind, r | w, d, h }]
+  big(o, th) { return OBST[o.kind]({ r: o.r, w: o.w, d: o.d, src: { height: o.h, color: o.color } }, th); },
+  armchair(o) {
+    const g = new THREE.Group(), c = o.color || '#7a3b2e', fab = mat(c, 0.9), wood = woodMat('#5a3a22');
+    const seat = mesh(rbox(0.7, 0.18, 0.62, 0.07), fab); seat.position.y = 0.2; g.add(seat);
+    const back = mesh(rbox(0.7, 0.55, 0.16, 0.07), fab); back.position.set(0, 0.32, -0.26); g.add(back);
+    for (const s of [-1, 1]) { const arm = mesh(rbox(0.13, 0.3, 0.62, 0.06), fab); arm.position.set(s * 0.33, 0.25, 0); g.add(arm); }
+    const cush = mesh(rbox(0.5, 0.08, 0.46, 0.04), mat(shade(c, 0.06), 0.9)); cush.position.set(0, 0.38, 0.04); g.add(cush);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const l = mesh(cyl(0.025, 0.02, 0.2, 10), wood); l.position.set(sx * 0.3, 0, sz * 0.25); g.add(l); }
+    return g;
+  },
+  crate() { const g = new THREE.Group(), w = woodMat('#b98a55'); g.add(mesh(rbox(0.5, 0.36, 0.4, 0.02), w)); for (const y of [0.1, 0.24]) { const s = mesh(rbox(0.52, 0.04, 0.42, 0.01), woodMat('#9c7144')); s.position.y = y; g.add(s); } return g; },
   chipStacks() { const g = new THREE.Group(); [[0, 0, 7, '#d7262b'], [0.06, 0.03, 5, '#151515'], [-0.03, 0.06, 4, '#1d4fb8']].forEach(([x, z, n, col]) => { for (let i = 0; i < n; i++) { const c = mesh(cyl(0.028, 0.028, 0.0085, 22), chipMat(col)); c.position.set(x + ((i * 37) % 5 - 2) * 0.0008, i * 0.009, z); g.add(c); } }); return g; },
   dice() {
     const m = mat('#ffffff', 0.25, { map: diceTex() }), g = new THREE.Group();
@@ -1685,7 +1960,7 @@ function loadTable(idx, restore, practice = false, list = G.levels) {
     const shapeArgs = o.shape === 'circle' ? { r: o.radius, src: o } : { w: o.size[0], d: o.size[1], seed: oi, src: o };
     let m = builder(shapeArgs, th);
     // circle builders used with a box shape (or vice versa) fall back to the generic piece so physics always matches
-    const boxKinds = ['toolbox', 'pizzaBox', 'book', 'napkinHolder', 'block', 'ramp', 'bumperRail', 'toyWall', 'bookStack', 'dice'];
+    const boxKinds = ['toolbox', 'pizzaBox', 'book', 'napkinHolder', 'block', 'ramp', 'bumperRail', 'toyWall', 'bookStack', 'dice', 'boardGame', 'cooler', 'logStack', 'laptop', 'succulent', 'speaker', 'bowlingShoe', 'cardDeck'];
     if (o.kind !== 'movable' && (o.shape === 'box') !== boxKinds.includes(o.kind) && OBST[o.kind]) m = o.shape === 'circle' ? OBST.disc(shapeArgs, th) : OBST.block(shapeArgs, th);
     m.position.set(o.pos[0], 0, o.pos[1]); m.rotation.y = -(p.deg != null ? p.deg : o.rotation || 0) * DEG; // round ones too (fans face where they blow)
     G.root.add(m); p.mesh = m; p.baseQ = m.quaternion.clone(); p.wig = null;
@@ -2222,6 +2497,47 @@ function onRest() {
 function snapshot() { const pos = {}; for (const b of G.balls) pos[b.n] = [b.x, b.z]; pos.obs = G.obstacles.map(o => o.dynamic || o.movable ? [o.x, o.z] : null); if (G.fx.on) pos.fanT = G.fanT; return pos; }
 function saveMid(pos) { if (G.practice) return; day.current = { idx: G.idx, shots: G.shots, orderIdx: G.orderIdx, sunk: G.sunk.slice(), out: G.out.slice(), pos: pos || snapshot() }; saveDay(); }
 
+/* ---- first-table hint ---- */
+// 1) a curved arrow (and a hand) sweeping around the cue ball: drag around to aim
+// 2) once they've aimed, a straight arrow pulling back from the ball: pull back, then let go
+// It ends with their first shot, and never shows again.
+const coach = { on: false, phase: 'aim', t: 0, start: 0 };
+function startCoach() { coach.on = true; coach.phase = 'aim'; coach.t = 0; coach.start = aimState.target; }
+function endCoach() { if (!coach.on) return; coach.on = false; $('coach').hidden = true; settings.seenHelp = true; saveSettings(); }
+function updateCoach(dt) {
+  const el = $('coach');
+  if (!coach.on) { if (!el.hidden) el.hidden = true; return; }
+  const show = !homeOpen && canShoot() && G.camMode !== 'outro' && G.camMode !== 'far';
+  el.hidden = !show; if (!show) return;
+  coach.t += dt;
+  if (coach.phase === 'aim' && Math.abs(aimState.target - coach.start) > 12 * DEG) { coach.phase = 'pull'; coach.t = 0; }
+  if (coach.phase === 'aim' && drag && drag.mode === 'power') { coach.phase = 'pull'; coach.t = 0; }
+  const [cx, cy] = toScreen(G.cue.x, G.cue.z), ax = stickAxis(), fine = matchMedia('(pointer: fine)').matches;
+  const svg = $('coachSvg'), hand = $('coachHand'), cap = $('coachCap');
+  const head = (x, y, dx, dy) => { const l = 13, w = 9; return `M${x - dx * l - dy * w} ${y - dy * l + dx * w} L${x} ${y} L${x - dx * l + dy * w} ${y - dy * l - dx * w}`; };
+  if (coach.phase === 'aim') {
+    // the arc sits on the far side of the ball from the cue stick, sweeping around it
+    const r = 74, mid = Math.atan2(ax[1], ax[0]), a0 = mid - 1.3, sweep = 2.6;
+    const cyc = coach.t % 2.6, p = Math.min(1, cyc / 1.6), ease = 1 - (1 - p) ** 3, a1 = a0 + sweep * ease;
+    const pt = (a) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+    const [x0, y0] = pt(a0), [x1, y1] = pt(a1), large = sweep * ease > Math.PI ? 1 : 0;
+    const tx = -Math.sin(a1), ty = Math.cos(a1); // direction of travel at the arrow's tip
+    svg.innerHTML = ease > 0.02 ? `<path d="M${x0} ${y0} A${r} ${r} 0 ${large} 1 ${x1} ${y1}"/><path d="${head(x1, y1, tx, ty)}"/>` : '';
+    svg.style.opacity = cyc > 2.2 ? Math.max(0, 1 - (cyc - 2.2) / 0.4) : 1;
+    hand.style.transform = `translate(${x1 - 12}px, ${y1 - 4}px) scale(${cyc < 0.15 ? 0.9 : 1})`; hand.style.opacity = svg.style.opacity;
+    cap.innerHTML = 'Drag around to aim' + (fine ? '<small>or ← →</small>' : '');
+  } else {
+    // pull straight back, away from where the ball will go
+    const bx = -ax[0], by = -ax[1], cyc = coach.t % 2.2, p = Math.min(1, cyc / 1.2), ease = 1 - (1 - p) ** 3;
+    const s0 = 34, s1 = 34 + 110 * ease, x0 = cx + bx * s0, y0 = cy + by * s0, x1 = cx + bx * s1, y1 = cy + by * s1;
+    svg.innerHTML = ease > 0.02 ? `<path d="M${x0} ${y0} L${x1} ${y1}"/><path d="${head(x1, y1, bx, by)}"/>` : '';
+    svg.style.opacity = cyc > 1.8 ? Math.max(0, 1 - (cyc - 1.8) / 0.4) : 1;
+    hand.style.transform = `translate(${x1 - 12}px, ${y1 - 4}px)`; hand.style.opacity = svg.style.opacity;
+    cap.innerHTML = 'Pull back, then let go' + (fine ? '<small>or ↓ then Space</small>' : '');
+  }
+  // the caption floats just above the ball
+  const w = cap.offsetWidth || 180; cap.style.transform = `translate(${clamp(cx - w / 2, 12, innerWidth - w - 12)}px, ${cy - 128}px)`;
+}
 function shoot(dx, dz, power) {
   if (G.inputLocked || G.moving || G.complete) return;
   Sound.init();
@@ -2232,7 +2548,7 @@ function shoot(dx, dz, power) {
   const sp = MAX_SPEED * power;
   G.cue.vx = dx * sp; G.cue.vz = dz * sp;
   G.moving = true; G.inputLocked = true; G.acc = 0; G.camMode = 'shot';
-  Sound.cue(power); haptic(8);
+  Sound.cue(power); haptic(8); endCoach();
   updatePill();
 }
 function completeTable(capped) {
@@ -2925,6 +3241,7 @@ function frame(now) {
     if (G.fx.on) fxFrame(dt);
     updateAimVisuals(dt);
     updateCamera(dt);
+    updateCoach(dt);
     updateFade(dt);
     updateFx(dt);
     renderer.render(scene, camera);
@@ -3106,7 +3423,12 @@ function showHelp(step = 0) {
   sheet.querySelector('#go').onclick = () => { Sound.init(); Sound.tap(); if (last) done(); else showHelp(step + 1); };
   const b = sheet.querySelector('#back'); if (b) b.onclick = () => { Sound.tap(); showHelp(step - 1); };
 }
-function syncToggles() { $('btn-sound').classList.toggle('off', !settings.sound); }
+function syncToggles() {
+  $('btn-sound').classList.toggle('off', !settings.sound);
+  for (const id of ['btn-music', 'homeMusic']) { $(id).hidden = !MUSIC_TRACKS.length; $(id).classList.toggle('off', !settings.music); }
+}
+function toggleMusic() { Sound.init(); settings.tunes = settings.music = !settings.music; saveSettings(); syncToggles(); Sound.setMusic(settings.music); Sound.tap(); }
+$('btn-music').onclick = toggleMusic; $('homeMusic').onclick = toggleMusic;
 $('btn-help').onclick = () => { Sound.init(); Sound.tap(); showHelp(0); };
 $('btn-stats').onclick = () => { Sound.init(); Sound.tap(); showStats(); };
 $('btn-sound').onclick = () => { Sound.init(); settings.sound = !settings.sound; saveSettings(); syncToggles(); Sound.setSound(settings.sound); Sound.tap(); };
@@ -3148,7 +3470,7 @@ function playToday() {
   const i = dailyIdx();
   if (G.practice || G.idx !== i || G.complete) loadTable(i, day.current);
   else tweenCamera(G.shots > 0 ? 'ready' : 'overview', 1.1, easeOut);
-  if (!settings.seenHelp) showHelp(0);
+  if (!settings.seenHelp) startCoach(); // first visit: show how to aim and shoot right on the table
 }
 $('homePlay').onclick = playToday;
 $('gameWord').onclick = () => { Sound.tap(); showHome(); };

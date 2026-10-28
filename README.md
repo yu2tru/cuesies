@@ -48,11 +48,16 @@ Only tables that use one of these run the 3D physics; the original five tables k
 | Ice table | `"surface":"ice"` (balls and movables glide about 1.5x farther; a puck keeps its own friction) |
 | Water puddle | slow zone with `"kind":"water"`: no friction inside, so balls carry further than the dotted line shows |
 | Props | `lamp` (circle, clicks on/off when hit), `umbrella` (circle, pole through the table), `teddy`, `cocktail` (circles), `dice` (box) |
+| Room props | circles: `rootBeer`, `ketchup`, `milkshake`, `tire`, `paintCan`, `flowerPot`, `lemonade`, `sandBucket`, `lantern`, `ramen`, `bowlingBall`, `roulette`, `rubberDuck`, `stackRings`; boxes: `boardGame`, `cooler`, `logStack`, `laptop`, `succulent`, `speaker`, `bowlingShoe`, `cardDeck` |
 | Goal "last" | `"goal":{"type":"last","last":8}` (sink every ball; that one goes last, early costs +1) |
 
 Every obstacle can also take `"height"`. Airborne balls fly over anything lower than they are.
 
 Tuning (in `index.html`, right after `FLOOR_Y`): `GRAVITY`, `E_LAND` / `LAND_SETTLE` (landing bounce), `FAN_ACC` / `FAN_SWEEP_RATE`, `BUMPER_KICK`, `RAIL_KICK`, `POP_VY`, `SLOPE_G` (and `SLOPE_VIS` for how far the table visibly leans), `RAMP_ANGLE_DEFAULT`, `TRAMP_BASE` / `TRAMP_PER_SPEED` / `TRAMP_MAX`, `MOVABLE_MU`, `ICE_FRICTION`, `OBST_H` (default heights).
+
+## Music
+
+Put tracks in `music/` and list them in `MUSIC_TRACKS` near the top of `index.html` (see `music/README.md`). They play shuffled with crossfades; the ♪ button appears once there's at least one.
 
 ## Debug mode
 
