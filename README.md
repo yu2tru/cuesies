@@ -8,7 +8,7 @@ Opens on a home page (today's card, Levels replays, Collection, Stats, Streak) s
 1. Create a Supabase project and run `supabase.sql` in the SQL editor.
 2. In `index.html`, fill in `SUPABASE_URL` and `SUPABASE_ANON_KEY` (top of the `<script>` block, "CONFIG").
 3. Add five rows to `cuesies_levels` for each date (`level_order` 1–5). The `data` column is the level JSON.
-   `supabase-new-levels.sql` has 12 ready-made tables that use the new pieces (placeholder dates in November 2026).
+   `supabase-new-levels.sql` has 12 ready-made tables and `supabase-addon-levels.sql` 6 more (shaped tables and moving pieces) that use the new pieces (placeholder dates in November 2026).
 
 Upgrading from the old `poolsies_` tables? Run `supabase-rename.sql` once instead of step 1.
 
@@ -49,11 +49,22 @@ Only tables that use one of these run the 3D physics; the original five tables k
 | Water puddle | slow zone with `"kind":"water"`: no friction inside, so balls carry further than the dotted line shows |
 | Props | `lamp` (circle, clicks on/off when hit), `umbrella` (circle, pole through the table), `teddy`, `cocktail` (circles), `dice` (box) |
 | Room props | circles: `rootBeer`, `ketchup`, `milkshake`, `tire`, `paintCan`, `flowerPot`, `lemonade`, `sandBucket`, `lantern`, `ramen`, `bowlingBall`, `roulette`, `rubberDuck`, `stackRings`; boxes: `boardGame`, `cooler`, `logStack`, `laptop`, `succulent`, `speaker`, `bowlingShoe`, `cardDeck` |
+| Conveyor belt | `{"kind":"conveyor","path":[[x,z],[x,z]],"width":0.15,"speed":1,"loop":false}` (carries rolling balls along; a ball rides belts at most ~3 s per shot) |
+| Turntable | `{"kind":"turntable","model":"record"/"lazySusan","pos":[x,z],"radius":0.2,"spin":1}` (bends rolling balls; the sign of spin picks the way) |
+| Gopher holes | `{"kind":"gopherHole","id":"a1","pairId":"a2","pos":[x,z],"exitDirection":90,"exitSpeed":0.3}` (drop in one, pop out of its pair heading exitDirection; never a pocket) |
+| Piston | `{"kind":"piston","pos":[x,z],"size":[w,d],"height":0.15,"period":2.5,"phase":0}` (up for half of each cycle; phase is a fraction of a cycle; waits while a ball sits on it) |
+| Sliding drawer | `{"kind":"slider","from":[x,z],"to":[x,z],"size":[w,d],"period":3,"phase":0}` (shoves balls in its way, even resting ones; that push isn't a shot) |
+| Roulette saucer | `{"kind":"roulette","pos":[x,z],"radius":0.35,"spin":1,"depth":0.06,"centerIsPocket":true}` (slopes toward a center hole; otherwise the ball returns to its spot for +1) |
+| Shaped table | `"shape":{"outline":[[x,z],...],"islands":[[[x,z],...]],"cornerRadius":0.08},"pockets":[[x,z],...]` (outline = cushion line; pockets snap to the nearest rail; "pockets" alone keeps the normal rectangle) |
 | Goal "last" | `"goal":{"type":"last","last":8}` (sink every ball; that one goes last, early costs +1) |
 
 Every obstacle can also take `"height"`. Airborne balls fly over anything lower than they are.
 
-Tuning (in `index.html`, right after `FLOOR_Y`): `GRAVITY`, `E_LAND` / `LAND_SETTLE` (landing bounce), `FAN_ACC` / `FAN_SWEEP_RATE`, `BUMPER_KICK`, `RAIL_KICK`, `POP_VY`, `SLOPE_G` (and `SLOPE_VIS` for how far the table visibly leans), `RAMP_ANGLE_DEFAULT`, `TRAMP_BASE` / `TRAMP_PER_SPEED` / `TRAMP_MAX`, `MOVABLE_MU`, `ICE_FRICTION`, `OBST_H` (default heights).
+Tuning (in `index.html`, right after `FLOOR_Y`): `GRAVITY`, `E_LAND` / `LAND_SETTLE` (landing bounce), `FAN_ACC` / `FAN_SWEEP_RATE`, `BUMPER_KICK`, `RAIL_KICK`, `POP_VY`, `SLOPE_G` (and `SLOPE_VIS` for how far the table visibly leans), `RAMP_ANGLE_DEFAULT`, `TRAMP_BASE` / `TRAMP_PER_SPEED` / `TRAMP_MAX`, `MOVABLE_MU`, `ICE_FRICTION`, `OBST_H` (default heights), `CONVEYOR_SPEED` / `CONVEYOR_GRIP` / `CONVEYOR_MAX_RIDE`, `TURNTABLE_CURVE` (and `TURNTABLE_VIS`), `GOPHER_EXIT` / `GOPHER_DELAY`, `PISTON_RISE` (period and phase are per piston/slider in the level), `ROULETTE_PULL` / `ROULETTE_CURVE` / `ROULETTE_DROP_SPEED` (spin and depth are per saucer).
+
+Moving pieces all run on one clock that starts at 0 when a table loads and never pauses, so the pattern is the same for everyone and timing is part of the skill. Belts, turntables, the saucer and fans only push balls that are already rolling.
+
+The 8 ball: sinking it when the goal doesn't call for it (or before the others on a "sink the 8 last" table) is +2 and it goes back to its spot.
 
 ## Music
 
