@@ -4576,6 +4576,7 @@ function padAhead(x, z, dx, dz, maxS) {
 // Each leg is a straight roll ('line': full length to what it runs into, and how far this charge carries it)
 // or a jump ('air': points in 3D). Both the faint guide and the dots are drawn from the same legs.
 const PREVIEW_BOUNCES = 3;
+const PREVIEW_AFTER_HIT = 6 * R; // the two paths after the cue ball hits a ball reach at most 3 ball widths
 function previewTrace(dx, dz, power) {
   const st = { legs: [], ghosts: [] }, c = G.cue;
   traceRoll(st, c.x, c.z, dx, dz, MAX_SPEED * power, G.cue, null, 0, 0, 'cue');
@@ -4583,7 +4584,8 @@ function previewTrace(dx, dz, power) {
 }
 function traceRoll(st, x, z, dx, dz, v, self, skip, depth, kicks, role) {
   if (st.legs.length > 12) return;
-  const { s, hit } = firstContact(x, z, dx, dz, self, skip), r = roll(x, z, dx, dz, v, s), reaches = !!hit && r.v > 0;
+  const fc = firstContact(x, z, dx, dz, self, skip), short = role === 'target' ? PREVIEW_AFTER_HIT + R : role === 'after' ? PREVIEW_AFTER_HIT : 9; // after hitting a ball, both paths are just short hints
+  const s = Math.min(fc.s, short), hit = fc.s <= short ? fc.hit : null, r = roll(x, z, dx, dz, v, s), reaches = !!hit && r.v > 0;
   // rolling onto a trampoline on the way: it throws the ball up
   const pad = padAhead(x, z, dx, dz, s), rp = pad ? roll(x, z, dx, dz, v, pad.t) : null;
   const padVy = rp && rp.v > 0 ? Math.min(TRAMP_MAX, pad.o.bounce * (TRAMP_BASE + TRAMP_PER_SPEED * rp.v)) : 0;
@@ -4608,7 +4610,7 @@ function traceRoll(st, x, z, dx, dz, v, self, skip, depth, kicks, role) {
     if (cv > 0.06 && self === G.cue) traceRoll(st, gx, gz, cvx / cv, cvz / cv, cv, self, b, depth + 1, kicks, 'after');
     return;
   }
-  if (hit.type === 'obs') {
+  if (hit.type === 'obs' && role !== 'target' && role !== 'after') { // the short after-hit hints stop at whatever they meet
     const o = hit.o;
     if (o.ramp) { const f = rampFlight(gx, gz, vx, vz, o); if (f) { traceFlight(st, f, self, skip, depth, kicks, role); return; } }
     if ((o.bumper || o.rail) && depth < PREVIEW_BOUNCES) {
@@ -4672,7 +4674,7 @@ function drawAim(dx, dz, power) {
   // impact circles: bright where this charge gets to, faint where you're only pointing
   const gs = (live || guide).ghosts;
   aim.ghosts.forEach((g, i) => {
-    const q = gs[i]; g.ring.visible = g.fill.visible = !!q && (i === 0 || !!live); if (!g.ring.visible) return;
+    const q = gs[i]; g.ring.visible = g.fill.visible = !!q && i === 0; if (!g.ring.visible) return; // one impact circle: where the cue ball meets something
     const on = !!live && q.reach, main = i === 0;
     g.ring.material.opacity = on ? (main ? 1 : 0.85) : 0.38; g.fill.material.opacity = on ? (main ? 0.5 : 0.3) : 0.1;
     g.ring.material.color.set(on ? '#ffffff' : '#e8e8e8'); g.ring.scale.setScalar(on && main ? 1.08 : q.role === 'target' ? 0.9 : 1);
