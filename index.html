@@ -199,7 +199,7 @@
   button.wordmark { font-family: inherit; color: var(--ink); background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
   #gameWord { pointer-events: auto; }
   .home-body { flex: none; padding: 0 14px; position: relative; isolation: isolate; }
-  .home-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .home-row { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-bottom: 10px; }
   .home-date { font-weight: 800; font-size: 15px; color: rgba(21,21,21,.78); letter-spacing: -.02em; background: var(--card); border-radius: 999px; padding: 9px 14px; box-shadow: 0 2px 0 rgba(31,28,21,.05); }
   .home-icons { display: flex; gap: 8px; }
   .rbtn { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--card); display: grid; place-items: center; box-shadow: 0 2px 0 rgba(31,28,21,.05); cursor: pointer; position: relative; }
@@ -313,10 +313,10 @@
 <div id="home" hidden aria-label="Home">
   <div class="home-col">
     <div class="hero" id="homeHero">
-      <div class="home-top" id="homeTop"><button class="wordmark" id="homeWord" tabindex="-1">cuesies</button></div>
+      <div class="home-top" id="homeTop"><div class="brand"><button class="wordmark" id="homeWord" tabindex="-1">cuesies</button><div class="pno" id="homePno">No. 1</div></div></div>
     </div>
     <div class="home-body">
-      <div class="home-row"><div class="home-date" id="homeDate"></div>
+      <div class="home-row">
         <div class="home-icons">
           <button class="rbtn" id="homeMusic" aria-label="Toggle music" hidden><svg viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
           <button class="rbtn" id="homeSound" aria-label="Toggle sound"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg></button>
@@ -5448,7 +5448,7 @@ const ROOM_ICON = { basement: '🎯', diner: '🍔', garage: '🔧', patio: '�
 function markRoom(theme) { stats.rooms = stats.rooms || {}; if (!stats.rooms[theme]) { stats.rooms[theme] = 1; saveStats(); } }
 const dailyIdx = () => Math.min(day.results.filter(v => v != null).length, G.levels.length - 1);
 function renderHome() {
-  $('homeDate').textContent = `No. ${PUZZLE_NO} · ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`;
+  $('homePno').textContent = `No. ${PUZZLE_NO}`;
   $('homeDots').innerHTML = G.levels.map((_, i) => { const v = day.results[i]; return `<i class="${v == null ? '' : badgeFor(v)[0]}"></i>`; }).join('');
   const done = day.results.filter(v => v != null).length;
   $('homePlay').textContent = day.done ? `See results · ${totalShots()} shots` : done ? `Continue · ${done}/${G.levels.length}` : 'Play today';
