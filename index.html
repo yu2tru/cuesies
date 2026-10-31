@@ -3830,8 +3830,8 @@ function buildBackdrop(bd, th) {
     if (hole) s.holes.push(new THREE.Path([new THREE.Vector2(hole[0], hole[1]), new THREE.Vector2(hole[0], hole[3]), new THREE.Vector2(hole[2], hole[3]), new THREE.Vector2(hole[2], hole[1])]));
     const geo = new THREE.ExtrudeGeometry(s, { depth: T, bevelEnabled: false, curveSegments: 1 }), uv = geo.attributes.uv, pos = geo.attributes.position;
     geo.translate(0, 0, -T); for (let i = 0; i < uv.count; i++) uv.setXY(i, (pos.getX(i) + 40) / 4, pos.getY(i) / H);
-    const wall = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92, side: THREE.DoubleSide })); wall.position.y = FLOOR_Y; wall.receiveShadow = true; p.add(wall);
-    const upper = new THREE.Mesh(new THREE.BoxGeometry(W, TOP - H, T), new THREE.MeshStandardMaterial({ color: upperCol, roughness: 0.95, side: THREE.DoubleSide })); upper.position.set(0, FLOOR_Y + H + (TOP - H) / 2, -T / 2); p.add(upper); // carries on up, so its top never shows
+    const wall = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92 })); wall.position.y = FLOOR_Y; wall.receiveShadow = true; p.add(wall);
+    const upper = new THREE.Mesh(new THREE.BoxGeometry(W, TOP - H, T), new THREE.MeshStandardMaterial({ color: upperCol, roughness: 0.95 })); upper.position.set(0, FLOOR_Y + H + (TOP - H) / 2, -T / 2); p.add(upper); // carries on up, so its top never shows
     if (!outdoor) {
       const base = mesh(rbox(W, 0.12, 0.04, 0.01), new THREE.MeshStandardMaterial({ color: bd.trim || '#5a3a22', roughness: 0.6 }), false); base.position.set(0, FLOOR_Y, 0.02); p.add(base);
       const cornice = mesh(softBox(W, 0.1, 0.12, 0.03), new THREE.MeshStandardMaterial({ color: bd.trim || '#5a3a22', roughness: 0.5 }), false); cornice.position.set(0, FLOOR_Y + H - 0.05, 0.04); p.add(cornice);
@@ -5248,18 +5248,21 @@ function yawLimit() {
   let lim = 180; for (const [tz, d, t] of poses) { const q = (wz - tz) / (d * Math.cos(t * DEG)); if (q > -1) lim = Math.min(lim, Math.acos(Math.min(1, q)) / DEG); }
   return Math.max(10, lim - 2);
 }
-const WALL_FADE_MIN = 0.12, WALL_FADE_BUFFER = 0.25; // a wall in the way fades to this; the camera must be this far past it before it changes its mind
-function updateWalls(dt) {
+// The back wall fades by the camera's angle around the table: fully solid until the camera swings WALL_FADE_START degrees from straight-on
+// behind the wall, more see-through the further round it goes, and gone (not drawn at all) inside a 45° slice right behind its middle.
+const WALL_FADE_START = 85, WALL_FADE_GONE = 22.5;
+function updateWalls() {
   for (const w of G.walls || []) {
-    // how far the camera is beyond this wall's face (its back side, or past it when zoomed in); the buffer keeps it from flickering at the edge
-    const side = (camera.position.x - w.px) * w.nx + (camera.position.z - w.pz) * w.nz;
-    if (side > WALL_FADE_BUFFER) w.out = true; else if (side < -WALL_FADE_BUFFER) w.out = false;
-    const target = w.out ? WALL_FADE_MIN : 1;
-    if (w.op === target) continue;
-    w.op = reduceMotion ? target : target > w.op ? Math.min(target, w.op + dt / 0.3 * (1 - WALL_FADE_MIN)) : Math.max(target, w.op - dt / 0.3 * (1 - WALL_FADE_MIN)); // about 0.3 s
-    const one = (mm) => { if (mm.userData.op0 == null) mm.userData.op0 = mm.opacity; const tr = w.op < 1 || mm.userData.tr0; if (mm.transparent !== tr) { mm.transparent = tr; mm.needsUpdate = true; } mm.opacity = mm.userData.op0 * w.op; mm.depthWrite = w.op > 0.6; };
+    const cx = camera.position.x, cz = camera.position.z, l = Math.hypot(cx, cz) || 1;
+    const off = Math.acos(clamp((cx * w.nx + cz * w.nz) / l, -1, 1)) / DEG; // 0 = the camera is right behind the middle of the wall
+    const k = clamp((off - WALL_FADE_GONE) / (WALL_FADE_START - WALL_FADE_GONE), 0, 1), op = k * k * (3 - 2 * k);
+    if (op === w.op) continue;
+    w.op = op; const show = op > 0.003;
+    w.group.visible = show; for (const d of w.attached) d.visible = show; // gone: nothing is drawn at all
+    if (!show) continue;
+    const one = (mm) => { if (mm.userData.op0 == null) mm.userData.op0 = mm.opacity; const tr = op < 0.999 || !!mm.userData.tr0; if (mm.transparent !== tr) { mm.transparent = tr; mm.needsUpdate = true; } mm.opacity = mm.userData.op0 * op; mm.depthWrite = op > 0.6; };
     const set = (m) => { if (!m.material) return; if (Array.isArray(m.material)) m.material.forEach(one); else one(m.material); };
-    w.group.traverse(set); for (const d of w.attached) d.traverse(set); // lamps, signs and dartboards on the wall fade with it
+    w.group.traverse(set); for (const d of w.attached) d.traverse(set); // the wall and everything on it fade together
   }
 }
 function clampYaw(key, lim, rot) { const base = 360 * Math.round((G.yawSmooth + rot) / 360), w = G[key] + rot - base; if (w > lim) G[key] -= w - lim; else if (w < -lim) G[key] += -lim - w; } // measured from the camera's current turn, so it never swings the long way round
@@ -5282,7 +5285,7 @@ function updateCamera(dt) {
     cam.tx = lerp(cam.tx, p.tx, f); cam.tz = lerp(cam.tz, p.tz, f); cam.dist = lerp(cam.dist, p.dist, f); cam.tilt = lerp(cam.tilt, p.tilt, f);
     cam.rot += wrapDeg(p.rot - cam.rot) * f;
   }
-  applyCam(); updateWalls(dt);
+  applyCam(); updateWalls();
 }
 const fade = { v: 0, target: 0, speed: 3, onFull: null };
 function fadeTo(opaque, ms) { fade.target = opaque ? 1 : 0; fade.speed = 1000 / Math.max(1, ms); if (reduceMotion) fade.v = 0; }
