@@ -5250,12 +5250,12 @@ function yawLimit() {
 }
 // The back wall fades by the camera's angle around the table: fully solid until the camera swings WALL_FADE_START degrees from straight-on
 // behind the wall, more see-through the further round it goes, and gone (not drawn at all) inside a 45° slice right behind its middle.
-const WALL_FADE_START = 85, WALL_FADE_GONE = 22.5;
+const WALL_FADE_START = 90, WALL_FADE_GONE = 22.5;
 function updateWalls() {
   for (const w of G.walls || []) {
     const cx = camera.position.x, cz = camera.position.z, l = Math.hypot(cx, cz) || 1;
     const off = Math.acos(clamp((cx * w.nx + cz * w.nz) / l, -1, 1)) / DEG; // 0 = the camera is right behind the middle of the wall
-    const k = clamp((off - WALL_FADE_GONE) / (WALL_FADE_START - WALL_FADE_GONE), 0, 1), op = k * k * (3 - 2 * k);
+    const k = clamp((off - WALL_FADE_GONE) / (WALL_FADE_START - WALL_FADE_GONE), 0, 1), op = k * k * k; // drops off quickly once the camera starts coming round behind
     if (op === w.op) continue;
     w.op = op; const show = op > 0.003;
     w.group.visible = show; for (const d of w.attached) d.visible = show; // gone: nothing is drawn at all
