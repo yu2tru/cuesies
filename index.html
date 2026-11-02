@@ -3790,10 +3790,11 @@ function matSig(m) {
 }
 const mergeTmp = { m: new THREE.Matrix4(), n: new THREE.Matrix3(), v: new THREE.Vector3(), inv: new THREE.Matrix4() };
 function mergeStatic(box, roots) {
-  box.updateMatrixWorld(true); mergeTmp.inv.copy(box.matrixWorld).invert();
+  box.updateMatrixWorld(true); if (!(Math.abs(box.matrixWorld.determinant()) >= 1e-12)) return 0; // squashed flat (hidden): nothing to merge into
+  mergeTmp.inv.copy(box.matrixWorld).invert();
   const buckets = new Map(), used = new Set();
   const visit = (o) => {
-    if (!o.visible || o.name || o.userData.noMerge || o.isLight) return;
+    if (!o.visible || o.name || o.userData.noMerge || o.isLight || !(Math.abs(o.matrixWorld.determinant()) >= 1e-15)) return; // squashed-flat parts are animated: leave them
     const g = o.geometry, mm = o.material;
     if (o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh && !o.children.length && mm && o.renderOrder === 0 && g && g.attributes.position && g.attributes.normal
       && !Object.keys(g.morphAttributes).length && g.drawRange.count === Infinity && Object.values(g.attributes).every(a => !a.isInterleavedBufferAttribute)
