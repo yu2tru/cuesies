@@ -1278,7 +1278,7 @@ function stripesTex(colors, n = 8, vertical = true) {
 /* ============================ textures ============================= */
 let pileTexC = null;
 const pileTex = () => pileTexC || (pileTexC = (() => { const rnd = mulberry(5), t = canvasTex(512, 512, (g, W) => { g.fillStyle = '#808080'; g.fillRect(0, 0, W, W); for (let i = 0; i < 40000; i++) { g.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,.35)' : 'rgba(0,0,0,.35)'; g.fillRect(rnd() * W, rnd() * W, 1, 2); } }); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.NoColorSpace; return t; })());
-function floorTexture(f, w = 160, d = 160) {
+function floorTexture(f) {
   const rnd = mulberry(7);
   const big = f.pattern === 'medallion' || f.pattern === 'linoleum', tex = canvasTex(big ? 1024 : 512, big ? 1024 : 512, (g, W, H) => {
     g.fillStyle = f.base; g.fillRect(0, 0, W, H);
@@ -1413,7 +1413,7 @@ function floorTexture(f, w = 160, d = 160) {
   });
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   const unit = { planks: 2.6, deck: 2.4, lanes: 2.8, checker: 2.0, tiles: 2.6, concrete: 4, sand: 3, carpet: 2, casino: 2.2, foam: 2.4, grass: 5, diamondPlate: 3, neon: 3, tatami: 3.6, medallion: 3.2, knotPlanks: 3.2, linoleum: 2.4 }[f.pattern] || 2.5;
-  tex.repeat.set(w / unit, d / unit);
+  tex.repeat.set(60 / unit, 60 / unit);
   return tex;
 }
 let iceTexC = null;
@@ -3814,42 +3814,31 @@ function buildOcean() {
   const wet = new THREE.Mesh(new THREE.PlaneGeometry(44, 0.7).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#c9a86c', transparent: true, opacity: 0.55, roughness: 0.4, depthWrite: false })); wet.position.set(0, FLOOR_Y + 0.004, shore + 0.25); g.add(wet);
   const ft = foamTex().clone(); ft.needsUpdate = true; ft.wrapS = THREE.RepeatWrapping; ft.repeat.set(9, 1);
   const foam = new THREE.Mesh(new THREE.PlaneGeometry(44, 0.55).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: ft, transparent: true, depthWrite: false })); foam.position.set(0, FLOOR_Y + 0.009, shore); g.add(foam);
-  const sky = new THREE.Mesh(new THREE.PlaneGeometry(200, 60), new THREE.MeshBasicMaterial({ map: skyTex(), fog: false, side: THREE.DoubleSide })); sky.position.set(0, FLOOR_Y + 26, shore - 30); g.add(sky);
+  const sky = new THREE.Mesh(new THREE.PlaneGeometry(90, 14), new THREE.MeshBasicMaterial({ map: skyTex(), fog: false })); sky.position.set(0, FLOOR_Y + 5, shore - 26); g.add(sky);
   g.userData.tick = (dt, now) => { if (reduceMotion) return; wt.offset.y -= dt * 0.03; wt.offset.x = Math.sin(now * 0.2) * 0.02; foam.position.z = shore + Math.sin(now * 0.7) * 0.14; ft.offset.x += dt * 0.01; foam.material.opacity = 0.75 + 0.25 * Math.sin(now * 0.7 + 1); };
   return g;
 }
 function buildBackdrop(bd, th) {
   if (bd.style === 'ocean') return buildOcean();
-  // The wall behind the far end: solid and thick (both faces drawn), far wider than any screen and tall enough that its top never shows.
-  // Turn the camera all the way round: when the camera gets behind it (or would pass through it), it fades away (see updateWalls).
-  const g = new THREE.Group(), outdoor = ['ocean', 'skyline', 'hedge'].includes(bd.style), z = outdoor ? WALL_Z - 1.7 : WALL_Z, H = outdoor ? 4.4 : 3.2, T = 0.25, TOP = 16, SX = outdoor ? 5.4 : 3.4;
+  const g = new THREE.Group(), outdoor = ['ocean', 'skyline', 'hedge'].includes(bd.style), z = outdoor ? WALL_Z - 1.7 : WALL_Z, H = outdoor ? 4.4 : 3.2, W = outdoor ? 20 : 14;
   const tex = backdropTex(bd).clone(); tex.needsUpdate = true; tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping;
-  const upperCol = { skyline: '#3b4a8b', hedge: '#8fcdf0' }[bd.style] || shade(bd.wall || '#888888', -0.05);
-  const panel = (W, hole) => { // one wall, its painted face at local z = 0 facing +z, centered on x = 0
-    const p = new THREE.Group(), s = new THREE.Shape([new THREE.Vector2(-W / 2, 0), new THREE.Vector2(W / 2, 0), new THREE.Vector2(W / 2, H), new THREE.Vector2(-W / 2, H)]);
-    if (hole) s.holes.push(new THREE.Path([new THREE.Vector2(hole[0], hole[1]), new THREE.Vector2(hole[0], hole[3]), new THREE.Vector2(hole[2], hole[3]), new THREE.Vector2(hole[2], hole[1])]));
-    const geo = new THREE.ExtrudeGeometry(s, { depth: T, bevelEnabled: false, curveSegments: 1 }), uv = geo.attributes.uv, pos = geo.attributes.position;
-    geo.translate(0, 0, -T); for (let i = 0; i < uv.count; i++) uv.setXY(i, (pos.getX(i) + 40) / 4, pos.getY(i) / H);
-    const wall = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92 })); wall.position.y = FLOOR_Y; wall.receiveShadow = true; p.add(wall);
-    const upper = new THREE.Mesh(new THREE.BoxGeometry(W, TOP - H, T), new THREE.MeshStandardMaterial({ color: upperCol, roughness: 0.95 })); upper.position.set(0, FLOOR_Y + H + (TOP - H) / 2, -T / 2); p.add(upper); // carries on up, so its top never shows
-    if (!outdoor) {
-      const base = mesh(rbox(W, 0.12, 0.04, 0.01), new THREE.MeshStandardMaterial({ color: bd.trim || '#5a3a22', roughness: 0.6 }), false); base.position.set(0, FLOOR_Y, 0.02); p.add(base);
-      const cornice = mesh(softBox(W, 0.1, 0.12, 0.03), new THREE.MeshStandardMaterial({ color: bd.trim || '#5a3a22', roughness: 0.5 }), false); cornice.position.set(0, FLOOR_Y + H - 0.05, 0.04); p.add(cornice);
-    }
-    return p;
-  };
+  const s = new THREE.Shape([new THREE.Vector2(-W / 2, 0), new THREE.Vector2(W / 2, 0), new THREE.Vector2(W / 2, H), new THREE.Vector2(-W / 2, H)]);
   const win = bd.style === 'dorm' ? [0.35, 0.95, 2.45, 2.35] : null; // a window looking out at the moving truck
-  const walls = [], addWall = (p, x, zz, rotY, nx, nz) => { p.position.set(x, 0, zz); p.rotation.y = rotY; g.add(p); walls.push({ group: p, nx, nz, px: x, pz: zz, op: 1, attached: [] }); return p; };
-  const back = addWall(panel(80, win), 0, z, 0, 0, -1); // the one wall behind the far end: far wider than any screen
-  g.userData.walls = walls;
+  if (win) s.holes.push(new THREE.Path([new THREE.Vector2(win[0], win[1]), new THREE.Vector2(win[0], win[3]), new THREE.Vector2(win[2], win[3]), new THREE.Vector2(win[2], win[1])]));
+  const geo = new THREE.ShapeGeometry(s), uv = geo.attributes.uv, pos = geo.attributes.position;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (pos.getX(i) + W / 2) / 4, pos.getY(i) / H);
+  const wall = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92 })); wall.position.set(0, FLOOR_Y, z); wall.receiveShadow = true; g.add(wall);
+  const upperCol = { skyline: '#3b4a8b', hedge: '#8fcdf0' }[bd.style] || shade(bd.wall || '#888888', -0.05), TOP = 16; // the wall carries on up, so its top never shows
+  const upper = new THREE.Mesh(new THREE.PlaneGeometry(W, TOP - H), new THREE.MeshStandardMaterial({ color: upperCol, roughness: 0.95 })); upper.position.set(0, FLOOR_Y + H + (TOP - H) / 2, z); g.add(upper);
+  if (!outdoor) { const base = mesh(rbox(W, 0.12, 0.04, 0.01), mat(bd.trim || '#5a3a22', 0.6), false); base.position.set(0, FLOOR_Y, z + 0.02); g.add(base); }
   if (win) {
     const frame = mat('#ffffff', 0.5), cx = (win[0] + win[2]) / 2, cy = (win[1] + win[3]) / 2, ww = win[2] - win[0], wh = win[3] - win[1];
-    for (const [x, y, w, h] of [[cx, win[1] - 0.04, ww + 0.16, 0.08], [cx, win[3] - 0.04, ww + 0.16, 0.08], [win[0] - 0.04, win[1], 0.08, wh], [win[2] + 0.04, win[1], 0.08, wh], [cx, win[1], 0.05, wh]]) { const f = mesh(rbox(w, h, 0.1, 0.01), frame, false); f.position.set(x, FLOOR_Y + y, 0); back.add(f); } // the frame goes with the wall
-    const sill = mesh(rbox(ww + 0.3, 0.04, 0.22, 0.01), frame); sill.position.set(cx, FLOOR_Y + win[1] - 0.05, 0.08); back.add(sill); void cy;
-    const out = new THREE.Mesh(new THREE.PlaneGeometry(160, 60).rotateX(-Math.PI / 2), mat('#8c9097', 0.95)); out.position.set(0, FLOOR_Y + 0.002, z - 31.3); g.add(out); // the parking lot outside
-    const lawn = new THREE.Mesh(new THREE.PlaneGeometry(160, 1.2).rotateX(-Math.PI / 2), mat('#8fbf72', 0.95)); lawn.position.set(0, FLOOR_Y + 0.003, z - 0.65); g.add(lawn);
+    for (const [x, y, w, h] of [[cx, win[1] - 0.04, ww + 0.16, 0.08], [cx, win[3] - 0.04, ww + 0.16, 0.08], [win[0] - 0.04, win[1], 0.08, wh], [win[2] + 0.04, win[1], 0.08, wh], [cx, win[1], 0.05, wh]]) { const f = mesh(rbox(w, h, 0.1, 0.01), frame, false); f.position.set(x, FLOOR_Y + y, z); g.add(f); }
+    const sill = mesh(rbox(ww + 0.3, 0.04, 0.22, 0.01), frame); sill.position.set(cx, FLOOR_Y + win[1] - 0.05, z + 0.08); g.add(sill); void cy;
+    const out = new THREE.Mesh(new THREE.PlaneGeometry(14, 6).rotateX(-Math.PI / 2), mat('#8c9097', 0.95)); out.position.set(0, FLOOR_Y + 0.002, z - 3.05); g.add(out); // the parking lot outside
+    const lawn = new THREE.Mesh(new THREE.PlaneGeometry(14, 1.2).rotateX(-Math.PI / 2), mat('#8fbf72', 0.95)); lawn.position.set(0, FLOOR_Y + 0.003, z - 0.65); g.add(lawn);
   }
-  if (bd.style === 'skyline') { const par = mesh(rbox(SX * 2, 0.55, 0.22, 0.02), mat('#8a8478', 0.8)); par.position.set(0, FLOOR_Y, WALL_Z); g.add(par); const cap = mesh(rbox(SX * 2, 0.05, 0.28, 0.01), mat('#a39d90', 0.7)); cap.position.set(0, FLOOR_Y + 0.55, WALL_Z); g.add(cap); } // rooftop parapet
+  if (bd.style === 'skyline') { const par = mesh(rbox(W, 0.55, 0.22, 0.02), mat('#8a8478', 0.8)); par.position.set(0, FLOOR_Y, WALL_Z); g.add(par); const cap = mesh(rbox(W, 0.05, 0.28, 0.01), mat('#a39d90', 0.7)); cap.position.set(0, FLOOR_Y + 0.55, WALL_Z); g.add(cap); } // rooftop parapet
   if (bd.style === 'ocean') { const w = woodMat('#c08a52'); for (let x = -9; x <= 9; x += 1.2) { const p = mesh(rbox(0.08, 0.8, 0.08, 0.01), w); p.position.set(x, FLOOR_Y, WALL_Z + 0.2); g.add(p); } for (const y of [0.45, 0.78]) { const r = mesh(rbox(W, 0.06, 0.06, 0.01), w); r.position.set(0, FLOOR_Y + y, WALL_Z + 0.2); g.add(r); } } // boardwalk railing
   return g;
 }
@@ -3863,19 +3852,14 @@ function loadTable(idx, restore, practice = false, list = G.levels) {
   setThemeColors(th);
   // floor
   if (floorMesh) { scene.remove(floorMesh); floorMesh.material.map.dispose(); floorMesh.material.dispose(); }
-  // one big floor: it reaches past every screen edge and melts into the room's background color with distance (fog)
-  const roomed = false, open2 = roomed && ['skyline', 'hedge'].includes(th.backdrop.style), RX = roomed ? (open2 ? 5.4 : 3.4) : 80, RZ = roomed ? (open2 ? 1.7 - WALL_Z : -WALL_Z) : 80;
-  floorMesh = new THREE.Mesh(cached(`floor${RX}|${RZ}`, () => { const p = new THREE.PlaneGeometry(RX * 2, RZ * 2); p.rotateX(-Math.PI / 2); return p; }), new THREE.MeshStandardMaterial({ map: floorTexture(th.floor, RX * 2, RZ * 2), roughness: 0.95 }));
+  floorMesh = new THREE.Mesh(cached('floor', () => { const p = new THREE.PlaneGeometry(60, 60); p.rotateX(-Math.PI / 2); return p; }), new THREE.MeshStandardMaterial({ map: floorTexture(th.floor), roughness: 0.95 }));
   floorMesh.position.y = FLOOR_Y; floorMesh.receiveShadow = true; scene.add(floorMesh);
   if (th.floor.pattern === 'medallion') { const pb = pileTex(); pb.repeat.copy(floorMesh.material.map.repeat); floorMesh.material.bumpMap = pb; floorMesh.material.bumpScale = 1.4; }
   if (th.floor.glow) { floorMesh.material.emissive.set('#ffffff'); floorMesh.material.emissiveMap = floorMesh.material.map; floorMesh.material.emissiveIntensity = th.floor.glow; }
-  if (roomed) { const ground = new THREE.Mesh(cached('ground', () => new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2)), new THREE.MeshStandardMaterial({ color: th.background || shade(th.floor.base, -0.06), roughness: 1 })); ground.position.y = FLOOR_Y - 0.01; ground.receiveShadow = true; levelGroup.add(ground); }
   setupTable(L);
   G.root.add(G.table ? buildShapedTable(th) : buildTable(th));
   if (th.glow) { const gl = new THREE.PointLight(th.glow, 3.5, 0, 2); gl.position.set(0, 2.2, 0); gl.userData.keep = true; levelGroup.add(gl); }
   const backdrop = th.backdrop ? buildBackdrop(th.backdrop, th) : null; if (backdrop) levelGroup.add(backdrop);
-  G.walls = backdrop && backdrop.userData.walls ? backdrop.userData.walls : null;
-  G.wallZ = !th.backdrop || th.backdrop.style === 'ocean' ? null : ['skyline', 'hedge'].includes(th.backdrop.style) ? WALL_Z - 1.7 : WALL_Z; // the camera never turns past it
   const Lt = th.light || {};
   for (const s of Lt.spots || []) { const sp = new THREE.SpotLight(s.color || '#ffd28a', s.intensity || 6, 0, s.angle || 0.62, 0.7, 1.1); sp.position.set(s.x, s.y || 2.9, s.z); sp.target.position.set(s.x, 0, s.z); sp.userData.keep = true; levelGroup.add(sp, sp.target); } // warm pools of light on the table
   for (const q of Lt.glows || []) { const pl = new THREE.PointLight(q.color, q.intensity || 2, q.dist || 4, 2); pl.position.set(q.x, q.y, q.z); pl.userData.keep = true; levelGroup.add(pl); }        // colored glows from signs and machines
@@ -3890,7 +3874,6 @@ function loadTable(idx, restore, practice = false, list = G.levels) {
     if (on === 'floor' && clearRing && !opts.y && !['rug', 'steppingStones', 'stringLights', 'fairyLights'].includes(type) && pointInPoly(x, z, clearRing)) continue; // a big shaped table covers that spot
     const d = b(opts, th); d.position.set(x, on === 'rail' ? RAIL_TOP : FLOOR_Y, z); d.rotation.y = -rot * DEG;
     if (on === 'floor') { d.position.y += 0.001 + (opts.y || 0); }
-    if (G.walls && on === 'floor' && (opts.y || z < WALL_Z + 0.75)) { d.traverse(m => { if (!m.material) return; const cl = (x) => { const c = x.clone(); c.userData.tr0 = x.transparent; return c; }; m.material = Array.isArray(m.material) ? m.material.map(cl) : cl(m.material); }); G.walls[0].attached.push(d); } // hangs on, or stands against, the back wall
     (on === 'rail' ? G.root : levelGroup).add(d); if (d.userData.tick) G.ticks.push(d.userData.tick);
   }
   // obstacles
@@ -5240,36 +5223,8 @@ const easeIn = (t) => t * t * t, easeOut = (t) => 1 - (1 - t) ** 3;
 const easeInOut = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 let camTween = null; // { from, mode, t, dur, ease }
 function tweenCamera(mode, dur, ease) { G.camMode = mode; camTween = reduceMotion ? null : { from: { ...cam }, mode, t: 0, dur, ease }; }
-// How far the camera may turn (degrees either side of the table's own angle) before it would reach the wall behind the table.
-// Checked for every camera pose (bird's eye, zoomed in on the cue ball anywhere on the table, pulling out), so no pose ever gets there.
-function yawLimit() {
-  if (G.wallZ == null || !G.level) return 999;
-  const L = G.level.camera, t0 = L.tilt + view.tiltAdj, wz = G.wallZ + 0.7, poses = [[0, view.base * 1.14, t0], [-0.3, view.base * 1.32 * 1.14, Math.min(84, t0 + 8)], [-1.9, view.base * 0.6 * 1.14, 34]];
-  let lim = 180; for (const [tz, d, t] of poses) { const q = (wz - tz) / (d * Math.cos(t * DEG)); if (q > -1) lim = Math.min(lim, Math.acos(Math.min(1, q)) / DEG); }
-  return Math.max(10, lim - 2);
-}
-// The back wall fades by the camera's angle around the table: fully solid until the camera swings WALL_FADE_START degrees from straight-on
-// behind the wall, more see-through the further round it goes, and gone (not drawn at all) inside a 45° slice right behind its middle.
-const WALL_FADE_START = 90, WALL_FADE_GONE = 22.5;
-function updateWalls() {
-  for (const w of G.walls || []) {
-    const cx = camera.position.x, cz = camera.position.z, l = Math.hypot(cx, cz) || 1;
-    const off = Math.acos(clamp((cx * w.nx + cz * w.nz) / l, -1, 1)) / DEG; // 0 = the camera is right behind the middle of the wall
-    const k = clamp((off - WALL_FADE_GONE) / (WALL_FADE_START - WALL_FADE_GONE), 0, 1), op = k * k * k; // drops off quickly once the camera starts coming round behind
-    if (op === w.op) continue;
-    w.op = op; const show = op > 0.003;
-    w.group.visible = show; for (const d of w.attached) d.visible = show; // gone: nothing is drawn at all
-    if (!show) continue;
-    const one = (mm) => { if (mm.userData.op0 == null) mm.userData.op0 = mm.opacity; const tr = op < 0.999 || !!mm.userData.tr0; if (mm.transparent !== tr) { mm.transparent = tr; mm.needsUpdate = true; } mm.opacity = mm.userData.op0 * op; mm.depthWrite = op > 0.6; };
-    const set = (m) => { if (!m.material) return; if (Array.isArray(m.material)) m.material.forEach(one); else one(m.material); };
-    w.group.traverse(set); for (const d of w.attached) d.traverse(set); // the wall and everything on it fade together
-  }
-}
-function clampYaw(key, lim, rot) { const base = 360 * Math.round((G.yawSmooth + rot) / 360), w = G[key] + rot - base; if (w > lim) G[key] -= w - lim; else if (w < -lim) G[key] += -lim - w; } // measured from the camera's current turn, so it never swings the long way round
 function updateCamera(dt) {
-  const lim = 999, lrot = G.level ? G.level.camera.rotation : 0; // turn freely, all the way round (walls in the way fade instead)
-  if (homeOpen && !reduceMotion) { G.homeDir = G.homeDir || 1; G.yawTarget += dt * 7 * G.homeDir; const w = G.yawTarget + lrot - 360 * Math.round((G.yawSmooth + lrot) / 360); if (w > lim - 1) G.homeDir = -1; else if (w < -lim + 1) G.homeDir = 1; } // the home page's table slowly turns (back and forth when a wall is near)
-  if (lim < 180) { clampYaw('yawTarget', lim, lrot); clampYaw('yawSmooth', lim + 3, lrot); }
+  if (homeOpen && !reduceMotion) G.yawTarget += dt * 7; // the home page's table slowly turns
   // ease toward the turn the player dragged to, so fast swipes stay smooth
   G.yawSmooth += (G.yawTarget - G.yawSmooth) * (reduceMotion ? 1 : 1 - Math.exp(-dt * 7));
   const p = poseFor(G.camMode);
@@ -5285,7 +5240,7 @@ function updateCamera(dt) {
     cam.tx = lerp(cam.tx, p.tx, f); cam.tz = lerp(cam.tz, p.tz, f); cam.dist = lerp(cam.dist, p.dist, f); cam.tilt = lerp(cam.tilt, p.tilt, f);
     cam.rot += wrapDeg(p.rot - cam.rot) * f;
   }
-  applyCam(); updateWalls();
+  applyCam();
 }
 const fade = { v: 0, target: 0, speed: 3, onFull: null };
 function fadeTo(opaque, ms) { fade.target = opaque ? 1 : 0; fade.speed = 1000 / Math.max(1, ms); if (reduceMotion) fade.v = 0; }
@@ -5892,7 +5847,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && lo
   const dare = new URLSearchParams(location.search);
   if (dare.get('dare') && !day.done) setTimeout(() => toast(`A friend did table ${+dare.get('t') || 1} in ${+dare.get('dare')} shots. Beat that!`), 900);
   // expose a tiny hook for automated testing
-  window.__cuesies = { G, aim, keys, keyMod, loadTable, tweenCamera, scene, cam, previewTrace, yawLimit, updateCamera, NEW_LEVELS, newLib, onRest, allStopped, shoot, showHome, playToday, zoomTo, THREE, camera, aimState, toScreen, firstContact, physStep, roll, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
+  window.__cuesies = { G, aim, keys, keyMod, loadTable, tweenCamera, updateCamera, scene, cam, previewTrace, NEW_LEVELS, newLib, onRest, allStopped, shoot, showHome, playToday, zoomTo, THREE, camera, aimState, toScreen, firstContact, physStep, roll, simulate(maxSteps = 240 * 60) { let n = 0; while (n < maxSteps && !(allStopped())) { physStep(); n++; } return n * DT; } };
 })();
 </script>
 </body>
