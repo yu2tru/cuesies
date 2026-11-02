@@ -1939,7 +1939,7 @@ const OBST = {
   cocktail(o) { // martini glass with an olive
     const r = o.r, g = new THREE.Group(), V = (x, y) => new THREE.Vector2(x, y);
     g.add(glassMesh(cached('mart' + r, () => new THREE.LatheGeometry([V(0.0001, 0.0015), V(r * 0.78, 0.0015), V(r * 0.76, 0.006), V(0.006, 0.01), V(0.005, 0.1), V(0.01, 0.104), V(r, 0.19)], 40))));
-    g.add(mesh(cached('martD' + r, () => new THREE.LatheGeometry([V(0, 0.108), V(0.006, 0.108), V(r * 0.78, 0.17), V(0, 0.17)], 32)), new THREE.MeshPhysicalMaterial({ color: '#f2d27a', roughness: 0.1, clearcoat: 0.6 }), false));
+    g.add(mesh(cached('martD' + r, () => new THREE.LatheGeometry([V(0, 0.108), V(0.006, 0.108), V(r * 0.72, 0.165), V(0, 0.165)], 32)), new THREE.MeshPhysicalMaterial({ color: '#f2d27a', roughness: 0.1, clearcoat: 0.6 }), false));
     const olive = mesh(sph(0.013, 12, 10), mat('#6b8e23', 0.4)); olive.position.set(0, 0.145, 0); g.add(olive);
     const pick = mesh(cyl(0.0018, 0.0018, 0.09, 6), mat('#d7263b', 0.4), false); pick.position.set(0, 0.12, 0); pick.rotation.z = 0.5; g.add(pick);
     return g;
@@ -2005,7 +2005,7 @@ const OBST = {
   },
   flowerPot(o) { // terracotta pot, soil, stems, leaves and full blooms (tulips, daisies, roses)
     const r = o.r, g = new THREE.Group(), h = r * 1.5, V = (x, y) => new THREE.Vector2(x, y);
-    g.add(mesh(cached(`potB${r}`, () => new THREE.LatheGeometry([V(0, 0), V(r * 0.72, 0), V(r * 0.78, h * 0.08), V(r * 0.96, h * 0.82), V(r * 0.96, h * 0.82)], 40)), mat('#c8693e', 0.55)));
+    g.add(mesh(cached(`potB${r}`, () => new THREE.LatheGeometry([V(0, 0), V(r * 0.72, 0), V(r * 0.78, h * 0.08), V(r * 0.96, h * 0.82)], 40)), mat('#c8693e', 0.55)));
     const lip = mesh(torus(r * 0.98, r * 0.09, 12, 40), mat('#b85d34', 0.55)); lip.rotation.x = Math.PI / 2; lip.position.y = h * 0.84; g.add(lip);
     const soil = mesh(cyl(r * 0.92, r * 0.92, 0.008, 32), mat('#4a3020', 1), false); soil.position.y = h * 0.8; g.add(soil);
     const stemM = mat('#3f8f45', 0.5), leafM = mat('#3f9b55', 0.45), leaf2 = mat('#2f8045', 0.45), top = h * 0.8;
@@ -2917,14 +2917,34 @@ const backdropTex = (bd) => propTex('wall' + bd.style + bd.wall, 1024, 768, (c, 
 
 // ---- art-direction helpers: real glass, soft rounded boxes, soft stars ----
 // Clear glass: refracts what's behind it (transmission, IOR 1.5), clear-coated, reflects the room, a faint tint, bright at grazing angles.
-// Glass draws after the solid things around it; liquids inside are solid so they show through it clearly.
+// Glass draws after the solid things around it (fixed render order, never writes depth); liquids inside are solid so they show through it clearly.
+// Only the outer face uses refraction (front side only): the inside wall is its own simple see-through surface (glassInner), so the
+// renderer never has to refract the glass's own back faces. Glass casts and receives no shadows.
+// Any bad pixel (NaN) it samples from the scene behind is replaced instead of spreading into a black patch.
 const glassCache = {};
 function glassMat(tint = '#f4fbff', thickness = 0.006) {
   const k = tint + thickness; if (glassCache[k]) return glassCache[k];
-  return glassCache[k] = new THREE.MeshPhysicalMaterial({ color: '#ffffff', transmission: 1, ior: 1.5, thickness, roughness: 0.03, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.03,
-    attenuationColor: new THREE.Color(tint), attenuationDistance: 0.25, specularIntensity: 1, envMap: roomEnv, envMapIntensity: 1.5, side: THREE.DoubleSide, transparent: true, depthWrite: false });
+  const m = new THREE.MeshPhysicalMaterial({ color: '#ffffff', transmission: 1, ior: 1.5, thickness, roughness: 0.03, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.03,
+    attenuationColor: new THREE.Color(tint), attenuationDistance: 0.25, specularIntensity: 1, envMap: roomEnv, envMapIntensity: 1.5, side: THREE.FrontSide, transparent: true, depthWrite: false });
+  m.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <transmission_fragment>', '#include <transmission_fragment>\n\tif (any(isnan(totalDiffuse)) || any(isinf(totalDiffuse))) totalDiffuse = vec3(0.86, 0.9, 0.92);'); };
+  m.customProgramCacheKey = () => 'glassSafe';
+  return glassCache[k] = m;
 }
-const glassMesh = (geo, tint, thick) => { const m = new THREE.Mesh(geo, glassMat(tint, thick)); m.renderOrder = 6; m.castShadow = false; return m; };
+let glassInnerM = null;
+const glassInner = () => glassInnerM || (glassInnerM = new THREE.MeshPhysicalMaterial({ color: '#f4fbff', roughness: 0.05, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.05, envMap: roomEnv, envMapIntensity: 1.2,
+  transparent: true, opacity: 0.14, side: THREE.BackSide, depthWrite: false }));
+const glassMesh = (geo, tint, thick) => {
+  const m = new THREE.Mesh(geo, glassMat(tint, thick)); m.renderOrder = 6; m.castShadow = false; m.receiveShadow = false;
+  const inner = new THREE.Mesh(geo, glassInner()); inner.renderOrder = 5; inner.castShadow = false; inner.receiveShadow = false; m.add(inner); // the inside wall, seen through the opening
+  return m;
+};
+// A normal with no length shades as NaN, which shows as black specks and, seen through glass, black patches. Give any such normal a safe direction.
+const normalsFixed = new WeakSet();
+function fixNormals(root) {
+  root.traverse(o => { const g = o.geometry; if (!o.isMesh || !g || normalsFixed.has(g)) return; normalsFixed.add(g); const n = g.attributes.normal; if (!n) return; let bad = 0;
+    for (let i = 0; i < n.count; i++) { const x = n.getX(i), y = n.getY(i), z = n.getZ(i), l = x * x + y * y + z * z; if (!(l > 1e-10)) { n.setXYZ(i, 0, 1, 0); bad++; } }
+    if (bad) n.needsUpdate = true; });
+}
 // a box with every edge and corner rounded (radius rr), standing on y = 0
 function softBox(w, h, d, rr) {
   return cached(`soft${w}|${h}|${d}|${rr}`, () => {
@@ -3485,7 +3505,7 @@ const DECOR = {
     g.add(mesh(cached('lgJuice2', () => new THREE.LatheGeometry([V(0.0001, 0.009), V(r * 0.8, 0.009), V(r * 0.93, h * 0.78), V(0.0001, h * 0.78)], 32)), new THREE.MeshPhysicalMaterial({ color: '#f7d84a', roughness: 0.15, clearcoat: 0.6 }), false));
     for (let i = 0; i < 3; i++) { const c = mesh(softBox(0.032, 0.03, 0.032, 0.007), new THREE.MeshPhysicalMaterial({ color: '#f4fbff', roughness: 0.08, clearcoat: 1 }), false); c.position.set((i - 1) * 0.024, h * 0.7, (i % 2 - 0.5) * 0.02); c.rotation.set(0.4, i, 0.3); g.add(c); }
     const slice = mesh(cyl(0.04, 0.04, 0.008, 24), mat('#ffffff', 0.4, { map: lemonTex() })); slice.rotation.set(Math.PI / 2, 0, 0.3); slice.position.set(r * 0.92, h - 0.006, 0); g.add(slice);
-    const straw = mesh(cyl(0.006, 0.006, h * 1.35, 10), mat('#ffffff', 0.4, { map: getStripeTex('straw', ['#e2483c', '#ffffff'], 10) })); straw.position.set(-r * 0.3, h * 0.12, 0); straw.rotation.z = 0.22; g.add(straw);
+    const straw = mesh(cyl(0.006, 0.006, h * 1.35, 10), mat('#ffffff', 0.4, { map: getStripeTex('straw', ['#e2483c', '#ffffff'], 10) })); straw.position.set(-r * 0.15, h * 0.12, 0); straw.rotation.z = 0.22; g.add(straw);
     return g;
   },
   patioChair() { const g = new THREE.Group(), w = woodMat('#f1e8d6');
@@ -3934,6 +3954,7 @@ function loadTable(idx, restore, practice = false, list = G.levels) {
   sunburst.visible = false; $('stamp').classList.remove('show');
   G.inputLocked = false; aimState.power = 0; drag = null; defaultAim(); setStickOpacity(0); stick.strike = 0;
   G.yawTarget = 0; G.yawSmooth = 0;
+  fixNormals(scene);
   updateUI(); computeView(); snapCamera('far');
   tweenCamera(G.shots > 0 ? 'ready' : 'overview', 1.1, easeOut); // entering: ease out
   setTimeout(() => fadeTo(false, 450), 60);
