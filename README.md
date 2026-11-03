@@ -74,7 +74,10 @@ Only tables that use one of these run the 3D physics; the original five tables k
 | Magnet | `{"kind":"magnet","pos":[x,z],"radius":0.11,"range":0.8,"strength":1,"rotation":0}` (pulls rolling balls toward it, harder the closer; the horseshoe opens toward `rotation`) |
 | Boost pad | slow zone `{"kind":"boost","shape":"box","pos":[x,z],"size":[w,d],"rotation":-90,"strength":1}` (pushes balls crossing it toward `rotation`) |
 | Oiled lane | slow zone `{"kind":"oil",...}` (almost no friction; slopes, magnets and spinners don't bend a ball on it) |
-| Gutter | slow zone `{"kind":"gutter","shape":"box","pos":[x,z],"size":[length,width],"rotation":-90}` (a ball that drops in rides it to the end, toward `rotation`; if a pocket is near the end it goes in) |
+| Gutter | slow zone `{"kind":"gutter","shape":"box","pos":[x,z],"size":[length,width],"rotation":-90}` (a ball that drops in rides it to the end, toward `rotation`; if the end runs into a pit it's lost there, never the pocket) |
+| Pin pit | slow zone `{"kind":"pit","shape":"box",...}` (a drop-off: the cushion opens where it overlaps the table edge; a ball that rolls in is lost, cue +2, others +1 and back to their spot; pins that fall in are gone) |
+| Walls | `"walls":[[[x,z],...]]` (free-standing walls, cushions on both sides; on the bowling lane, the curved backstop around the pocket) |
+| Floor height | scene `"floorY"` (the bowling alley's lane sits right on the floor) |
 | Table surface | `"friction":1.15` (the table's own rolling friction: 0.85 for lane wood, 1.15 for frosting; the power line uses it) |
 | Raised deck | `"deck":{"poly":[[x,z],...],"height":0.1,"ramp":{"from":[x,z],"to":[x,z],"width":0.42},"walls":[[[x,z],...]]}` (a second, higher level; the ramp runs from the lower floor up to the deck and pulls balls back down like real gravity; wall lines are cushions on both sides) |
 | Pocket in the surface | `"freePockets":[[x,z]]` (a round pocket anywhere on the surface or the deck, like a petri dish) |
