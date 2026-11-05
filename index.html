@@ -355,6 +355,7 @@
 
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js';
+const RENDERS = new URLSearchParams(location.search).has('renders'); // ?renders: a model viewer instead of the game (renders.js, loaded only then)
 
 /* =====================================================================
    CONFIG — paste your Supabase project values here.
@@ -628,7 +629,7 @@ const DEG = Math.PI / 180;
 const reduceMotion = false;
 const pad2 = (n) => String(n).padStart(2, '0');
 
-try { // the game used to be called Poolsies: carry saved progress over to the new key names once
+if (!RENDERS) try { // the game used to be called Poolsies: carry saved progress over to the new key names once
   for (const k of ['settings', 'pid', 'day', 'stats']) { const old = localStorage.getItem('poolsies:' + k); if (old != null && localStorage.getItem('cuesies:' + k) == null) localStorage.setItem('cuesies:' + k, old); }
 } catch (e) {}
 const store = {
@@ -652,7 +653,7 @@ const settings = Object.assign({ sound: true, seenHelp: false, tunes: true }, st
 settings.music = settings.tunes && MUSIC_TRACKS.length > 0; // the ♪ button (shown once MUSIC_TRACKS has files)
 const saveSettings = () => store.set('settings', settings);
 let playerId = store.get('pid', null);
-if (!playerId) { playerId = uuid(); store.set('pid', playerId); }
+if (!playerId) { playerId = uuid(); if (!RENDERS) store.set('pid', playerId); }
 
 /* ===================== table + physics constants ==================== */
 // Table units: x in [-1, 1] across the width, z in [-2, 2] along the length (near end = +z).
@@ -6878,6 +6879,11 @@ setInterval(() => { if (localDateStr() !== TODAY && !G.moving && !drag) location
 document.addEventListener('visibilitychange', () => { if (!document.hidden && localDateStr() !== TODAY && !G.moving) location.reload(); });
 
 (async function boot() {
+  if (RENDERS) { // the renders viewer: the game never starts, nothing is saved or sent anywhere
+    import('./renders.js').then(m => m.start({ THREE, THREE_URL: 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js', renderer, scene, camera, hemi, sun, fill, roomEnv,
+      OBST, DECOR, THEMES, G, levels: DEMO_LEVELS.concat(NEW_LEVELS).map((l, i) => normalizeLevel({ ...l, date: TODAY }, i)), ballTexture, mesh, R }));
+    return;
+  }
   try { await withTimeout(document.fonts.load('900 46px Nunito'), 2500); } catch (e) {}
   await initBackend();
   if (!day || day.date !== TODAY || day.key !== levelsKey()) { day = freshDay(); saveDay(); }

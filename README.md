@@ -127,6 +127,14 @@ Every level picks a scene with `"theme"` (or `"scene"`). The five rooms at the b
 
 Put tracks in `music/` and list them in `MUSIC_TRACKS` near the top of `index.html` (see `music/README.md`). They play shuffled with crossfades; the ♪ button appears once there's at least one.
 
+## Renders mode
+
+Open the game with `?renders` (for example `https://yu2tru.github.io/cuesies/?renders`) to look at every object on its own instead of playing. The game doesn't start, nothing is saved, and nothing is sent to Supabase; the code lives in `renders.js` and is only loaded in this mode.
+
+- **Previous / Next** buttons (or ← →) step through every on-table piece, movable, background prop and the ball. Drag to turn all the way around (and underneath), pinch or scroll to zoom.
+- **Look** (or keys 1–4): A = the game as it is, B = new lighting (room environment, key + rim light, soft contact shadow), C = smoother geometry (double segments, creased normals), D = B + C.
+- **Snap** (or P) downloads a PNG of the current object in all four looks, from the current angle.
+
 ## Debug mode
 
 Open the page with `?debug` for physics outlines with heights, fan zones, the slope arrow, pocket circles, a dotted path for every flight, and a level picker that includes the 18 new levels, and a button that turns the hitboxes on and off. Nothing played with `?debug` is sent to the leaderboard.
