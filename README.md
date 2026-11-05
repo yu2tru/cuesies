@@ -129,7 +129,7 @@ Put tracks in `music/` and list them in `MUSIC_TRACKS` near the top of `index.ht
 
 ## Renders mode
 
-Open the game with `?renders` (for example `https://yu2tru.github.io/cuesies/?renders`) to look at every object on its own instead of playing. The game doesn't start, nothing is saved, and nothing is sent to Supabase; the code lives in `renders.js` and is only loaded in this mode.
+Open the game with `?renders` (`https://yu2tru.github.io/cuesies/?renders`) to look at every object on its own instead of playing. The game doesn't start, nothing is saved, and nothing is sent to Supabase; the code lives in `renders.js` and is only loaded in this mode.
 
 - **Previous / Next** buttons (or ← →) step through every on-table piece, movable, background prop and the ball. Drag to turn all the way around (and underneath), pinch or scroll to zoom.
 - **Look** (or keys 1–4): A = the game as it is, B = new lighting (room environment, key + rim light, soft contact shadow), C = smoother geometry (double segments, creased normals), D = B + C.
